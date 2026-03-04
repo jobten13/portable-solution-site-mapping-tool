@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Open Site Planner (No Key Required)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; }
+        
+        #sidebar {
+            width: 320px; background: #fff; border-right: 1px solid #ddd;
+            padding: 20px; z-index: 1000; overflow-y: auto; box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        #map { flex-grow: 1; height: 100%; z-index: 1; }
+        
+        h2 { font-size: 1.2rem; color: var(--primary); margin-top: 0; border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+        .mfg-label { font-weight: bold; font-size: 0.7rem; color: #888; text-transform: uppercase; margin: 15px 0 5px; display: block; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+        button {
+            background: #f9f9f9; border: 1px solid #ddd; padding: 10px; text-align: left;
+            border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: all 0.2s;
+        }
+        button:hover { background: #eff6ff; border-color: var(--accent); }
+
+        .active-controls {
+            margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 8px; 
+            border: 1px solid #b3d7ff; display: none;
+        }
+        input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; }
+        .delete-btn { background: #ffeded; color: #cc0000; border: 1px solid #ffcccc; margin-top: 15px; width: 100%; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h2>Site Planner</h2>
+    
+    <span class="mfg-label">Blu-Med</span>
+    <div class="btn-grid">
+        <button onclick="spawnTent(20, 32.5, 'BluMed 2032.5', '#27ae60')">XP 2032.5 (20x32.5')</button>
+        <button onclick="spawnTent(20, 39, 'BluMed 2039', '#219150')">XP 2039 (20x39')</button>
+        <button onclick="spawnTent(8, 8, 'BluMed Vestibule', '#16a085')">Vestibule (8x8')</button>
+    </div>
+
+    <span class="mfg-label">Western Shelter</span>
+    <div class="btn-grid">
+        <button onclick="spawnTent(18.58, 33.92, 'WS 1935', '#e67e22')">GK 1935 (18.6x33.9')</button>
+        <button onclick="spawnTent(18.58, 18.58, 'WS 20', '#d35400')">GK 20 (18.6x18.6')</button>
+        <button onclick="spawnTent(7.67, 7.33, 'WS Vestibule', '#e74c3c')">Vestibule (7.7x7.3')</button>
+    </div>
+
+    <div id="controls" class="active-controls">
+        <strong>Selected: <span id="activeName">None</span></strong>
+        <div style="margin-top:10px;">
+            <label>Rotate: <span id="rotLabel">0</span>°</label>
+            <input type="range" id="rotSlider" min="0" max="360" value="0" oninput="updateActiveTent('rotate', this.value)">
+        </div>
+        <button class="delete-btn" onclick="updateActiveTent('delete')">Delete Object</button>
+    </div>
+    
+    <p style="font-size: 11px; color: #999; margin-top: 20px;">* Map tiles provided by Esri World Imagery (No API Key required).</p>
+</div>
+
+<div id="map"></div>
+
+<script>
+    // 1. Initialize Map (No Keys Needed)
+    const map = L.map('map').setView([39.8, -98.5], 4);
+
+    // 2. Add Satellite Layer (Esri)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+    }).addTo(map);
+
+    let activeLayer = null;
+    let tentData = {}; // Store metadata for rotation
+
+    function spawnTent(wFt, lFt, name, color) {
+        const center = map.getCenter();
+        const id = 't' + Date.now();
+        
+        // Store technical data
+        tentData[id] = {
+            name: name,
+            widthKm: wFt * 0.0003048,
+            lengthKm: lFt * 0.0003048,
+            coords: [center.lng, center.lat],
+            rotation: 0,
+            color: color
+        };
+
+        renderTent(id);
+    }
+
+    function renderTent(id) {
+        const d = tentData[id];
+        const pt = turf.point(d.coords);
+        
+        // Calculate rectangle based on real-world dimensions
+        let poly = turf.envelope(turf.featureCollection([
+            turf.destination(pt, d.widthKm/2, 90, {units:'kilometers'}),
+            turf.destination(pt, d.widthKm/2, -90, {units:'kilometers'}),
+            turf.destination(pt, d.lengthKm/2, 0, {units:'kilometers'}),
+            turf.destination(pt, d.lengthKm/2, 180, {units:'kilometers'})
+        ]));
+
+        if (d.rotation !== 0) {
+            poly = turf.transformRotate(poly, d.rotation, {pivot: d.coords});
+        }
+
+        // Convert GeoJSON to Leaflet Layer
+        const geoLayer = L.geoJSON(poly, {
+            style: { color: '#fff', weight: 1, fillColor: d.color, fillOpacity: 0.7 }
+        });
+
+        // If replacing an existing layer
+        if (d.leafletLayer) {
+            map.removeLayer(d.leafletLayer);
+        }
+
+        d.leafletLayer = geoLayer;
+        geoLayer.addTo(map);
+        
+        // Click to select
+        geoLayer.on('click', (e) => {
+            L.DomEvent.stopPropagation(e);
+            selectTent(id);
+        });
+
+        selectTent(id);
+        map.flyTo(centerToLeaflet(d.coords), 20);
+    }
+
+    function selectTent(id) {
+        activeLayer = id;
+        const d = tentData[id];
+        document.getElementById('controls').style.display = 'block';
+        document.getElementById('activeName').innerText = d.name;
+        document.getElementById('rotSlider').value = d.rotation;
+        document.getElementById('rotLabel').innerText = d.rotation;
+    }
+
+    function updateActiveTent(action, val) {
+        if (!activeLayer) return;
+        if (action === 'rotate') {
+            tentData[activeLayer].rotation = parseInt(val);
+            document.getElementById('rotLabel').innerText = val;
+            renderTent(activeLayer);
+        } else if (action === 'delete') {
+            map.removeLayer(tentData[activeLayer].leafletLayer);
+            delete tentData[activeLayer];
+            document.getElementById('controls').style.display = 'none';
+            activeLayer = null;
+        }
+    }
+
+    function centerToLeaflet(coords) {
+        return [coords[1], coords[0]]; // Turf uses [Lng, Lat], Leaflet uses [Lat, Lng]
+    }
+</script>
+</body>
+</html>

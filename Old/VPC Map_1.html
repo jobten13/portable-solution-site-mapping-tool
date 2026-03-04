@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .menu { position: absolute; background: white; padding: 10px; z-index: 1; margin: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="menu">
+    <b>Tent Models (Feet)</b><br>
+    <button onclick="addTent(20, 35, 'Western Shelter')">WS 1935 (19x35)</button><br>
+    <button onclick="addTent(20, 60, 'HDT')">HDT AirBeam (20x60)</button>
+</div>
+
+<div id="map"></div>
+
+<script>
+    mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-v9', // Satellite view for real context
+        center: [-96, 37], // Starting US center
+        zoom: 15
+    });
+
+    function addTent(widthFt, lengthFt, brand) {
+        const center = map.getCenter();
+        
+        // 1. Convert Feet to Kilometers for Turf.js math
+        const widthKm = widthFt * 0.0003048;
+        const lengthKm = lengthFt * 0.0003048;
+
+        // 2. Create a "Box" around the center point
+        const pt = turf.point([center.lng, center.lat]);
+        const poly = turf.envelope(turf.featureCollection([
+            turf.destination(pt, widthKm/2, 90, {units: 'kilometers'}),
+            turf.destination(pt, widthKm/2, -90, {units: 'kilometers'}),
+            turf.destination(pt, lengthKm/2, 0, {units: 'kilometers'}),
+            turf.destination(pt, lengthKm/2, 180, {units: 'kilometers'})
+        ]));
+
+        // 3. Add to map as a layer
+        const id = 'tent-' + Math.random();
+        map.addSource(id, { 'type': 'geojson', 'data': poly });
+        map.addLayer({
+            'id': id,
+            'type': 'fill',
+            'source': id,
+            'paint': { 'fill-color': '#088', 'fill-opacity': 0.7, 'fill-outline-color': '#fff' }
+        });
+    }
+</script>
+</body>
+</html>

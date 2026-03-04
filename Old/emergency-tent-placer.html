@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emergency Tent Site Planner</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+#header {
+  padding:10px 16px; background:#161b22;
+  border-bottom:1px solid #30363d;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap; z-index:1000;
+}
+#header h1 { font-size:16px; color:#58a6ff; white-space:nowrap; font-weight:600; }
+#search-bar { display:flex; gap:6px; flex:1; min-width:240px; }
+#address-input {
+  flex:1; padding:7px 10px; border-radius:6px;
+  border:1px solid #30363d; background:#21262d; color:#e6edf3;
+  font-size:13px; outline:none;
+}
+#address-input:focus { border-color:#58a6ff; }
+button {
+  padding:7px 14px; border-radius:6px; border:none;
+  background:#238636; color:white; cursor:pointer; font-size:12px;
+  transition:background 0.15s; white-space:nowrap;
+}
+button:hover { background:#2ea043; }
+button.blue { background:#1f6feb; }
+button.blue:hover { background:#388bfd; }
+button.ghost { background:#21262d; border:1px solid #30363d; }
+button.ghost:hover { background:#30363d; }
+button.danger { background:#da3633; }
+button.danger:hover { background:#f85149; }
+
+#main { display:flex; flex:1; overflow:hidden; }
+
+#sidebar {
+  width:290px; background:#161b22; border-right:1px solid #30363d;
+  display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0;
+}
+
+.sb-section { padding:12px; border-bottom:1px solid #30363d; }
+.sb-section h3 { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#8b949e; margin-bottom:8px; }
+
+/* Vendor Tabs */
+.vendor-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.vtab {
+  padding:4px 8px; font-size:11px; border-radius:4px; cursor:pointer;
+  background:#21262d; color:#8b949e; border:1px solid #30363d;
+  transition:all 0.15s;
+}
+.vtab:hover { border-color:#58a6ff; color:#e6edf3; }
+.vtab.active { background:#1f6feb; border-color:#1f6feb; color:white; }
+
+/* Tent list */
+.tent-list { display:flex; flex-direction:column; gap:4px; }
+.tent-item {
+  padding:8px 10px; background:#21262d; border-radius:6px;
+  border:1px solid #30363d; cursor:pointer; transition:all 0.15s;
+}
+.tent-item:hover { border-color:#58a6ff; background:#1c2128; }
+.tent-item.selected { border-color:#238636; background:#0d2414; }
+.tent-name { font-size:13px; font-weight:500; color:#e6edf3; }
+.tent-dims { font-size:11px; color:#8b949e; margin-top:2px; }
+.tent-shape-badge {
+  display:inline-block; font-size:10px; padding:1px 5px; border-radius:3px;
+  background:#30363d; color:#8b949e; margin-top:3px;
+}
+
+/* Properties */
+label { font-size:11px; color:#8b949e; display:block; margin-bottom:3px; margin-top:8px; }
+input[type=text], input[type=number], select {
+  width:100%; padding:6px 8px; background:#21262d; border:1px solid #30363d;
+  border-radius:6px; color:#e6edf3; font-size:12px; outline:none;
+}
+input:focus, select:focus { border-color:#58a6ff; }
+input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
+
+.color-row { display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
+.color-swatch {
+  width:22px; height:22px; border-radius:50%; cursor:pointer;
+  border:2px solid transparent; transition:all 0.15s;
+}
+.color-swatch.active { border-color:white; transform:scale(1.15); }
+
+/* Place button */
+.place-btn {
+  width:100%; margin-top:8px; padding:9px;
+  background:#238636; font-size:13px; font-weight:500;
+}
+
+/* Placed objects */
+#obj-list-items { padding:12px; }
+.obj-item {
+  display:flex; align-items:center; gap:8px; padding:7px 8px;
+  background:#21262d; border-radius:6px; margin-bottom:4px; font-size:12px;
+  border:1px solid #30363d;
+}
+.obj-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.obj-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e6edf3; }
+.obj-del { background:none; border:none; color:#8b949e; padding:2px 5px; font-size:13px; }
+.obj-del:hover { color:#f85149; background:none; }
+
+/* Map */
+#map { flex:1; }
+
+/* Status */
+#statusbar {
+  background:#0d1117; border-top:1px solid #30363d;
+  padding:4px 12px; font-size:11px; color:#8b949e;
+  display:flex; gap:20px; align-items:center;
+}
+#statusbar span { color:#58a6ff; }
+
+.mode-badge {
+  padding:3px 8px; border-radius:12px; font-size:11px;
+  background:#1f2937; color:#58a6ff; border:1px solid #1f6feb;
+}
+
+/* Note */
+.dim-note { font-size:10px; color:#8b949e; margin-top:4px; font-style:italic; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🏕 Emergency Tent Site Planner</h1>
+  <div id="search-bar">
+    <input type="text" id="address-input" placeholder="Address or lat, lng..." />
+    <button class="blue" onclick="searchLocation()">Search</button>
+  </div>
+  <div id="mode-display" class="mode-badge">View Mode</div>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+
+    <!-- Vendor Tabs -->
+    <div class="sb-section">
+      <h3>Vendor</h3>
+      <div class="vendor-tabs" id="vendor-tabs"></div>
+      <div class="tent-list" id="tent-list"></div>
+    </div>
+
+    <!-- Properties -->
+    <div class="sb-section">
+      <h3>Label & Style</h3>
+
+      <label>Custom Label (optional)</label>
+      <input type="text" id="obj-label" placeholder="e.g. Triage A..." />
+
+      <label>Color</label>
+      <div class="color-row" id="color-swatches"></div>
+
+      <label>Opacity: <span id="opacity-val">65</span>%</label>
+      <input type="range" id="obj-opacity" min="15" max="90" value="65"
+        oninput="document.getElementById('opacity-val').textContent=this.value" />
+
+      <button class="place-btn" onclick="startPlacing()">📍 Place on Map</button>
+      <button class="ghost" onclick="cancelPlacing()" style="width:100%;margin-top:4px;font-size:12px;">Cancel</button>
+    </div>
+
+    <!-- Custom shape -->
+    <div class="sb-section">
+      <h3>Custom Rectangle</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:6px;">Drag a box on the map to place a custom-sized shelter.</p>
+      <div style="display:flex;gap:6px;">
+        <div style="flex:1">
+          <label>Width (ft)</label>
+          <input type="number" id="custom-w" value="20" min="1" />
+        </div>
+        <div style="flex:1">
+          <label>Length (ft)</label>
+          <input type="number" id="custom-l" value="30" min="1" />
+        </div>
+      </div>
+      <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" />
+      <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;">Place Custom</button>
+    </div>
+
+    <!-- Placed objects list -->
+    <div style="border-bottom:1px solid #30363d;padding:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
+        <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;">Clear All</button>
+      </div>
+    </div>
+    <div id="obj-list-items"><p style="font-size:11px;color:#484f58;padding:10px;">No tents placed yet.</p></div>
+
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<div id="statusbar">
+  <div>Zoom: <span id="zoom-level">14</span></div>
+  <div>Tents: <span id="tent-count">0</span></div>
+  <div id="cursor-pos">Hover map for coords</div>
+</div>
+
+<script>
+// ─── Tent Database ──────────────────────────────────────────────────────────────
+// All dimensions in feet (width × length). Circles use widthFt as diameter.
+const TENT_DB = {
+  "BLU-MED": [
+    { name:"2032.5", widthFt:20, lengthFt:32.5, shape:"rect",
+      note:"XP Medical Shelter – 20'×32.5', 650 sq ft" },
+    { name:"2039", widthFt:20, lengthFt:39, shape:"rect",
+      note:"XP Medical Shelter – 20'×39' (modular extend)" },
+    { name:"Vestibule", widthFt:8, lengthFt:10, shape:"rect",
+      note:"Entry Vestibule – approx 8'×10'" },
+  ],
+  "Western Shelter": [
+    { name:"GK1935", widthFt:18.583, lengthFt:33.917, shape:"elongated-octagon",
+      // Spec sheet: 18'7" wide × 33'11" long overall, corner cuts ~7'6" × 9'4"
+      // Elongated octagon: rectangle center + angled cuts on all 4 corners
+      cornerCutW: 7.5,   // 7'6" cut along width axis
+      cornerCutL: 9.333, // 9'4" cut along length axis
+      note:"GK1935 – 18'7\"×33'11\" elongated octagon, 570 sq ft" },
+    { name:"GK20", widthFt:20, lengthFt:20, shape:"octagon",
+      note:"GK20 – 20' regular octagon, 286 sq ft" },
+    { name:"Vestibule", widthFt:6, lengthFt:8, shape:"rect",
+      note:"Vestibule – approx 6'×8'" },
+  ],
+  "DLX": [
+    { name:"X-24", widthFt:24, lengthFt:16, shape:"rect",
+      note:"X-Series X-24 – 24'×16', 384 sq ft" },
+    { name:"Quad (X-HUB)", widthFt:22, lengthFt:22, shape:"plus",
+      // X-HUB is a plus/cross shape connecting to X-Series shelters (all 16' wide) on all 4 sides.
+      // Overall bounding box ~22'×22'; arm width = 16'; arm extension = (22-16)/2 = 3' per side.
+      armWidthFt: 16,
+      note:"X-HUB – plus/cross shape, 16' arm width, ~22' overall bounding box, connects 4 shelters" },
+    { name:"X-32", widthFt:32, lengthFt:16, shape:"rect",
+      note:"X-Series X-32 – 32'×16', 512 sq ft" },
+  ],
+  "ZUMRO": [
+    { name:"Quad Interface", widthFt:19.5, lengthFt:29.4, shape:"plus",
+      // Spec sheet: Length 29.4', Exterior Width 19.5', Interior Width 15.7', 454 sq ft
+      // Asymmetric plus: 29.4' long axis, 19.5' wide axis, arm width = 19.5' (E-W)
+      // N/S arm stubs = (29.4 - 19.5) / 2 = 4.95' each end
+      // Area check (interior): 19.5×15.7 + 2×(4.95×15.7) ≈ 461 sq ft ✓
+      armWidthFt: 15.7,  // interior width = the connecting tunnel width
+      note:"Quad Interface – 29.4'×19.5' plus/cross, 15.7' arm width, 454 sq ft" },
+    { name:"Model 400", widthFt:19.2, lengthFt:21, shape:"rect",
+      note:"Model 400 – 21'L × 19.2'W (internal), 400 sq ft" },
+    { name:"Model 600", widthFt:20, lengthFt:30, shape:"rect",
+      note:"Model 600 – approx 30'L × 20'W (internal), 600 sq ft" },
+  ],
+  "HDT": [
+    { name:"Base-X 305", widthFt:18, lengthFt:25, shape:"rect",
+      note:"Base-X Model 305 – 18'×25', 450 sq ft" },
+    { name:"Base-X Dome (6D31)", widthFt:27.0, lengthFt:31.083, shape:"elongated-hexagon",
+      // Spec sheet: 27'0" wide × 31'1" long, 6-sided stretched hexagon
+      // Angled end facets: each end has two 45° faces meeting at a point
+      // End triangle height derived from: (31'1" - 14'7" center flat) / 2 ≈ 8'3" per end
+      endCapFt: 8.25,  // depth of each pointed end cap (N and S)
+      note:"Base-X Dome 6D31 – 27'×31' elongated hexagon, 6 doors, 615 sq ft" },
+  ]
+};
+
+const COLORS = ['#58a6ff','#3fb950','#f78166','#ffa657','#d2a8ff','#79c0ff','#ff7b72','#ffffff'];
+let selectedColor = COLORS[0];
+let selectedTent = null;
+let placingMode = false;
+let customMode = false;
+let objects = [];
+let objectId = 0;
+
+// ─── Map ────────────────────────────────────────────────────────────────────────
+const map = L.map('map').setView([40.7128,-74.0060], 16);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution:'© OpenStreetMap © CARTO', maxZoom:21
+}).addTo(map);
+
+// ─── Build Vendor Tabs ──────────────────────────────────────────────────────────
+let currentVendor = Object.keys(TENT_DB)[0];
+const tabContainer = document.getElementById('vendor-tabs');
+const tentListEl = document.getElementById('tent-list');
+
+Object.keys(TENT_DB).forEach(v => {
+  const t = document.createElement('div');
+  t.className = 'vtab' + (v === currentVendor ? ' active' : '');
+  t.textContent = v;
+  t.onclick = () => setVendor(v);
+  t.id = 'vtab-' + v;
+  tabContainer.appendChild(t);
+});
+
+function setVendor(v) {
+  currentVendor = v;
+  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+  document.getElementById('vtab-' + v).classList.add('active');
+  renderTentList();
+}
+
+function renderTentList() {
+  tentListEl.innerHTML = '';
+  TENT_DB[currentVendor].forEach((tent, idx) => {
+    const d = document.createElement('div');
+    d.className = 'tent-item' + (selectedTent && selectedTent._key === `${currentVendor}_${idx}` ? ' selected' : '');
+    d.innerHTML = `
+      <div class="tent-name">${tent.name}</div>
+      <div class="tent-dims">${dimStr(tent)}</div>
+      <div class="tent-shape-badge">${
+        tent.shape === 'circle' ? '⬤ Circle' :
+        tent.shape === 'octagon' ? '⯃ Octagon' :
+        tent.shape === 'elongated-octagon' ? '⯃ Elong. Octagon' :
+        tent.shape === 'elongated-hexagon' ? '⬡ Elong. Hexagon' :
+        tent.shape === 'plus' ? '✛ Plus/Cross' :
+        '▬ Rectangle'}</div>
+    `;
+    d.onclick = () => {
+      selectedTent = { ...tent, _key: `${currentVendor}_${idx}`, vendor: currentVendor };
+      document.querySelectorAll('.tent-item').forEach(el => el.classList.remove('selected'));
+      d.classList.add('selected');
+    };
+    tentListEl.appendChild(d);
+  });
+}
+
+function dimStr(tent) {
+  if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
+  if (tent.shape === 'octagon') return `⯃ ${tent.widthFt}' octagon`;
+  if (tent.shape === 'elongated-octagon') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated oct.`;
+  if (tent.shape === 'elongated-hexagon') return `⬡ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated hex.`;
+  if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
+  return `${tent.widthFt}' × ${tent.lengthFt}'`;
+}
+
+renderTentList();
+
+// ─── Color Swatches ──────────────────────────────────────────────────────────────
+const swatchContainer = document.getElementById('color-swatches');
+COLORS.forEach(c => {
+  const s = document.createElement('div');
+  s.className = 'color-swatch' + (c === selectedColor ? ' active' : '');
+  s.style.background = c;
+  s.onclick = () => {
+    selectedColor = c;
+    document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('active'));
+    s.classList.add('active');
+  };
+  swatchContainer.appendChild(s);
+});
+
+// ─── Unit helpers ────────────────────────────────────────────────────────────────
+const FT_TO_M = 0.3048;
+
+// ─── Place from selected tent ────────────────────────────────────────────────────
+function startPlacing() {
+  if (!selectedTent) { alert('Select a tent model first.'); return; }
+  placingMode = true;
+  customMode = false;
+  map.dragging.disable();
+  map.getContainer().style.cursor = 'crosshair';
+  setMode(`Click to place ${selectedTent.vendor} ${selectedTent.name}`);
+}
+
+function startCustomPlace() {
+  placingMode = true;
+  customMode = true;
+  map.dragging.disable();
+  map.getContainer().style.cursor = 'crosshair';
+  setMode('Click to place custom shelter');
+}
+
+function cancelPlacing() {
+  placingMode = false;
+  customMode = false;
+  map.dragging.enable();
+  map.getContainer().style.cursor = '';
+  setMode('View Mode');
+}
+
+function setMode(txt) {
+  document.getElementById('mode-display').textContent = txt;
+}
+
+// ─── Map Click ────────────────────────────────────────────────────────────────────
+map.on('click', e => {
+  if (!placingMode) return;
+
+  let widthFt, lengthFt, shape, label, vendor;
+  const opacity = parseInt(document.getElementById('obj-opacity').value) / 100;
+  const customLabelInput = document.getElementById('obj-label').value.trim();
+
+  if (customMode) {
+    widthFt  = parseFloat(document.getElementById('custom-w').value) || 20;
+    lengthFt = parseFloat(document.getElementById('custom-l').value) || 30;
+    shape    = 'rect';
+    vendor   = 'Custom';
+    label    = document.getElementById('custom-label').value.trim() || `Custom ${widthFt}'×${lengthFt}'`;
+  } else {
+    widthFt  = selectedTent.widthFt;
+    lengthFt = selectedTent.lengthFt;
+    shape    = selectedTent.shape;
+    vendor   = selectedTent.vendor;
+    label    = customLabelInput || `${vendor} ${selectedTent.name}`;
+  }
+
+  const extra = (!customMode && selectedTent) ? {
+    cornerCutW: selectedTent.cornerCutW,
+    cornerCutL: selectedTent.cornerCutL,
+    endCapFt:   selectedTent.endCapFt,
+    armWidthFt: selectedTent.armWidthFt,
+  } : {};
+
+  placeObject(e.latlng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, selectedColor, opacity, vendor, extra);
+  cancelPlacing();
+});
+
+map.on('mousemove', e => {
+  document.getElementById('cursor-pos').textContent =
+    `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+});
+
+map.on('zoomend', () => {
+  document.getElementById('zoom-level').textContent = map.getZoom();
+});
+
+// ─── Object Placement & Drawing ──────────────────────────────────────────────────
+function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, vendor, extra={}) {
+  const id = ++objectId;
+  const obj = { id, latlng, label, shape, widthM, lengthM, color, opacity, vendor, layer: null, ...extra };
+  objects.push(obj);
+  drawObject(obj);
+  updateList();
+}
+
+function drawObject(obj) {
+  if (obj.layer) { map.removeLayer(obj.layer); obj.layer = null; }
+
+  const s = {
+    color: obj.color,
+    fillColor: obj.color,
+    fillOpacity: obj.opacity,
+    weight: 1.5,
+    opacity: 0.95
+  };
+
+  if (obj.shape === 'circle') {
+    obj.layer = L.circle(obj.latlng, { radius: obj.widthM / 2, ...s });
+  } else if (obj.shape === 'octagon') {
+    obj.layer = createGeoPolygon(obj.latlng, obj.widthM, obj.widthM, 'octagon', s);
+  } else if (obj.shape === 'elongated-octagon') {
+    const cornerCutWm = (obj.cornerCutW || 0) * FT_TO_M;
+    const cornerCutLm = (obj.cornerCutL || 0) * FT_TO_M;
+    obj.layer = createGeoElongatedOctagon(obj.latlng, obj.widthM, obj.lengthM, cornerCutWm, cornerCutLm, s);
+  } else if (obj.shape === 'elongated-hexagon') {
+    const endCapM = (obj.endCapFt || 0) * FT_TO_M;
+    obj.layer = createGeoElongatedHexagon(obj.latlng, obj.widthM, obj.lengthM, endCapM, s);
+  } else if (obj.shape === 'plus') {
+    const armWidthM = obj.armWidthFt ? obj.armWidthFt * FT_TO_M : obj.widthM * 0.7;
+    obj.layer = createGeoPlusSign(obj.latlng, obj.widthM, obj.lengthM, armWidthM, s);
+  } else {
+    obj.layer = createGeoRect(obj.latlng, obj.widthM, obj.lengthM, s);
+  }
+
+  const wFt = (obj.widthM / FT_TO_M).toFixed(1);
+  const lFt = (obj.lengthM / FT_TO_M).toFixed(1);
+  const tip = obj.shape === 'circle'
+    ? `<b>${obj.label}</b><br>Ø ${wFt} ft`
+    : obj.shape === 'octagon'
+    ? `<b>${obj.label}</b><br>Octagon Ø ${wFt} ft`
+    : obj.shape === 'elongated-octagon'
+    ? `<b>${obj.label}</b><br>${wFt}' × ${lFt}' elong. octagon`
+    : obj.shape === 'elongated-hexagon'
+    ? `<b>${obj.label}</b><br>${wFt}' × ${lFt}' elongated hexagon`
+    : obj.shape === 'plus'
+    ? `<b>${obj.label}</b><br>${wFt}' plus/cross (arm w: ${Math.round(obj.armWidthFt||0)}')`
+    : `<b>${obj.label}</b><br>${wFt}' × ${lFt}'`;
+
+  obj.layer.bindTooltip(tip, { permanent: false, direction: 'top', className: 'map-tooltip' });
+  obj.layer.addTo(map);
+  obj.layer.on('click', () => { if (confirm(`Delete "${obj.label}"?`)) deleteObj(obj.id); });
+}
+
+// Convert meters offset to lat/lng delta from center
+function metersToDeg(center, dx, dy) {
+  const R = 6371000;
+  const latRad = center.lat * Math.PI / 180;
+  const dLat = (dy / R) * (180 / Math.PI);
+  const dLng = (dx / R) * (180 / Math.PI) / Math.cos(latRad);
+  return [center.lat + dLat, center.lng + dLng];
+}
+
+// Regular octagon inscribed in a square of side=widthM
+// A regular octagon with "diameter" d has corner cuts of d*(1 - 1/sqrt(2))/2 ≈ d*0.1464
+function createGeoPolygon(center, widthM, heightM, type, style) {
+  let points = [];
+  if (type === 'octagon') {
+    const hw = widthM / 2;
+    const c = hw * (1 - 1 / Math.sqrt(2)); // corner cut size
+    // 8 points clockwise from top-left going right
+    const offsets = [
+      [ c - hw,  hw],  // top-left → top-right direction
+      [ hw - c,  hw],
+      [ hw,  hw - c],
+      [ hw, -hw + c],
+      [ hw - c, -hw],
+      [ c - hw, -hw],
+      [-hw, -hw + c],
+      [-hw,  hw - c],
+    ];
+    points = offsets.map(([dx, dy]) => metersToDeg(center, dx, dy));
+  }
+  return L.polygon(points, style);
+}
+
+// Elongated octagon: overall widthM × lengthM, with corner cuts cornerCutW × cornerCutL
+// The 4 corners are cut diagonally. The spec gives the "bounding box" dimensions.
+function createGeoElongatedOctagon(center, widthM, lengthM, cornerCutWm, cornerCutLm, style) {
+  const hw = widthM / 2;    // half-width  (E-W)
+  const hl = lengthM / 2;   // half-length (N-S)
+  const cw = cornerCutWm;   // corner cut measured along width axis
+  const cl = cornerCutLm;   // corner cut measured along length axis
+
+  // 8 points: start top-left, go clockwise
+  // Top edge (N side): from (−hw+cw, +hl) to (+hw−cw, +hl)
+  // NE corner cut: from (+hw−cw, +hl) to (+hw, +hl−cl)
+  // Right edge (E side): from (+hw, +hl−cl) to (+hw, −hl+cl)
+  // SE corner: from (+hw, −hl+cl) to (+hw−cw, −hl)
+  // Bottom edge (S side): from (+hw−cw, −hl) to (−hw+cw, −hl)
+  // SW corner: from (−hw+cw, −hl) to (−hw, −hl+cl)
+  // Left edge (W side): from (−hw, −hl+cl) to (−hw, +hl−cl)
+  // NW corner: from (−hw, +hl−cl) to (−hw+cw, +hl)
+
+  const offsets = [
+    [-hw + cw,  hl],
+    [ hw - cw,  hl],
+    [ hw,  hl - cl],
+    [ hw, -hl + cl],
+    [ hw - cw, -hl],
+    [-hw + cw, -hl],
+    [-hw, -hl + cl],
+    [-hw,  hl - cl],
+  ];
+
+  const points = offsets.map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+// Elongated hexagon (HDT Base-X Dome shape):
+// widthM = flat-to-flat width (E-W), lengthM = total length (N-S)
+// endCapM = depth of the pointed triangular end cap at N and S ends
+// Shape: two long parallel sides + two angled faces meeting at a point on each end
+// 6 vertices total:
+//   N tip:  (0, +hl)
+//   NE:     (+hw, +hl - endCapM)
+//   SE:     (+hw, -hl + endCapM)
+//   S tip:  (0, -hl)
+//   SW:     (-hw, -hl + endCapM)
+//   NW:     (-hw, +hl - endCapM)
+function createGeoElongatedHexagon(center, widthM, lengthM, endCapM, style) {
+  const hw = widthM / 2;
+  const hl = lengthM / 2;
+  const ec = endCapM;
+
+  const offsets = [
+    [ 0,       hl     ],  // N tip
+    [ hw,  hl - ec    ],  // NE
+    [ hw, -hl + ec    ],  // SE
+    [ 0,      -hl     ],  // S tip
+    [-hw, -hl + ec    ],  // SW
+    [-hw,  hl - ec    ],  // NW
+  ];
+
+  const points = offsets.map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+// Plus / Cross shape (DLX X-HUB, Zumro Quad Interface):
+// totalWM   = full E-W tip-to-tip span
+// totalLM   = full N-S tip-to-tip span
+// armWidthM = width of each arm (the connecting tunnel dimension)
+// For a symmetric plus: totalWM === totalLM
+// For an asymmetric plus (like Zumro Quad): totalLM > totalWM, where totalWM = the wide face
+//   and the N/S arm stubs = (totalLM - totalWM) / 2
+// 12-vertex polygon, clockwise from NW corner of north arm:
+function createGeoPlusSign(center, totalWM, totalLM, armWidthM, style) {
+  const hw = totalWM / 2;    // half E-W span
+  const hl = totalLM / 2;    // half N-S span
+  const aw = armWidthM / 2;  // half arm width
+
+  const offsets = [
+    [-aw,  hl  ],  // N arm – top-left
+    [ aw,  hl  ],  // N arm – top-right
+    [ aw,  aw  ],  // inner NE corner  (use aw not hw for square inner corners)
+    [ hw,  aw  ],  // E arm – top
+    [ hw, -aw  ],  // E arm – bottom
+    [ aw, -aw  ],  // inner SE corner
+    [ aw, -hl  ],  // S arm – bottom-right
+    [-aw, -hl  ],  // S arm – bottom-left
+    [-aw, -aw  ],  // inner SW corner
+    [-hw, -aw  ],  // W arm – bottom
+    [-hw,  aw  ],  // W arm – top
+    [-aw,  aw  ],  // inner NW corner
+  ];
+
+  const points = offsets.map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+function createGeoRect(center, widthM, heightM, style) {
+  const R = 6371000;
+  const lat = center.lat * Math.PI / 180;
+  const dLat = (heightM / 2 / R) * (180 / Math.PI);
+  const dLng = (widthM / 2 / R) * (180 / Math.PI) / Math.cos(lat);
+  return L.rectangle([
+    [center.lat - dLat, center.lng - dLng],
+    [center.lat + dLat, center.lng + dLng]
+  ], style);
+}
+
+function deleteObj(id) {
+  const idx = objects.findIndex(o => o.id === id);
+  if (idx === -1) return;
+  if (objects[idx].layer) map.removeLayer(objects[idx].layer);
+  objects.splice(idx, 1);
+  updateList();
+}
+
+function clearAll() {
+  if (!objects.length) return;
+  if (!confirm('Clear all placed tents?')) return;
+  objects.forEach(o => { if (o.layer) map.removeLayer(o.layer); });
+  objects = [];
+  updateList();
+}
+
+function updateList() {
+  const el = document.getElementById('obj-list-items');
+  const cnt = objects.length;
+  document.getElementById('obj-count').textContent = cnt;
+  document.getElementById('tent-count').textContent = cnt;
+  if (!cnt) { el.innerHTML = '<p style="font-size:11px;color:#484f58;padding:10px;">No tents placed yet.</p>'; return; }
+  el.innerHTML = objects.map(o => {
+    const wFt = (o.widthM / FT_TO_M).toFixed(0);
+    const lFt = (o.lengthM / FT_TO_M).toFixed(0);
+    const dims = o.shape === 'circle' ? `Ø${wFt}'`
+      : o.shape === 'octagon' ? `Oct Ø${wFt}'`
+      : o.shape === 'elongated-octagon' ? `${wFt}'×${lFt}' Oct`
+      : o.shape === 'elongated-hexagon' ? `${wFt}'×${lFt}' Hex`
+      : o.shape === 'plus' ? `${wFt}' Plus`
+      : `${wFt}'×${lFt}'`;
+    return `<div class="obj-item">
+      <div class="obj-color-dot" style="background:${o.color}"></div>
+      <div class="obj-name">${o.label}</div>
+      <div style="font-size:10px;color:#8b949e;white-space:nowrap;">${dims}</div>
+      <button class="obj-del" onclick="deleteObj(${o.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ─── Address Search ──────────────────────────────────────────────────────────────
+async function searchLocation() {
+  const input = document.getElementById('address-input').value.trim();
+  if (!input) return;
+
+  const coordMatch = input.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+  if (coordMatch) {
+    const lat = parseFloat(coordMatch[1]), lng = parseFloat(coordMatch[2]);
+    map.setView([lat, lng], 17);
+    L.popup().setLatLng([lat, lng]).setContent(`📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`).openOn(map);
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=1`);
+    const data = await res.json();
+    if (data.length > 0) {
+      const { lat, lon, display_name } = data[0];
+      map.setView([parseFloat(lat), parseFloat(lon)], 17);
+      L.popup().setLatLng([lat, lon]).setContent(`📍 <b>${display_name.split(',')[0]}</b>`).openOn(map);
+    } else {
+      alert('Location not found.');
+    }
+  } catch (e) { alert('Search failed. Check connection.'); }
+}
+
+document.getElementById('address-input').addEventListener('keydown', e => { if (e.key==='Enter') searchLocation(); });
+
+// Tooltip style
+const style = document.createElement('style');
+style.textContent = `.map-tooltip { background:#161b22; color:#e6edf3; border:1px solid #30363d; border-radius:4px; padding:4px 8px; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.5); }
+.map-tooltip::before { display:none; }
+`;
+document.head.appendChild(style);
+
+// Initial
+document.getElementById('zoom-level').textContent = map.getZoom();
+</script>
+</body>
+</html>

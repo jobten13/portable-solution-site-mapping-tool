@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emergency Tent Site Planner</title>
+<!--
+  VPC Mapping Tool
+  Version: 0.6.3
+  Last Updated: 2026-02-26
+  Change Log:
+    - 0.6.3: Added on-map rotate handle with separate move-vs-rotate interactions.
+    - 0.6.2: Switched to click-then-place workflow and added true drag-to-move for placed objects.
+    - 0.6.1: Added drag-and-drop tent placement from sidebar to map.
+    - 0.6.0: Completed Tier 3 with performance and modular refactor pass.
+    - 0.5.2: Tier 3 accessibility/keyboard pass (focus visibility, keyboard-selectable lists, and shortcuts).
+    - 0.5.1: Tier 3 security hardening (sanitized labels and normalized colors for rendered HTML).
+    - 0.5.0: Completed Tier 2 with area measurement and GeoJSON export.
+    - 0.4.0: Added scenario save/load (JSON) with map view and object restoration.
+    - 0.3.2: Added clearance presets and apply-to-all buffer action.
+    - 0.3.1: Added configurable clearance buffers with buffered overlap checks.
+    - 0.3.0: Started Tier 2 with distance measurement tool and overlap warnings.
+    - 0.2.7: Hardened search/print edge cases (response checks, antimeridian-safe bias, print restore fallback).
+    - 0.2.6: Added map-area-biased search with automatic global fallback.
+    - 0.2.5: Added printable operation name field and hybrid labels overlay for satellite context.
+    - 0.2.4: Added print footer with date/time, scale, and center coordinates.
+    - 0.2.3: Added Back to View Mode action and Print Fit to Page workflow.
+    - 0.2.2: Added fixed-scale preset buttons (set-once, manual zoom still enabled).
+    - 0.2.1: Added multi-result search picker for choosing exact geocode matches.
+    - 0.2.0: Added Tier 1 core upgrades (satellite basemap default, basemap toggle, rotation control, and live scale ratio).
+    - 0.1.0: Initial versioned baseline cloned from emergency-tent-placer.html.
+-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+#header {
+  padding:10px 16px; background:#161b22;
+  border-bottom:1px solid #30363d;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap; z-index:1000;
+}
+#header h1 { font-size:16px; color:#58a6ff; white-space:nowrap; font-weight:600; }
+#search-bar { display:flex; gap:6px; flex:1; min-width:240px; }
+#address-input {
+  flex:1; padding:7px 10px; border-radius:6px;
+  border:1px solid #30363d; background:#21262d; color:#e6edf3;
+  font-size:13px; outline:none;
+}
+#address-input:focus { border-color:#58a6ff; }
+#search-results {
+  display:none;
+  min-width:260px;
+  max-width:380px;
+}
+#search-results.visible { display:block; }
+.search-opt {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  color:#8b949e;
+  white-space:nowrap;
+}
+.search-opt input {
+  width:auto;
+  margin:0;
+}
+button {
+  padding:7px 14px; border-radius:6px; border:none;
+  background:#238636; color:white; cursor:pointer; font-size:12px;
+  transition:background 0.15s; white-space:nowrap;
+}
+button:focus-visible, input:focus-visible, select:focus-visible, .vtab:focus-visible, .tent-item:focus-visible {
+  outline:2px solid #58a6ff;
+  outline-offset:2px;
+}
+button:hover { background:#2ea043; }
+button.blue { background:#1f6feb; }
+button.blue:hover { background:#388bfd; }
+button.ghost { background:#21262d; border:1px solid #30363d; }
+button.ghost:hover { background:#30363d; }
+button.danger { background:#da3633; }
+button.danger:hover { background:#f85149; }
+.header-btn { padding:6px 10px; font-size:11px; }
+
+#main { display:flex; flex:1; overflow:hidden; }
+
+#sidebar {
+  width:290px; background:#161b22; border-right:1px solid #30363d;
+  display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0;
+}
+
+.sb-section { padding:12px; border-bottom:1px solid #30363d; }
+.sb-section h3 { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#8b949e; margin-bottom:8px; }
+
+/* Vendor Tabs */
+.vendor-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.vtab {
+  padding:4px 8px; font-size:11px; border-radius:4px; cursor:pointer;
+  background:#21262d; color:#8b949e; border:1px solid #30363d;
+  transition:all 0.15s;
+}
+.vtab:hover { border-color:#58a6ff; color:#e6edf3; }
+.vtab.active { background:#1f6feb; border-color:#1f6feb; color:white; }
+
+/* Tent list */
+.tent-list { display:flex; flex-direction:column; gap:4px; }
+.tent-item {
+  padding:8px 10px; background:#21262d; border-radius:6px;
+  border:1px solid #30363d; cursor:pointer; transition:all 0.15s;
+}
+.tent-item:hover { border-color:#58a6ff; background:#1c2128; }
+.tent-item.selected { border-color:#238636; background:#0d2414; }
+.tent-name { font-size:13px; font-weight:500; color:#e6edf3; }
+.tent-dims { font-size:11px; color:#8b949e; margin-top:2px; }
+.tent-shape-badge {
+  display:inline-block; font-size:10px; padding:1px 5px; border-radius:3px;
+  background:#30363d; color:#8b949e; margin-top:3px;
+}
+
+/* Properties */
+label { font-size:11px; color:#8b949e; display:block; margin-bottom:3px; margin-top:8px; }
+input[type=text], input[type=number], select {
+  width:100%; padding:6px 8px; background:#21262d; border:1px solid #30363d;
+  border-radius:6px; color:#e6edf3; font-size:12px; outline:none;
+}
+input:focus, select:focus { border-color:#58a6ff; }
+input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
+
+.color-row { display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
+.color-swatch {
+  width:22px; height:22px; border-radius:50%; cursor:pointer;
+  border:2px solid transparent; transition:all 0.15s;
+}
+.color-swatch.active { border-color:white; transform:scale(1.15); }
+.scale-btn-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.scale-btn {
+  background:#21262d; border:1px solid #30363d; color:#8b949e;
+  padding:5px 8px; font-size:11px; border-radius:6px;
+}
+.scale-btn:hover { border-color:#58a6ff; color:#e6edf3; background:#1c2128; }
+.inline-controls { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+
+/* Place button */
+.place-btn {
+  width:100%; margin-top:8px; padding:9px;
+  background:#238636; font-size:13px; font-weight:500;
+}
+
+/* Placed objects */
+#obj-list-items { padding:12px; }
+.obj-item {
+  display:flex; align-items:center; gap:8px; padding:7px 8px;
+  background:#21262d; border-radius:6px; margin-bottom:4px; font-size:12px;
+  border:1px solid #30363d;
+}
+.obj-item.active {
+  border-color:#ffa657;
+  box-shadow:0 0 0 1px rgba(255,166,87,0.35) inset;
+}
+.obj-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.obj-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e6edf3; }
+.obj-del { background:none; border:none; color:#8b949e; padding:2px 5px; font-size:13px; }
+.obj-del:hover { color:#f85149; background:none; }
+.warn-text { color:#f78166; font-size:11px; margin-top:6px; }
+
+/* Map */
+#map { flex:1; }
+
+/* Status */
+#statusbar {
+  background:#0d1117; border-top:1px solid #30363d;
+  padding:4px 12px; font-size:11px; color:#8b949e;
+  display:flex; gap:20px; align-items:center;
+}
+#statusbar span { color:#58a6ff; }
+
+.mode-badge {
+  padding:3px 8px; border-radius:12px; font-size:11px;
+  background:#1f2937; color:#58a6ff; border:1px solid #1f6feb;
+}
+.version-badge {
+  position:fixed; right:10px; bottom:8px; z-index:1200;
+  padding:2px 7px; border-radius:10px; font-size:10px;
+  background:rgba(13,17,23,0.8); color:#8b949e; border:1px solid #30363d;
+  pointer-events:none;
+}
+#print-meta {
+  display:none;
+  position:fixed;
+  left:10px;
+  bottom:8px;
+  z-index:1250;
+  font-size:10px;
+  color:#0d1117;
+  background:rgba(255,255,255,0.9);
+  border:1px solid #d0d7de;
+  border-radius:6px;
+  padding:4px 7px;
+  font-family:Arial, sans-serif;
+}
+
+/* Note */
+.dim-note { font-size:10px; color:#8b949e; margin-top:4px; font-style:italic; }
+
+@media print {
+  html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
+  #header, #sidebar, #statusbar, #version-display { display:none !important; }
+  #main { display:block !important; height:100vh !important; }
+  #map { width:100vw !important; height:100vh !important; }
+  .leaflet-control-container { display:none !important; }
+  #print-meta { display:block !important; }
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>🏕 Emergency Tent Site Planner</h1>
+  <div id="search-bar">
+    <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" />
+    <button class="blue" onclick="searchLocation()">Search</button>
+  </div>
+  <label class="search-opt"><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
+  <select id="search-results" aria-label="Search result matches"></select>
+  <div id="mode-display" class="mode-badge" role="status" aria-live="polite">View Mode</div>
+  <button class="ghost header-btn" onclick="resetViewMode()">Back to View</button>
+  <button class="ghost header-btn" onclick="printFitToPage()">Print Fit</button>
+</div>
+
+<div id="main">
+  <div id="sidebar">
+
+    <!-- Vendor Tabs -->
+    <div class="sb-section">
+      <h3>Vendor</h3>
+      <div class="vendor-tabs" id="vendor-tabs"></div>
+      <div class="tent-list" id="tent-list"></div>
+    </div>
+
+    <!-- Properties -->
+    <div class="sb-section">
+      <h3>Label & Style</h3>
+
+      <label>Custom Label (optional)</label>
+      <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" />
+
+      <label>Color</label>
+      <div class="color-row" id="color-swatches"></div>
+
+      <label>Opacity: <span id="opacity-val">65</span>%</label>
+      <input type="range" id="obj-opacity" min="15" max="90" value="65" aria-label="Object opacity percentage"
+        oninput="document.getElementById('opacity-val').textContent=this.value" />
+
+      <label>Rotation: <span id="rotation-val">0</span>°</label>
+      <input type="range" id="obj-rotation" min="0" max="359" value="0" aria-label="Object rotation degrees"
+        oninput="document.getElementById('rotation-val').textContent=this.value" />
+
+      <label>Clearance Buffer: <span id="buffer-val">0</span> ft</label>
+      <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet"
+        oninput="document.getElementById('buffer-val').textContent=this.value" />
+      <div class="inline-controls">
+        <button class="scale-btn" onclick="applyBufferPreset(0)">None</button>
+        <button class="scale-btn" onclick="applyBufferPreset(5)">Std 5 ft</button>
+        <button class="scale-btn" onclick="applyBufferPreset(10)">High 10 ft</button>
+      </div>
+      <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;">Apply Buffer to All Placed</button>
+
+      <button class="place-btn" onclick="startPlacing()">📍 Place on Map</button>
+      <button class="ghost" onclick="cancelPlacing()" style="width:100%;margin-top:4px;font-size:12px;">Cancel</button>
+    </div>
+
+    <!-- Custom shape -->
+    <div class="sb-section">
+      <h3>Custom Rectangle</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:6px;">Drag a box on the map to place a custom-sized shelter.</p>
+      <div style="display:flex;gap:6px;">
+        <div style="flex:1">
+          <label>Width (ft)</label>
+          <input type="number" id="custom-w" value="20" min="1" aria-label="Custom width in feet" />
+        </div>
+        <div style="flex:1">
+          <label>Length (ft)</label>
+          <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" />
+        </div>
+      </div>
+      <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" />
+      <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;">Place Custom</button>
+    </div>
+
+    <!-- Scale presets -->
+    <div class="sb-section">
+      <h3>Scale Presets</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:4px;">Set map scale once, then continue normal zoom/pan.</p>
+      <div class="scale-btn-row">
+        <button class="scale-btn" onclick="applyScalePreset(100)">1:100</button>
+        <button class="scale-btn" onclick="applyScalePreset(150)">1:150</button>
+        <button class="scale-btn" onclick="applyScalePreset(200)">1:200</button>
+        <button class="scale-btn" onclick="applyScalePreset(500)">1:500</button>
+      </div>
+    </div>
+
+    <!-- Print metadata -->
+    <div class="sb-section">
+      <h3>Print Metadata</h3>
+      <label>Operation Name</label>
+      <input type="text" id="operation-name" placeholder="e.g. UC Davis Parking Lot Surge Site" aria-label="Operation name for print metadata" />
+    </div>
+
+    <!-- Scenario -->
+    <div class="sb-section">
+      <h3>Scenario</h3>
+      <button class="blue" onclick="saveScenario()" style="width:100%;">Save Scenario</button>
+      <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;">Load Scenario</button>
+      <button class="ghost" onclick="exportGeoJSON()" style="width:100%;margin-top:4px;">Export GeoJSON</button>
+      <p style="font-size:11px;color:#8b949e;margin-top:6px;">Saves map view, placed objects, and key settings to JSON.</p>
+    </div>
+
+    <!-- Measure -->
+    <div class="sb-section">
+      <h3>Measure</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:4px;">Distance: 2 clicks. Area: 3+ clicks, then finish.</p>
+      <button class="ghost" onclick="toggleMeasureMode()" style="width:100%;">Measure Distance</button>
+      <button class="ghost" onclick="toggleAreaMeasureMode()" style="width:100%;margin-top:4px;">Measure Area</button>
+      <button class="ghost" onclick="finishAreaMeasure()" style="width:100%;margin-top:4px;">Finish Area</button>
+      <button class="ghost" onclick="clearMeasure()" style="width:100%;margin-top:4px;">Clear Measurement</button>
+      <div id="measure-readout" style="font-size:11px;color:#8b949e;margin-top:6px;">No measurement.</div>
+    </div>
+
+    <!-- Placed objects list -->
+    <div style="border-bottom:1px solid #30363d;padding:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
+        <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;">Clear All</button>
+      </div>
+      <div id="overlap-warning" class="warn-text" style="display:none;"></div>
+    </div>
+    <div id="obj-list-items"><p style="font-size:11px;color:#484f58;padding:10px;">No tents placed yet.</p></div>
+
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<div id="statusbar">
+  <div>Zoom: <span id="zoom-level">14</span></div>
+  <div>Scale: <span id="scale-ratio">1:0</span></div>
+  <div>Tents: <span id="tent-count">0</span></div>
+  <div>Overlaps: <span id="overlap-count">0</span></div>
+  <div id="cursor-pos">Hover map for coords</div>
+</div>
+<div id="version-display" class="version-badge">v0.1.0</div>
+<div id="print-meta">
+  Operation: <span id="print-meta-operation">Untitled</span> |
+  Printed: <span id="print-meta-date">-</span> |
+  Scale: <span id="print-meta-scale">-</span> |
+  Center: <span id="print-meta-center">-</span>
+</div>
+<input type="file" id="scenario-file-input" accept=".json,application/json" style="display:none;" />
+
+<script>
+const APP_META = {
+  name: 'VPC Mapping Tool',
+  version: '0.6.3',
+  lastUpdated: '2026-02-26',
+  changelog: [
+    { version: '0.6.3', date: '2026-02-26', note: 'Added on-map rotate handle with separate move-vs-rotate interactions.' },
+    { version: '0.6.2', date: '2026-02-26', note: 'Switched to click-then-place workflow and added true drag-to-move for placed objects.' },
+    { version: '0.6.1', date: '2026-02-26', note: 'Added drag-and-drop tent placement from sidebar to map.' },
+    { version: '0.6.0', date: '2026-02-26', note: 'Completed Tier 3 with performance and modular refactor pass.' },
+    { version: '0.5.2', date: '2026-02-26', note: 'Tier 3 accessibility/keyboard pass (focus visibility, keyboard-selectable lists, and shortcuts).' },
+    { version: '0.5.1', date: '2026-02-26', note: 'Tier 3 security hardening (sanitized labels and normalized colors for rendered HTML).' },
+    { version: '0.5.0', date: '2026-02-26', note: 'Completed Tier 2 with area measurement and GeoJSON export.' },
+    { version: '0.4.0', date: '2026-02-26', note: 'Added scenario save/load (JSON) with map view and object restoration.' },
+    { version: '0.3.2', date: '2026-02-26', note: 'Added clearance presets and apply-to-all buffer action.' },
+    { version: '0.3.1', date: '2026-02-26', note: 'Added configurable clearance buffers with buffered overlap checks.' },
+    { version: '0.3.0', date: '2026-02-26', note: 'Started Tier 2 with distance measurement tool and overlap warnings.' },
+    { version: '0.2.7', date: '2026-02-26', note: 'Hardened search/print edge cases (response checks, antimeridian-safe bias, print restore fallback).' },
+    { version: '0.2.6', date: '2026-02-26', note: 'Added map-area-biased search with automatic global fallback.' },
+    { version: '0.2.5', date: '2026-02-26', note: 'Added printable operation name field and hybrid labels overlay for satellite context.' },
+    { version: '0.2.4', date: '2026-02-26', note: 'Added print footer with date/time, scale, and center coordinates.' },
+    { version: '0.2.3', date: '2026-02-26', note: 'Added Back to View Mode action and Print Fit to Page workflow.' },
+    { version: '0.2.2', date: '2026-02-26', note: 'Added fixed-scale preset buttons (set-once, manual zoom still enabled).' },
+    { version: '0.2.1', date: '2026-02-26', note: 'Added multi-result search picker for choosing exact geocode matches.' },
+    { version: '0.2.0', date: '2026-02-26', note: 'Added Tier 1 core upgrades (satellite basemap default, basemap toggle, rotation control, and live scale ratio).' },
+    { version: '0.1.0', date: '2026-02-26', note: 'Initial versioned baseline cloned from emergency-tent-placer.html.' }
+  ]
+};
+
+// ─── Tent Database ──────────────────────────────────────────────────────────────
+// All dimensions in feet (width × length). Circles use widthFt as diameter.
+const TENT_DB = {
+  "BLU-MED": [
+    { name:"2032.5", widthFt:20, lengthFt:32.5, shape:"rect",
+      note:"XP Medical Shelter – 20'×32.5', 650 sq ft" },
+    { name:"2039", widthFt:20, lengthFt:39, shape:"rect",
+      note:"XP Medical Shelter – 20'×39' (modular extend)" },
+    { name:"Vestibule", widthFt:8, lengthFt:10, shape:"rect",
+      note:"Entry Vestibule – approx 8'×10'" },
+  ],
+  "Western Shelter": [
+    { name:"GK1935", widthFt:18.583, lengthFt:33.917, shape:"elongated-octagon",
+      // Spec sheet: 18'7" wide × 33'11" long overall, corner cuts ~7'6" × 9'4"
+      // Elongated octagon: rectangle center + angled cuts on all 4 corners
+      cornerCutW: 7.5,   // 7'6" cut along width axis
+      cornerCutL: 9.333, // 9'4" cut along length axis
+      note:"GK1935 – 18'7\"×33'11\" elongated octagon, 570 sq ft" },
+    { name:"GK20", widthFt:20, lengthFt:20, shape:"octagon",
+      note:"GK20 – 20' regular octagon, 286 sq ft" },
+    { name:"Vestibule", widthFt:6, lengthFt:8, shape:"rect",
+      note:"Vestibule – approx 6'×8'" },
+  ],
+  "DLX": [
+    { name:"X-24", widthFt:24, lengthFt:16, shape:"rect",
+      note:"X-Series X-24 – 24'×16', 384 sq ft" },
+    { name:"Quad (X-HUB)", widthFt:22, lengthFt:22, shape:"plus",
+      // X-HUB is a plus/cross shape connecting to X-Series shelters (all 16' wide) on all 4 sides.
+      // Overall bounding box ~22'×22'; arm width = 16'; arm extension = (22-16)/2 = 3' per side.
+      armWidthFt: 16,
+      note:"X-HUB – plus/cross shape, 16' arm width, ~22' overall bounding box, connects 4 shelters" },
+    { name:"X-32", widthFt:32, lengthFt:16, shape:"rect",
+      note:"X-Series X-32 – 32'×16', 512 sq ft" },
+  ],
+  "ZUMRO": [
+    { name:"Quad Interface", widthFt:19.5, lengthFt:29.4, shape:"plus",
+      // Spec sheet: Length 29.4', Exterior Width 19.5', Interior Width 15.7', 454 sq ft
+      // Asymmetric plus: 29.4' long axis, 19.5' wide axis, arm width = 19.5' (E-W)
+      // N/S arm stubs = (29.4 - 19.5) / 2 = 4.95' each end
+      // Area check (interior): 19.5×15.7 + 2×(4.95×15.7) ≈ 461 sq ft ✓
+      armWidthFt: 15.7,  // interior width = the connecting tunnel width
+      note:"Quad Interface – 29.4'×19.5' plus/cross, 15.7' arm width, 454 sq ft" },
+    { name:"Model 400", widthFt:19.2, lengthFt:21, shape:"rect",
+      note:"Model 400 – 21'L × 19.2'W (internal), 400 sq ft" },
+    { name:"Model 600", widthFt:20, lengthFt:30, shape:"rect",
+      note:"Model 600 – approx 30'L × 20'W (internal), 600 sq ft" },
+  ],
+  "HDT": [
+    { name:"Base-X 305", widthFt:18, lengthFt:25, shape:"rect",
+      note:"Base-X Model 305 – 18'×25', 450 sq ft" },
+    { name:"Base-X Dome (6D31)", widthFt:27.0, lengthFt:31.083, shape:"elongated-hexagon",
+      // Spec sheet: 27'0" wide × 31'1" long, 6-sided stretched hexagon
+      // Angled end facets: each end has two 45° faces meeting at a point
+      // End triangle height derived from: (31'1" - 14'7" center flat) / 2 ≈ 8'3" per end
+      endCapFt: 8.25,  // depth of each pointed end cap (N and S)
+      note:"Base-X Dome 6D31 – 27'×31' elongated hexagon, 6 doors, 615 sq ft" },
+  ]
+};
+
+const COLORS = ['#58a6ff','#3fb950','#f78166','#ffa657','#d2a8ff','#79c0ff','#ff7b72','#ffffff'];
+const MAX_LABEL_LENGTH = 80;
+let selectedColor = COLORS[0];
+let selectedTent = null;
+let placingMode = false;
+let customMode = false;
+let objects = [];
+let objectId = 0;
+let pendingSearchResults = [];
+let measureMode = false;
+let measureStart = null;
+let measureTempLayer = null;
+let areaMeasureMode = false;
+let areaMeasurePoints = [];
+let areaMeasureLayer = null;
+let overlapRaf = 0;
+let activeObjectDrag = null;
+let activeRotateDrag = null;
+let selectedObjectId = null;
+let rotateHandleLayer = null;
+
+// ─── Map ────────────────────────────────────────────────────────────────────────
+const map = L.map('map').setView([40.7128,-74.0060], 16);
+const mapContainer = map.getContainer();
+const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles © Esri',
+  maxZoom: 21
+});
+const labelsLayer = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Labels © Esri',
+  maxZoom: 21
+});
+const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap © CARTO',
+  maxZoom: 21
+});
+
+satelliteLayer.addTo(map);
+labelsLayer.addTo(map);
+L.control.layers(
+  { 'Satellite (Default)': satelliteLayer, 'Street': streetLayer },
+  { 'Place Labels (Hybrid)': labelsLayer },
+  { position: 'topright', collapsed: true }
+).addTo(map);
+L.control.scale({ imperial: true, metric: true, maxWidth: 120 }).addTo(map);
+
+// ─── Build Vendor Tabs ──────────────────────────────────────────────────────────
+let currentVendor = Object.keys(TENT_DB)[0];
+const tabContainer = document.getElementById('vendor-tabs');
+const tentListEl = document.getElementById('tent-list');
+
+Object.keys(TENT_DB).forEach(v => {
+  const t = document.createElement('div');
+  t.className = 'vtab' + (v === currentVendor ? ' active' : '');
+  t.textContent = v;
+  t.setAttribute('role', 'button');
+  t.setAttribute('tabindex', '0');
+  t.setAttribute('aria-label', `Select vendor ${v}`);
+  t.onclick = () => setVendor(v);
+  t.onkeydown = ev => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      setVendor(v);
+    }
+  };
+  t.id = 'vtab-' + v;
+  tabContainer.appendChild(t);
+});
+
+function setVendor(v) {
+  currentVendor = v;
+  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+  document.getElementById('vtab-' + v).classList.add('active');
+  renderTentList();
+}
+
+function renderTentList() {
+  tentListEl.textContent = '';
+  const fragment = document.createDocumentFragment();
+  TENT_DB[currentVendor].forEach((tent, idx) => {
+    fragment.appendChild(createTentCard(tent, idx));
+  });
+  tentListEl.appendChild(fragment);
+}
+
+function tentShapeBadge(shape) {
+  if (shape === 'circle') return '⬤ Circle';
+  if (shape === 'octagon') return '⯃ Octagon';
+  if (shape === 'elongated-octagon') return '⯃ Elong. Octagon';
+  if (shape === 'elongated-hexagon') return '⬡ Elong. Hexagon';
+  if (shape === 'plus') return '✛ Plus/Cross';
+  return '▬ Rectangle';
+}
+
+function createTentCard(tent, idx) {
+  const card = document.createElement('div');
+  const isSelected = selectedTent && selectedTent._key === `${currentVendor}_${idx}`;
+  card.className = 'tent-item' + (isSelected ? ' selected' : '');
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
+  card.setAttribute('aria-label', `Select tent ${tent.name}, ${dimStr(tent)}`);
+
+  const name = document.createElement('div');
+  name.className = 'tent-name';
+  name.textContent = tent.name;
+
+  const dims = document.createElement('div');
+  dims.className = 'tent-dims';
+  dims.textContent = dimStr(tent);
+
+  const badge = document.createElement('div');
+  badge.className = 'tent-shape-badge';
+  badge.textContent = tentShapeBadge(tent.shape);
+
+  card.appendChild(name);
+  card.appendChild(dims);
+  card.appendChild(badge);
+
+  card.onclick = () => {
+    selectedTent = { ...tent, _key: `${currentVendor}_${idx}`, vendor: currentVendor };
+    renderTentList();
+    startPlacing();
+  };
+  card.onkeydown = ev => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      card.click();
+    }
+  };
+  return card;
+}
+
+function dimStr(tent) {
+  if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
+  if (tent.shape === 'octagon') return `⯃ ${tent.widthFt}' octagon`;
+  if (tent.shape === 'elongated-octagon') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated oct.`;
+  if (tent.shape === 'elongated-hexagon') return `⬡ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated hex.`;
+  if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
+  return `${tent.widthFt}' × ${tent.lengthFt}'`;
+}
+
+renderTentList();
+
+// ─── Color Swatches ──────────────────────────────────────────────────────────────
+const swatchContainer = document.getElementById('color-swatches');
+COLORS.forEach(c => {
+  const s = document.createElement('div');
+  s.className = 'color-swatch' + (c === selectedColor ? ' active' : '');
+  s.style.background = c;
+  s.onclick = () => {
+    selectedColor = c;
+    document.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('active'));
+    s.classList.add('active');
+  };
+  swatchContainer.appendChild(s);
+});
+
+// ─── Unit helpers ────────────────────────────────────────────────────────────────
+const FT_TO_M = 0.3048;
+
+// ─── Place from selected tent ────────────────────────────────────────────────────
+function startPlacing() {
+  if (!selectedTent) { alert('Select a tent model first.'); return; }
+  placingMode = true;
+  customMode = false;
+  map.dragging.disable();
+  map.getContainer().style.cursor = 'crosshair';
+  setMode(`Click to place ${selectedTent.vendor} ${selectedTent.name}`);
+}
+
+function startCustomPlace() {
+  placingMode = true;
+  customMode = true;
+  map.dragging.disable();
+  map.getContainer().style.cursor = 'crosshair';
+  setMode('Click to place custom shelter');
+}
+
+function cancelPlacing() {
+  placingMode = false;
+  customMode = false;
+  map.dragging.enable();
+  map.getContainer().style.cursor = '';
+  setMode('View Mode');
+}
+
+function setMode(txt) {
+  document.getElementById('mode-display').textContent = txt;
+}
+
+function resetViewMode() {
+  cancelPlacing();
+  measureMode = false;
+  areaMeasureMode = false;
+  endObjectDrag();
+  endRotateDrag();
+  setMode('View Mode');
+}
+
+function toggleMeasureMode() {
+  if (placingMode) cancelPlacing();
+  areaMeasureMode = false;
+  areaMeasurePoints = [];
+  if (areaMeasureLayer) {
+    map.removeLayer(areaMeasureLayer);
+    areaMeasureLayer = null;
+  }
+  measureMode = !measureMode;
+  measureStart = null;
+  setMode(measureMode ? 'Measure Mode: click start and end points' : 'View Mode');
+}
+
+function toggleAreaMeasureMode() {
+  if (placingMode) cancelPlacing();
+  measureMode = false;
+  measureStart = null;
+  if (measureTempLayer) {
+    map.removeLayer(measureTempLayer);
+    measureTempLayer = null;
+  }
+  areaMeasureMode = !areaMeasureMode;
+  areaMeasurePoints = [];
+  if (areaMeasureLayer) {
+    map.removeLayer(areaMeasureLayer);
+    areaMeasureLayer = null;
+  }
+  document.getElementById('measure-readout').textContent = areaMeasureMode
+    ? 'Area mode active. Click 3+ points, then click Finish Area.'
+    : 'No measurement.';
+  setMode(areaMeasureMode ? 'Area Measure Mode: click points, then Finish Area' : 'View Mode');
+}
+
+function clearMeasure() {
+  measureMode = false;
+  areaMeasureMode = false;
+  measureStart = null;
+  if (measureTempLayer) {
+    map.removeLayer(measureTempLayer);
+    measureTempLayer = null;
+  }
+  areaMeasurePoints = [];
+  if (areaMeasureLayer) {
+    map.removeLayer(areaMeasureLayer);
+    areaMeasureLayer = null;
+  }
+  document.getElementById('measure-readout').textContent = 'No measurement.';
+  setMode('View Mode');
+}
+
+function startObjectDrag(obj, startLatlng) {
+  if (placingMode || measureMode || areaMeasureMode || activeRotateDrag) return;
+  activeObjectDrag = {
+    obj,
+    startMouse: startLatlng,
+    startCenter: L.latLng(obj.latlng.lat, obj.latlng.lng),
+    moved: false
+  };
+  map.dragging.disable();
+  mapContainer.style.cursor = 'grabbing';
+}
+
+function endObjectDrag() {
+  if (!activeObjectDrag) return;
+  const { obj, moved } = activeObjectDrag;
+  activeObjectDrag = null;
+  map.dragging.enable();
+  mapContainer.style.cursor = '';
+  if (moved) {
+    obj._suppressDeleteUntil = Date.now() + 250;
+    updateList();
+    scheduleOverlapSummary();
+    setMode(`Moved ${sanitizeLabel(obj.label)}`);
+  }
+}
+
+function startRotateDrag(obj) {
+  if (placingMode || measureMode || areaMeasureMode || activeObjectDrag) return;
+  activeRotateDrag = { obj };
+  map.dragging.disable();
+  mapContainer.style.cursor = 'crosshair';
+}
+
+function endRotateDrag() {
+  if (!activeRotateDrag) return;
+  activeRotateDrag = null;
+  map.dragging.enable();
+  mapContainer.style.cursor = '';
+  updateList();
+  scheduleOverlapSummary();
+  setMode('Rotation updated');
+}
+
+function getObjectById(id) {
+  return objects.find(o => o.id === id) || null;
+}
+
+function clearRotateHandle() {
+  if (!rotateHandleLayer) return;
+  map.removeLayer(rotateHandleLayer);
+  rotateHandleLayer = null;
+}
+
+function getRotateHandleLatLng(obj) {
+  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + 6;
+  const [dx, dy] = rotateOffsets([[0, handleOffsetM]], obj.angleDeg || 0)[0];
+  const [lat, lng] = metersToDeg(obj.latlng, dx, dy);
+  return L.latLng(lat, lng);
+}
+
+function syncRotateHandle() {
+  clearRotateHandle();
+  const obj = getObjectById(selectedObjectId);
+  if (!obj || !obj.layer) return;
+  const handleLatLng = getRotateHandleLatLng(obj);
+  rotateHandleLayer = L.circleMarker(handleLatLng, {
+    radius: 6,
+    color: '#ffa657',
+    fillColor: '#ffa657',
+    fillOpacity: 1,
+    weight: 2
+  }).addTo(map);
+  rotateHandleLayer.bindTooltip('Rotate handle', { permanent: false, direction: 'top' });
+  rotateHandleLayer.on('mousedown', ev => {
+    L.DomEvent.stop(ev);
+    startRotateDrag(obj);
+  });
+}
+
+function setSelectedObject(id) {
+  selectedObjectId = id;
+  syncRotateHandle();
+}
+
+function computeAngleFromCenter(center, target) {
+  const dx = map.distance([center.lat, center.lng], [center.lat, target.lng]) * (target.lng >= center.lng ? 1 : -1);
+  const dy = map.distance([center.lat, center.lng], [target.lat, center.lng]) * (target.lat >= center.lat ? 1 : -1);
+  return normalizeAngle((Math.atan2(dx, dy) * 180 / Math.PI));
+}
+
+function setBufferInput(ft) {
+  const value = Math.max(0, Math.min(30, Math.round(ft)));
+  const input = document.getElementById('obj-buffer');
+  const label = document.getElementById('buffer-val');
+  input.value = String(value);
+  label.textContent = String(value);
+}
+
+function applyBufferPreset(ft) {
+  setBufferInput(ft);
+  setMode(`Clearance preset selected: ${ft} ft`);
+}
+
+function applyBufferToAll() {
+  if (!objects.length) {
+    setMode('No placed objects to update');
+    return;
+  }
+  const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
+  objects.forEach(o => {
+    o.bufferFt = bufferFt;
+    drawObject(o);
+  });
+  updateList();
+  scheduleOverlapSummary();
+  setMode(`Applied ${bufferFt} ft clearance to ${objects.length} object(s)`);
+}
+
+function sanitizeLabel(value, fallback = 'Untitled') {
+  const trimmed = String(value || '').trim().slice(0, MAX_LABEL_LENGTH);
+  return trimmed || fallback;
+}
+
+function normalizeColor(value) {
+  const color = String(value || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : COLORS[0];
+}
+
+function saveScenario() {
+  const scenario = buildScenarioData();
+  downloadJsonFile(
+    scenario,
+    `vpc-scenario-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.json`,
+    'application/json'
+  );
+  setMode(`Scenario saved (${scenario.objects.length} object(s))`);
+}
+
+function buildScenarioData() {
+  const center = map.getCenter();
+  const operationName = (document.getElementById('operation-name').value || '').trim();
+  return {
+    schema: 'vpc-scenario-v1',
+    appVersion: APP_META.version,
+    savedAt: new Date().toISOString(),
+    map: {
+      center: [center.lat, center.lng],
+      zoom: map.getZoom()
+    },
+    ui: {
+      operationName,
+      preferCurrentMapArea: !!document.getElementById('search-local-bias').checked,
+      bufferFt: Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0)
+    },
+    objects: objects.map(o => ({
+      id: o.id,
+      latlng: { lat: o.latlng.lat, lng: o.latlng.lng },
+      label: o.label,
+      shape: o.shape,
+      widthM: o.widthM,
+      lengthM: o.lengthM,
+      color: o.color,
+      opacity: o.opacity,
+      angleDeg: o.angleDeg || 0,
+      bufferFt: o.bufferFt || 0,
+      vendor: o.vendor || '',
+      cornerCutW: o.cornerCutW,
+      cornerCutL: o.cornerCutL,
+      endCapFt: o.endCapFt,
+      armWidthFt: o.armWidthFt
+    }))
+  };
+}
+
+function downloadJsonFile(data, filename, mime) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportGeoJSON() {
+  const features = objects.map(o => {
+    const feature = o.layer && o.layer.toGeoJSON ? o.layer.toGeoJSON() : null;
+    if (!feature) return null;
+    feature.properties = {
+      id: o.id,
+      label: o.label,
+      shape: o.shape,
+      vendor: o.vendor || '',
+      width_m: o.widthM,
+      length_m: o.lengthM,
+      rotation_deg: o.angleDeg || 0,
+      buffer_ft: o.bufferFt || 0,
+      color: o.color,
+      opacity: o.opacity
+    };
+    return feature;
+  }).filter(Boolean);
+
+  const collection = {
+    type: 'FeatureCollection',
+    name: 'vpc-layout',
+    metadata: {
+      appVersion: APP_META.version,
+      exportedAt: new Date().toISOString(),
+      objectCount: features.length
+    },
+    features
+  };
+
+  downloadJsonFile(
+    collection,
+    `vpc-layout-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.geojson`,
+    'application/geo+json'
+  );
+  setMode(`GeoJSON exported (${features.length} feature(s))`);
+}
+
+function loadScenarioPrompt() {
+  document.getElementById('scenario-file-input').click();
+}
+
+function toNumber(value, fallback) {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function loadScenarioFromData(data) {
+  if (!data || !Array.isArray(data.objects)) {
+    throw new Error('Invalid scenario file format.');
+  }
+
+  resetPlacedObjects();
+
+  const loadedObjects = data.objects.map((raw, idx) => buildObjectFromRaw(raw, idx));
+
+  loadedObjects.forEach(o => {
+    objects.push(o);
+    objectId = Math.max(objectId, o.id);
+    drawObject(o);
+  });
+  selectedObjectId = null;
+  clearRotateHandle();
+
+  if (data.map && Array.isArray(data.map.center) && data.map.center.length === 2) {
+    const lat = toNumber(data.map.center[0], map.getCenter().lat);
+    const lng = toNumber(data.map.center[1], map.getCenter().lng);
+    const zoom = toNumber(data.map.zoom, map.getZoom());
+    map.setView([lat, lng], zoom);
+  }
+
+  if (data.ui) {
+    if (typeof data.ui.operationName === 'string') {
+      document.getElementById('operation-name').value = data.ui.operationName;
+    }
+    if (typeof data.ui.preferCurrentMapArea === 'boolean') {
+      document.getElementById('search-local-bias').checked = data.ui.preferCurrentMapArea;
+    }
+    if (Number.isFinite(parseFloat(data.ui.bufferFt))) {
+      setBufferInput(parseFloat(data.ui.bufferFt));
+    }
+  }
+
+  updateList();
+  scheduleOverlapSummary();
+  updatePrintMeta();
+  setMode(`Scenario loaded (${objects.length} object(s))`);
+}
+
+function buildObjectFromRaw(raw, idx) {
+  return {
+    id: Number.isFinite(raw.id) ? raw.id : (idx + 1),
+    latlng: {
+      lat: toNumber(raw.latlng && raw.latlng.lat, 0),
+      lng: toNumber(raw.latlng && raw.latlng.lng, 0)
+    },
+    label: sanitizeLabel(raw.label || `Loaded ${idx + 1}`),
+    shape: String(raw.shape || 'rect'),
+    widthM: Math.max(0.1, toNumber(raw.widthM, 1)),
+    lengthM: Math.max(0.1, toNumber(raw.lengthM, 1)),
+    color: normalizeColor(raw.color || '#58a6ff'),
+    opacity: Math.min(1, Math.max(0.15, toNumber(raw.opacity, 0.65))),
+    angleDeg: normalizeAngle(toNumber(raw.angleDeg, 0)),
+    bufferFt: Math.max(0, toNumber(raw.bufferFt, 0)),
+    vendor: String(raw.vendor || 'Loaded'),
+    cornerCutW: toNumber(raw.cornerCutW, undefined),
+    cornerCutL: toNumber(raw.cornerCutL, undefined),
+    endCapFt: toNumber(raw.endCapFt, undefined),
+    armWidthFt: toNumber(raw.armWidthFt, undefined),
+    layer: null,
+    layerBuffer: null
+  };
+}
+
+// ─── Map Click ────────────────────────────────────────────────────────────────────
+map.on('click', e => {
+  if (areaMeasureMode) {
+    handleAreaMeasureClick(e.latlng);
+    return;
+  }
+  if (measureMode) {
+    handleMeasureClick(e.latlng);
+    return;
+  }
+  if (!placingMode) return;
+
+  let widthFt, lengthFt, shape, label, vendor;
+  const opacity = parseInt(document.getElementById('obj-opacity').value) / 100;
+  const angleDeg = normalizeAngle(parseFloat(document.getElementById('obj-rotation').value) || 0);
+  const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
+  const customLabelInput = document.getElementById('obj-label').value.trim();
+
+  if (customMode) {
+    widthFt  = parseFloat(document.getElementById('custom-w').value) || 20;
+    lengthFt = parseFloat(document.getElementById('custom-l').value) || 30;
+    shape    = 'rect';
+    vendor   = 'Custom';
+    label    = document.getElementById('custom-label').value.trim() || `Custom ${widthFt}'×${lengthFt}'`;
+  } else {
+    widthFt  = selectedTent.widthFt;
+    lengthFt = selectedTent.lengthFt;
+    shape    = selectedTent.shape;
+    vendor   = selectedTent.vendor;
+    label    = customLabelInput || `${vendor} ${selectedTent.name}`;
+  }
+  label = sanitizeLabel(label);
+
+  const extra = (!customMode && selectedTent) ? {
+    cornerCutW: selectedTent.cornerCutW,
+    cornerCutL: selectedTent.cornerCutL,
+    endCapFt:   selectedTent.endCapFt,
+    armWidthFt: selectedTent.armWidthFt,
+  } : {};
+
+  placeObject(e.latlng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, selectedColor, opacity, angleDeg, bufferFt, vendor, extra);
+  cancelPlacing();
+});
+
+map.on('mousemove', e => {
+  document.getElementById('cursor-pos').textContent =
+    `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  if (activeRotateDrag) {
+    let nextAngle = computeAngleFromCenter(activeRotateDrag.obj.latlng, e.latlng);
+    if (e.originalEvent && e.originalEvent.shiftKey) {
+      nextAngle = Math.round(nextAngle / 5) * 5;
+    }
+    activeRotateDrag.obj.angleDeg = normalizeAngle(nextAngle);
+    drawObject(activeRotateDrag.obj);
+    return;
+  }
+  if (activeObjectDrag) {
+    const dLat = e.latlng.lat - activeObjectDrag.startMouse.lat;
+    const dLng = e.latlng.lng - activeObjectDrag.startMouse.lng;
+    if (Math.abs(dLat) > 1e-8 || Math.abs(dLng) > 1e-8) {
+      activeObjectDrag.moved = true;
+    }
+    activeObjectDrag.obj.latlng = L.latLng(
+      activeObjectDrag.startCenter.lat + dLat,
+      activeObjectDrag.startCenter.lng + dLng
+    );
+    drawObject(activeObjectDrag.obj);
+  }
+});
+
+map.on('zoomend', () => {
+  document.getElementById('zoom-level').textContent = map.getZoom();
+  updateScaleRatio();
+});
+
+map.on('moveend', updateScaleRatio);
+map.on('mouseup', () => endObjectDrag());
+map.on('mouseup', () => endRotateDrag());
+
+// ─── Object Placement & Drawing ──────────────────────────────────────────────────
+function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angleDeg, bufferFt, vendor, extra={}) {
+  const id = ++objectId;
+  const obj = {
+    id,
+    latlng,
+    label: sanitizeLabel(label),
+    shape,
+    widthM,
+    lengthM,
+    color: normalizeColor(color),
+    opacity,
+    angleDeg,
+    bufferFt,
+    vendor,
+    layer: null,
+    layerBuffer: null,
+    ...extra
+  };
+  objects.push(obj);
+  drawObject(obj);
+  setSelectedObject(obj.id);
+  updateList();
+  scheduleOverlapSummary();
+}
+
+function drawObject(obj) {
+  if (obj.layer) { map.removeLayer(obj.layer); obj.layer = null; }
+  if (obj.layerBuffer) { map.removeLayer(obj.layerBuffer); obj.layerBuffer = null; }
+
+  const s = {
+    color: obj.color,
+    fillColor: obj.color,
+    fillOpacity: obj.opacity,
+    weight: 1.5,
+    opacity: 0.95
+  };
+
+  const bufferM = (obj.bufferFt || 0) * FT_TO_M;
+  if (bufferM > 0) {
+    const bufferStyle = {
+      color: '#f78166',
+      fill: false,
+      fillOpacity: 0,
+      weight: 1.2,
+      opacity: 0.9,
+      dashArray: '4 4'
+    };
+    obj.layerBuffer = createShapeLayer(obj, obj.widthM, obj.lengthM, bufferStyle, bufferM);
+    obj.layerBuffer.addTo(map);
+  }
+  obj.layer = createShapeLayer(obj, obj.widthM, obj.lengthM, s, 0);
+
+  const wFt = (obj.widthM / FT_TO_M).toFixed(1);
+  const lFt = (obj.lengthM / FT_TO_M).toFixed(1);
+  const safeLabel = escapeHtml(obj.label);
+  const tip = obj.shape === 'circle'
+    ? `<b>${safeLabel}</b><br>Ø ${wFt} ft`
+    : obj.shape === 'octagon'
+    ? `<b>${safeLabel}</b><br>Octagon Ø ${wFt} ft`
+    : obj.shape === 'elongated-octagon'
+    ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' elong. octagon`
+    : obj.shape === 'elongated-hexagon'
+    ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' elongated hexagon`
+    : obj.shape === 'plus'
+    ? `<b>${safeLabel}</b><br>${wFt}' plus/cross (arm w: ${Math.round(obj.armWidthFt||0)}')`
+    : `<b>${safeLabel}</b><br>${wFt}' × ${lFt}'`;
+  const angleInfo = obj.shape === 'circle' ? '' : `<br>Rotation: ${Math.round(obj.angleDeg || 0)}°`;
+  const bufferInfo = (obj.bufferFt || 0) > 0 ? `<br>Clearance buffer: +${obj.bufferFt} ft` : '';
+
+  obj.layer.bindTooltip(`${tip}${angleInfo}${bufferInfo}`, { permanent: false, direction: 'top', className: 'map-tooltip' });
+  obj.layer.addTo(map);
+  const bindDragStart = layer => {
+    layer.on('mousedown', ev => {
+      if (ev.originalEvent && ev.originalEvent.button !== 0) return;
+      L.DomEvent.stop(ev);
+      startObjectDrag(obj, ev.latlng);
+    });
+  };
+  const bindSelect = layer => {
+    layer.on('click', ev => {
+      if (obj._suppressDeleteUntil && Date.now() < obj._suppressDeleteUntil) return;
+      if (ev.originalEvent && ev.originalEvent.shiftKey) {
+        if (confirm(`Delete "${obj.label}"?`)) deleteObj(obj.id);
+        return;
+      }
+      setSelectedObject(obj.id);
+      setMode(`Selected ${sanitizeLabel(obj.label)} (drag object to move, drag handle to rotate)`);
+      updateList();
+    });
+  };
+  bindDragStart(obj.layer);
+  if (obj.layerBuffer) bindDragStart(obj.layerBuffer);
+  bindSelect(obj.layer);
+  if (obj.layerBuffer) bindSelect(obj.layerBuffer);
+  if (selectedObjectId === obj.id) syncRotateHandle();
+}
+
+function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
+  const widthBuffered = widthM + extraBufferM * 2;
+  const lengthBuffered = lengthM + extraBufferM * 2;
+  if (obj.shape === 'circle') {
+    return L.circle(obj.latlng, { radius: widthM / 2 + extraBufferM, ...style });
+  }
+  if (obj.shape === 'octagon') {
+    return createGeoPolygon(obj.latlng, widthBuffered, widthBuffered, 'octagon', obj.angleDeg || 0, style);
+  }
+  if (obj.shape === 'elongated-octagon') {
+    const cornerCutWm = ((obj.cornerCutW || 0) * FT_TO_M) + extraBufferM;
+    const cornerCutLm = ((obj.cornerCutL || 0) * FT_TO_M) + extraBufferM;
+    return createGeoElongatedOctagon(obj.latlng, widthBuffered, lengthBuffered, cornerCutWm, cornerCutLm, obj.angleDeg || 0, style);
+  }
+  if (obj.shape === 'elongated-hexagon') {
+    const endCapM = ((obj.endCapFt || 0) * FT_TO_M) + extraBufferM;
+    return createGeoElongatedHexagon(obj.latlng, widthBuffered, lengthBuffered, endCapM, obj.angleDeg || 0, style);
+  }
+  if (obj.shape === 'plus') {
+    const armWidthBase = obj.armWidthFt ? obj.armWidthFt * FT_TO_M : widthM * 0.7;
+    const armWidthM = armWidthBase + extraBufferM * 2;
+    return createGeoPlusSign(obj.latlng, widthBuffered, lengthBuffered, armWidthM, obj.angleDeg || 0, style);
+  }
+  return createGeoRect(obj.latlng, widthBuffered, lengthBuffered, obj.angleDeg || 0, style);
+}
+
+// Convert meters offset to lat/lng delta from center
+function metersToDeg(center, dx, dy) {
+  const R = 6371000;
+  const latRad = center.lat * Math.PI / 180;
+  const dLat = (dy / R) * (180 / Math.PI);
+  const dLng = (dx / R) * (180 / Math.PI) / Math.cos(latRad);
+  return [center.lat + dLat, center.lng + dLng];
+}
+
+function normalizeAngle(deg) {
+  return ((deg % 360) + 360) % 360;
+}
+
+function rotateOffsets(offsets, angleDeg) {
+  if (!angleDeg) return offsets;
+  const rad = angleDeg * Math.PI / 180;
+  const cosA = Math.cos(rad);
+  const sinA = Math.sin(rad);
+  return offsets.map(([dx, dy]) => [
+    dx * cosA - dy * sinA,
+    dx * sinA + dy * cosA
+  ]);
+}
+
+// Regular octagon inscribed in a square of side=widthM
+// A regular octagon with "diameter" d has corner cuts of d*(1 - 1/sqrt(2))/2 ≈ d*0.1464
+function createGeoPolygon(center, widthM, heightM, type, angleDeg, style) {
+  let points = [];
+  if (type === 'octagon') {
+    const hw = widthM / 2;
+    const c = hw * (1 - 1 / Math.sqrt(2)); // corner cut size
+    // 8 points clockwise from top-left going right
+    const offsets = [
+      [ c - hw,  hw],  // top-left → top-right direction
+      [ hw - c,  hw],
+      [ hw,  hw - c],
+      [ hw, -hw + c],
+      [ hw - c, -hw],
+      [ c - hw, -hw],
+      [-hw, -hw + c],
+      [-hw,  hw - c],
+    ];
+    points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
+  }
+  return L.polygon(points, style);
+}
+
+// Elongated octagon: overall widthM × lengthM, with corner cuts cornerCutW × cornerCutL
+// The 4 corners are cut diagonally. The spec gives the "bounding box" dimensions.
+function createGeoElongatedOctagon(center, widthM, lengthM, cornerCutWm, cornerCutLm, angleDeg, style) {
+  const hw = widthM / 2;    // half-width  (E-W)
+  const hl = lengthM / 2;   // half-length (N-S)
+  const cw = cornerCutWm;   // corner cut measured along width axis
+  const cl = cornerCutLm;   // corner cut measured along length axis
+
+  // 8 points: start top-left, go clockwise
+  // Top edge (N side): from (−hw+cw, +hl) to (+hw−cw, +hl)
+  // NE corner cut: from (+hw−cw, +hl) to (+hw, +hl−cl)
+  // Right edge (E side): from (+hw, +hl−cl) to (+hw, −hl+cl)
+  // SE corner: from (+hw, −hl+cl) to (+hw−cw, −hl)
+  // Bottom edge (S side): from (+hw−cw, −hl) to (−hw+cw, −hl)
+  // SW corner: from (−hw+cw, −hl) to (−hw, −hl+cl)
+  // Left edge (W side): from (−hw, −hl+cl) to (−hw, +hl−cl)
+  // NW corner: from (−hw, +hl−cl) to (−hw+cw, +hl)
+
+  const offsets = [
+    [-hw + cw,  hl],
+    [ hw - cw,  hl],
+    [ hw,  hl - cl],
+    [ hw, -hl + cl],
+    [ hw - cw, -hl],
+    [-hw + cw, -hl],
+    [-hw, -hl + cl],
+    [-hw,  hl - cl],
+  ];
+
+  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+// Elongated hexagon (HDT Base-X Dome shape):
+// widthM = flat-to-flat width (E-W), lengthM = total length (N-S)
+// endCapM = depth of the pointed triangular end cap at N and S ends
+// Shape: two long parallel sides + two angled faces meeting at a point on each end
+// 6 vertices total:
+//   N tip:  (0, +hl)
+//   NE:     (+hw, +hl - endCapM)
+//   SE:     (+hw, -hl + endCapM)
+//   S tip:  (0, -hl)
+//   SW:     (-hw, -hl + endCapM)
+//   NW:     (-hw, +hl - endCapM)
+function createGeoElongatedHexagon(center, widthM, lengthM, endCapM, angleDeg, style) {
+  const hw = widthM / 2;
+  const hl = lengthM / 2;
+  const ec = endCapM;
+
+  const offsets = [
+    [ 0,       hl     ],  // N tip
+    [ hw,  hl - ec    ],  // NE
+    [ hw, -hl + ec    ],  // SE
+    [ 0,      -hl     ],  // S tip
+    [-hw, -hl + ec    ],  // SW
+    [-hw,  hl - ec    ],  // NW
+  ];
+
+  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+// Plus / Cross shape (DLX X-HUB, Zumro Quad Interface):
+// totalWM   = full E-W tip-to-tip span
+// totalLM   = full N-S tip-to-tip span
+// armWidthM = width of each arm (the connecting tunnel dimension)
+// For a symmetric plus: totalWM === totalLM
+// For an asymmetric plus (like Zumro Quad): totalLM > totalWM, where totalWM = the wide face
+//   and the N/S arm stubs = (totalLM - totalWM) / 2
+// 12-vertex polygon, clockwise from NW corner of north arm:
+function createGeoPlusSign(center, totalWM, totalLM, armWidthM, angleDeg, style) {
+  const hw = totalWM / 2;    // half E-W span
+  const hl = totalLM / 2;    // half N-S span
+  const aw = armWidthM / 2;  // half arm width
+
+  const offsets = [
+    [-aw,  hl  ],  // N arm – top-left
+    [ aw,  hl  ],  // N arm – top-right
+    [ aw,  aw  ],  // inner NE corner  (use aw not hw for square inner corners)
+    [ hw,  aw  ],  // E arm – top
+    [ hw, -aw  ],  // E arm – bottom
+    [ aw, -aw  ],  // inner SE corner
+    [ aw, -hl  ],  // S arm – bottom-right
+    [-aw, -hl  ],  // S arm – bottom-left
+    [-aw, -aw  ],  // inner SW corner
+    [-hw, -aw  ],  // W arm – bottom
+    [-hw,  aw  ],  // W arm – top
+    [-aw,  aw  ],  // inner NW corner
+  ];
+
+  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+function createGeoRect(center, widthM, heightM, angleDeg, style) {
+  const hw = widthM / 2;
+  const hh = heightM / 2;
+  const offsets = [
+    [-hw,  hh],
+    [ hw,  hh],
+    [ hw, -hh],
+    [-hw, -hh]
+  ];
+  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
+function deleteObj(id) {
+  const idx = objects.findIndex(o => o.id === id);
+  if (idx === -1) return;
+  if (objects[idx].layer) map.removeLayer(objects[idx].layer);
+  if (objects[idx].layerBuffer) map.removeLayer(objects[idx].layerBuffer);
+  if (selectedObjectId === id) {
+    selectedObjectId = null;
+    clearRotateHandle();
+  }
+  objects.splice(idx, 1);
+  updateList();
+  scheduleOverlapSummary();
+}
+
+function resetPlacedObjects() {
+  endObjectDrag();
+  endRotateDrag();
+  selectedObjectId = null;
+  clearRotateHandle();
+  objects.forEach(o => {
+    if (o.layer) map.removeLayer(o.layer);
+    if (o.layerBuffer) map.removeLayer(o.layerBuffer);
+  });
+  objects = [];
+  objectId = 0;
+  updateList();
+  scheduleOverlapSummary();
+}
+
+function clearAll() {
+  if (!objects.length) return;
+  if (!confirm('Clear all placed tents?')) return;
+  resetPlacedObjects();
+}
+
+function updateList() {
+  const el = document.getElementById('obj-list-items');
+  const cnt = objects.length;
+  document.getElementById('obj-count').textContent = cnt;
+  document.getElementById('tent-count').textContent = cnt;
+  el.textContent = '';
+  if (!cnt) {
+    const p = document.createElement('p');
+    p.style.fontSize = '11px';
+    p.style.color = '#484f58';
+    p.style.padding = '10px';
+    p.textContent = 'No tents placed yet.';
+    el.appendChild(p);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  objects.forEach(o => fragment.appendChild(createObjectListItem(o)));
+  el.appendChild(fragment);
+}
+
+function createObjectListItem(o) {
+  const wFt = (o.widthM / FT_TO_M).toFixed(0);
+  const lFt = (o.lengthM / FT_TO_M).toFixed(0);
+  const dims = o.shape === 'circle' ? `Ø${wFt}'`
+    : o.shape === 'octagon' ? `Oct Ø${wFt}'`
+    : o.shape === 'elongated-octagon' ? `${wFt}'×${lFt}' Oct`
+    : o.shape === 'elongated-hexagon' ? `${wFt}'×${lFt}' Hex`
+    : o.shape === 'plus' ? `${wFt}' Plus`
+    : `${wFt}'×${lFt}'`;
+  const angleText = o.shape === 'circle' ? '' : ` @${Math.round(o.angleDeg || 0)}°`;
+  const bufferText = (o.bufferFt || 0) > 0 ? ` +${o.bufferFt}ft clr` : '';
+
+  const row = document.createElement('div');
+  row.className = 'obj-item' + (o.id === selectedObjectId ? ' active' : '');
+  row.onclick = () => {
+    setSelectedObject(o.id);
+    map.panTo(o.latlng);
+    setMode(`Selected ${sanitizeLabel(o.label)} (drag object to move, drag handle to rotate)`);
+    updateList();
+  };
+
+  const dot = document.createElement('div');
+  dot.className = 'obj-color-dot';
+  dot.style.background = normalizeColor(o.color);
+
+  const name = document.createElement('div');
+  name.className = 'obj-name';
+  name.textContent = sanitizeLabel(o.label);
+
+  const meta = document.createElement('div');
+  meta.style.fontSize = '10px';
+  meta.style.color = '#8b949e';
+  meta.style.whiteSpace = 'nowrap';
+  meta.textContent = `${dims}${angleText}${bufferText}`;
+
+  const del = document.createElement('button');
+  del.className = 'obj-del';
+  del.textContent = '✕';
+  del.setAttribute('aria-label', `Delete ${sanitizeLabel(o.label)}`);
+  del.onclick = ev => {
+    ev.stopPropagation();
+    deleteObj(o.id);
+  };
+
+  row.appendChild(dot);
+  row.appendChild(name);
+  row.appendChild(meta);
+  row.appendChild(del);
+  return row;
+}
+
+function handleMeasureClick(latlng) {
+  if (!measureStart) {
+    measureStart = latlng;
+    if (measureTempLayer) {
+      map.removeLayer(measureTempLayer);
+      measureTempLayer = null;
+    }
+    document.getElementById('measure-readout').textContent = 'Start point set. Click end point.';
+    return;
+  }
+
+  const meters = map.distance(measureStart, latlng);
+  const feet = meters / FT_TO_M;
+  if (measureTempLayer) map.removeLayer(measureTempLayer);
+  measureTempLayer = L.polyline([measureStart, latlng], { color: '#ffa657', weight: 2.5, opacity: 0.95 }).addTo(map);
+  measureTempLayer.bindTooltip(`${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`, { permanent: true, direction: 'center' });
+  document.getElementById('measure-readout').textContent = `Distance: ${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`;
+  measureStart = null;
+}
+
+function handleAreaMeasureClick(latlng) {
+  areaMeasurePoints.push(latlng);
+  drawAreaMeasureLayer();
+  if (areaMeasurePoints.length < 3) {
+    document.getElementById('measure-readout').textContent = `Area points: ${areaMeasurePoints.length}. Add at least 3.`;
+  } else {
+    document.getElementById('measure-readout').textContent = `Area points: ${areaMeasurePoints.length}. Click Finish Area to calculate.`;
+  }
+}
+
+function drawAreaMeasureLayer() {
+  if (areaMeasureLayer) {
+    map.removeLayer(areaMeasureLayer);
+    areaMeasureLayer = null;
+  }
+  if (!areaMeasurePoints.length) return;
+  if (areaMeasurePoints.length < 3) {
+    areaMeasureLayer = L.polyline(areaMeasurePoints, { color: '#d2a8ff', weight: 2.5, opacity: 0.95 }).addTo(map);
+    return;
+  }
+  areaMeasureLayer = L.polygon(areaMeasurePoints, {
+    color: '#d2a8ff',
+    fillColor: '#d2a8ff',
+    fillOpacity: 0.18,
+    weight: 2
+  }).addTo(map);
+}
+
+function finishAreaMeasure() {
+  if (!areaMeasureMode || areaMeasurePoints.length < 3) {
+    setMode('Area measure requires at least 3 points');
+    return;
+  }
+  const areaM2 = polygonAreaMeters(areaMeasurePoints);
+  const areaFt2 = areaM2 * 10.76391041671;
+  if (areaMeasureLayer) {
+    areaMeasureLayer.bindTooltip(`${areaM2.toFixed(1)} sq m / ${areaFt2.toFixed(1)} sq ft`, { permanent: true, direction: 'center' });
+  }
+  document.getElementById('measure-readout').textContent =
+    `Area: ${areaM2.toFixed(1)} sq m / ${areaFt2.toFixed(1)} sq ft`;
+  areaMeasureMode = false;
+  areaMeasurePoints = [];
+  setMode('View Mode');
+}
+
+function polygonAreaMeters(latlngs) {
+  if (!latlngs || latlngs.length < 3) return 0;
+  const centerLat = latlngs.reduce((sum, p) => sum + p.lat, 0) / latlngs.length;
+  const latScale = 111320;
+  const lngScale = 111320 * Math.cos(centerLat * Math.PI / 180);
+  let area = 0;
+  for (let i = 0; i < latlngs.length; i += 1) {
+    const j = (i + 1) % latlngs.length;
+    const xi = latlngs[i].lng * lngScale;
+    const yi = latlngs[i].lat * latScale;
+    const xj = latlngs[j].lng * lngScale;
+    const yj = latlngs[j].lat * latScale;
+    area += (xi * yj) - (xj * yi);
+  }
+  return Math.abs(area) / 2;
+}
+
+function scheduleOverlapSummary() {
+  if (overlapRaf) return;
+  overlapRaf = requestAnimationFrame(() => {
+    overlapRaf = 0;
+    updateOverlapSummary();
+  });
+}
+
+function updateOverlapSummary() {
+  const activeBounds = [];
+  objects.forEach(o => {
+    const layer = o.layerBuffer || o.layer;
+    if (!layer || !layer.getBounds) return;
+    const bounds = layer.getBounds();
+    if (bounds && bounds.isValid()) activeBounds.push(bounds);
+  });
+
+  let overlapCount = 0;
+  for (let i = 0; i < activeBounds.length; i += 1) {
+    const a = activeBounds[i];
+    for (let j = i + 1; j < activeBounds.length; j += 1) {
+      if (a.intersects(activeBounds[j])) overlapCount += 1;
+    }
+  }
+  document.getElementById('overlap-count').textContent = String(overlapCount);
+  const warn = document.getElementById('overlap-warning');
+  if (overlapCount > 0) {
+    warn.style.display = 'block';
+    warn.textContent = `${overlapCount} buffered overlap(s) detected.`;
+  } else {
+    warn.style.display = 'none';
+    warn.textContent = '';
+  }
+}
+
+// ─── Address Search ──────────────────────────────────────────────────────────────
+async function searchLocation() {
+  const input = document.getElementById('address-input').value.trim();
+  if (!input) return;
+
+  const coordMatch = input.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+  if (coordMatch) {
+    const lat = parseFloat(coordMatch[1]), lng = parseFloat(coordMatch[2]);
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      alert('Coordinates out of range. Use latitude [-90, 90] and longitude [-180, 180].');
+      return;
+    }
+    clearSearchResults();
+    map.setView([lat, lng], 17);
+    L.popup().setLatLng([lat, lng]).setContent(`📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`).openOn(map);
+    return;
+  }
+
+  try {
+    const preferLocal = document.getElementById('search-local-bias').checked;
+    let results = [];
+    let usedGlobalFallback = false;
+
+    if (preferLocal) {
+      results = await fetchSearchResults(input, true);
+      if (!results.length) {
+        results = await fetchSearchResults(input, false);
+        usedGlobalFallback = !!results.length;
+      }
+    } else {
+      results = await fetchSearchResults(input, false);
+    }
+
+    if (results.length > 0) {
+      focusSearchResult(results[0]);
+      if (results.length > 1) {
+        showSearchResults(results);
+        setMode(`Search matched ${results.length} places; pick exact result`);
+      } else {
+        clearSearchResults();
+        setMode(usedGlobalFallback ? 'No nearby match found; centered best global result' : 'View Mode');
+      }
+    } else {
+      clearSearchResults();
+      alert('Location not found.');
+    }
+  } catch (e) {
+    clearSearchResults();
+    alert('Search failed. Check connection.');
+  }
+}
+
+async function fetchSearchResults(input, useViewbox) {
+  const base = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input)}&limit=5&addressdetails=1`;
+  let url = base;
+  if (useViewbox) {
+    const b = map.getBounds();
+    const left = b.getWest();
+    const top = b.getNorth();
+    const right = b.getEast();
+    const bottom = b.getSouth();
+    // If the view crosses the antimeridian, skip bounded mode to avoid invalid viewbox queries.
+    if (left <= right) {
+      url += `&viewbox=${left},${top},${right},${bottom}&bounded=1`;
+    }
+  }
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Search request failed (${res.status})`);
+  }
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+function focusSearchResult(result) {
+  const lat = parseFloat(result.lat);
+  const lon = parseFloat(result.lon);
+  if (Number.isNaN(lat) || Number.isNaN(lon)) return;
+  if (result.boundingbox && result.boundingbox.length === 4) {
+    const south = parseFloat(result.boundingbox[0]);
+    const north = parseFloat(result.boundingbox[1]);
+    const west = parseFloat(result.boundingbox[2]);
+    const east = parseFloat(result.boundingbox[3]);
+    map.fitBounds([[south, west], [north, east]], { maxZoom: 18 });
+  } else {
+    map.setView([lat, lon], 17);
+  }
+  const title = (result.display_name || `${lat.toFixed(5)}, ${lon.toFixed(5)}`).split(',')[0];
+  L.popup().setLatLng([lat, lon]).setContent(`📍 <b>${escapeHtml(title)}</b>`).openOn(map);
+}
+
+function clearSearchResults() {
+  pendingSearchResults = [];
+  const select = document.getElementById('search-results');
+  select.innerHTML = '';
+  select.classList.remove('visible');
+}
+
+function showSearchResults(results) {
+  pendingSearchResults = results.slice();
+  const select = document.getElementById('search-results');
+  select.innerHTML = '';
+  pendingSearchResults.forEach((result, idx) => {
+    const option = document.createElement('option');
+    option.value = String(idx);
+    option.textContent = result.display_name || `${result.lat}, ${result.lon}`;
+    select.appendChild(option);
+  });
+  select.value = '0';
+  select.classList.add('visible');
+}
+
+function escapeHtml(text) {
+  return String(text)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function updateScaleRatio() {
+  const lat = map.getCenter().lat * Math.PI / 180;
+  const zoom = map.getZoom();
+  const metersPerPixel = (40075016.686 * Math.cos(lat)) / Math.pow(2, zoom + 8);
+  const scaleDenominator = Math.max(1, Math.round(metersPerPixel / 0.000264583));
+  document.getElementById('scale-ratio').textContent = `1:${scaleDenominator.toLocaleString()}`;
+}
+
+function updatePrintMeta() {
+  const center = map.getCenter();
+  const opNameInput = document.getElementById('operation-name');
+  const operationName = opNameInput && opNameInput.value.trim() ? opNameInput.value.trim() : 'Untitled';
+  const scaleText = document.getElementById('scale-ratio').textContent || '1:?';
+  document.getElementById('print-meta-operation').textContent = operationName;
+  document.getElementById('print-meta-date').textContent = new Date().toLocaleString();
+  document.getElementById('print-meta-scale').textContent = scaleText;
+  document.getElementById('print-meta-center').textContent =
+    `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
+}
+
+function applyScalePreset(targetDenominator) {
+  const lat = map.getCenter().lat * Math.PI / 180;
+  const metersPerPixelTarget = targetDenominator * 0.000264583;
+  const zoom = Math.log2((40075016.686 * Math.cos(lat)) / (metersPerPixelTarget * 256));
+  const boundedZoom = Math.max(0, Math.min(21, zoom));
+  map.setZoom(boundedZoom);
+  setMode(`Scale preset applied: 1:${targetDenominator.toLocaleString()} (manual zoom still enabled)`);
+}
+
+function getPlacedBounds() {
+  let bounds = null;
+  objects.forEach(o => {
+    const refLayer = o.layerBuffer || o.layer;
+    if (!refLayer || !refLayer.getBounds) return;
+    const layerBounds = refLayer.getBounds();
+    if (!layerBounds || !layerBounds.isValid()) return;
+    bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
+  });
+  return bounds;
+}
+
+function printFitToPage() {
+  const previousCenter = map.getCenter();
+  const previousZoom = map.getZoom();
+  const bounds = getPlacedBounds();
+  let restored = false;
+
+  const printAndRestore = () => {
+    updateScaleRatio();
+    updatePrintMeta();
+    const restoreView = () => {
+      if (restored) return;
+      restored = true;
+      map.setView(previousCenter, previousZoom);
+      updateScaleRatio();
+      updatePrintMeta();
+      setMode('View Mode');
+    };
+    window.addEventListener('afterprint', restoreView, { once: true });
+    // Some environments do not fire afterprint reliably; this keeps view recovery safe.
+    setTimeout(restoreView, 2000);
+    window.print();
+  };
+
+  if (bounds && bounds.isValid()) {
+    map.fitBounds(bounds.pad(0.15), { maxZoom: 19 });
+    setMode('Print Fit: fitted placed objects to page');
+  } else {
+    setMode('Print Fit: no objects found, printing current view');
+  }
+
+  setTimeout(printAndRestore, 180);
+}
+
+document.getElementById('address-input').addEventListener('keydown', e => { if (e.key==='Enter') searchLocation(); });
+document.getElementById('search-results').addEventListener('change', e => {
+  const idx = parseInt(e.target.value, 10);
+  if (Number.isNaN(idx) || !pendingSearchResults[idx]) return;
+  focusSearchResult(pendingSearchResults[idx]);
+});
+document.getElementById('scenario-file-input').addEventListener('change', e => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result || '{}'));
+      loadScenarioFromData(data);
+    } catch (err) {
+      alert(`Failed to load scenario: ${err.message || 'Invalid file.'}`);
+    } finally {
+      e.target.value = '';
+    }
+  };
+  reader.onerror = () => {
+    alert('Failed to read scenario file.');
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+function isTypingTarget(target) {
+  if (!target) return false;
+  const tag = (target.tagName || '').toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select' || !!target.isContentEditable;
+}
+
+document.addEventListener('keydown', e => {
+  if (isTypingTarget(e.target)) return;
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    resetViewMode();
+    return;
+  }
+  if (e.key === '/') {
+    e.preventDefault();
+    document.getElementById('address-input').focus();
+    return;
+  }
+  if ((e.key === 'p' || e.key === 'P') && selectedTent) {
+    e.preventDefault();
+    startPlacing();
+  }
+});
+
+// Tooltip style
+const style = document.createElement('style');
+style.textContent = `.map-tooltip { background:#161b22; color:#e6edf3; border:1px solid #30363d; border-radius:4px; padding:4px 8px; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,.5); }
+.map-tooltip::before { display:none; }
+`;
+document.head.appendChild(style);
+
+// Initial
+document.getElementById('version-display').textContent = `v${APP_META.version}`;
+document.getElementById('zoom-level').textContent = map.getZoom();
+updateScaleRatio();
+updatePrintMeta();
+scheduleOverlapSummary();
+</script>
+</body>
+</html>

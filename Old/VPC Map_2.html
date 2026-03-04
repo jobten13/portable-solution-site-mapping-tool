@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Global Field Site Planner</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
+    <style>
+        :root { --primary: #007cbf; --accent: #ff5500; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        
+        .sidebar {
+            position: absolute; width: 300px; background: white;
+            margin: 10px; padding: 15px; z-index: 10; border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto;
+        }
+
+        h2 { font-size: 1.2rem; margin: 0 0 10px 0; border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+        .mfg-label { font-weight: 800; font-size: 0.75rem; color: #666; text-transform: uppercase; margin-top: 15px; display: block; }
+        
+        .btn-grid { display: grid; grid-template-columns: 1fr; gap: 5px; margin-top: 5px; }
+        button.tent-btn {
+            background: #f8f9fa; border: 1px solid #ddd; padding: 8px; text-align: left;
+            border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s;
+        }
+        button.tent-btn:hover { background: #e9ecef; border-color: var(--primary); }
+        
+        .active-controls {
+            margin-top: 20px; padding: 15px; background: #f0f7ff; border-radius: 6px; border: 1px solid #cce5ff;
+        }
+        .instr { font-size: 0.8rem; color: #555; line-height: 1.4; margin-bottom: 10px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        .danger-btn { background: #ff4444 !important; color: white !important; border: none !important; margin-top: 10px; text-align: center !important; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Site Planner</h2>
+    <p class="instr">Search for a location, then click a model to place it at the map center.</p>
+    
+    <div id="inventory">
+        <span class="mfg-label">Blu-Med</span>
+        <div class="btn-grid">
+            <button class="tent-btn" onclick="addTent(20, 32.5, 'BluMed 2032.5', '#2ecc71')">XP 2032.5 (20x32.5')</button>
+            <button class="tent-btn" onclick="addTent(20, 39, 'BluMed 2039', '#27ae60')">XP 2039 (20x39')</button>
+            <button class="tent-btn" onclick="addTent(8, 8, 'BluMed Vestibule', '#16a085')">Vestibule (8x8')</button>
+        </div>
+
+        <span class="mfg-label">Western Shelter</span>
+        <div class="btn-grid">
+            <button class="tent-btn" onclick="addTent(18.58, 33.92, 'WS 1935', '#e67e22')">GK 1935 (18.6x33.9')</button>
+            <button class="tent-btn" onclick="addTent(18.58, 18.58, 'WS 20', '#d35400')">GK 20 (18.6x18.6')</button>
+            <button class="tent-btn" onclick="addTent(7.67, 7.33, 'WS Vestibule', '#e74c3c')">Vestibule (7.7x7.3')</button>
+        </div>
+
+        <span class="mfg-label">Zumro / HDT</span>
+        <div class="btn-grid">
+            <button class="tent-btn" onclick="addTent(20, 32, 'HDT 2032', '#34495e')">HDT AirBeam 2032 (20x32')</button>
+            <button class="tent-btn" onclick="addTent(20, 20, 'Zumro 400', '#9b59b6')">Zumro 400 (20x20')</button>
+        </div>
+    </div>
+
+    <div id="controls" class="active-controls" style="display:none;">
+        <strong>Active: <span id="activeName">None</span></strong>
+        <div style="margin-top:10px;">
+            <label>Rotation: <span id="rotLabel">0</span>°</label>
+            <input type="range" id="rotSlider" min="0" max="360" value="0" oninput="modifyTent('rotate', this.value)">
+        </div>
+        <button class="tent-btn danger-btn" onclick="modifyTent('delete')">Remove Selected</button>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+    // REPLACE THIS WITH YOUR KEY FROM MAPBOX.COM
+    mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN';
+
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/satellite-v9',
+        center: [-98.5, 39.8],
+        zoom: 3
+    });
+
+    let tents = {};
+    let selectedId = null;
+
+    map.addControl(new MapboxGeocoder({ accessToken: mapboxgl.accessToken, mapboxgl: mapboxgl }));
+    map.addControl(new mapboxgl.NavigationControl());
+
+    function addTent(w, l, name, color) {
+        const id = 't' + Date.now();
+        const center = map.getCenter();
+        
+        tents[id] = {
+            id: id,
+            name: name,
+            width: w * 0.0003048, // Convert ft to km
+            length: l * 0.0003048,
+            coords: [center.lng, center.lat],
+            rotation: 0,
+            color: color
+        };
+
+        drawTent(id);
+        selectTent(id);
+        map.flyTo({ center: [center.lng, center.lat], zoom: 19 });
+    }
+
+    function drawTent(id) {
+        const t = tents[id];
+        const pt = turf.point(t.coords);
+        let poly = turf.envelope(turf.featureCollection([
+            turf.destination(pt, t.width/2, 90, {units:'kilometers'}),
+            turf.destination(pt, t.width/2, -90, {units:'kilometers'}),
+            turf.destination(pt, t.length/2, 0, {units:'kilometers'}),
+            turf.destination(pt, t.length/2, 180, {units:'kilometers'})
+        ]));
+
+        if (t.rotation !== 0) {
+            poly = turf.transformRotate(poly, t.rotation, {pivot: t.coords});
+        }
+
+        if (map.getSource(id)) {
+            map.getSource(id).setData(poly);
+        } else {
+            map.addSource(id, { type: 'geojson', data: poly });
+            map.addLayer({
+                id: id, type: 'fill', source: id,
+                paint: { 'fill-color': t.color, 'fill-opacity': 0.6, 'fill-outline-color': '#fff' }
+            });
+            map.on('click', id, (e) => { selectTent(id); e.originalEvent.stopPropagation(); });
+        }
+    }
+
+    function selectTent(id) {
+        selectedId = id;
+        document.getElementById('controls').style.display = 'block';
+        document.getElementById('activeName').innerText = tents[id].name;
+        document.getElementById('rotSlider').value = tents[id].rotation;
+        document.getElementById('rotLabel').innerText = tents[id].rotation;
+    }
+
+    function modifyTent(action, val) {
+        if (!selectedId) return;
+        if (action === 'rotate') {
+            tents[selectedId].rotation = parseInt(val);
+            document.getElementById('rotLabel').innerText = val;
+            drawTent(selectedId);
+        } else if (action === 'delete') {
+            map.removeLayer(selectedId);
+            map.removeSource(selectedId);
+            delete tents[selectedId];
+            document.getElementById('controls').style.display = 'none';
+            selectedId = null;
+        }
+    }
+</script>
+</body>
+</html>
