@@ -4,18 +4,22 @@ Web-based site planning tool for placing field hospital/tent footprints on real-
 
 ## Quick Start Card
 
-- Search site (address/place or `lat, lng`).
-- Select vendor/model, set rotation + clearance.
-- Click tent model (auto-enters place mode), then click location.
+- Search site (address/place or `lat, lng`). *Hover controls for tooltips (aligned with this guide).*
+- Select vendor/model; set label, role, and under **Options ▾** set rotation + clearance as needed.
+- Click tent model (auto-enters place mode), then click map location.
 - Click a placed object to select it; drag body to move, drag orange handle to rotate.
-- Check `Overlaps` and run distance/area measurements.
-- `Save Scenario` for backup/handoff.
-- `Export GeoJSON` for GIS coordination.
-- `Print Fit` for final map sheet with metadata.
+- Check `Overlaps` and run **Measure Distance** / **Measure Area** (Finish Area and Clear appear when relevant).
+- **Undo** / **Redo** in the header (or Ctrl+Z / Ctrl+Y) to step back layout changes.
+- `Save Plan` for backup/handoff; `Export GeoJSON` for GIS; `Print Fit` for final map sheet with metadata.
+- Click the mode badge (or press Esc) to return to View mode from place/measure.
 
 ## Working File
 
 - `VPC Mapping Tool.html`
+
+## Reference Docs
+
+- **`VENDOR_SPECS_DIGEST.md`** — Vendor tent specs digest (PoP 2 Vendors 1–5). **Implemented:** Tool `TENT_DB` dimensions and shapes follow this digest; vendor pre-assigned colors are applied on placement and when loading plans. HDT lineup in tool: Base-X 305 and Base-X Dome (8D36) only.
 
 ## Versioning Approach
 
@@ -25,12 +29,34 @@ Web-based site planning tool for placing field hospital/tent footprints on real-
 
 ## Current Version
 
-- `0.6.3` (2026-02-26)
+- `0.8.5` (2026-02-26)
 
 ## Change Log
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| 0.8.5   | 2026-02-26 | ZUMRO Interconnect added to TENT_DB: 7.17'×6.92' rect (86"×83"); dimensions from Vendor Specs and Manuals/ZUMRO/ZUMRO_Interconnect_Dimensions.md. |
+| 0.8.4   | 2026-03-10 | Snap face selection: click near any of target's 4 faces (2 length ends, 2 width ends); offset uses correct half-dimension per axis. ROLES constant; snap hint and auto-uncheck; postMode order. Snap is most accurate for rect-to-rect; non-rectangular targets use bounding-box face midpoints. |
+| 0.8.3   | 2026-03-10 | Snap to selected object: checkbox in Label & Style; next placement matches target rotation and attaches to end nearest click (e.g. Vestibule to GK1935). |
+| 0.8.2   | 2026-03-10 | v0.8.1 cleanup: mode badge click fix (B1), map border clear (B2), SAT origin fallback (B3); PDF caveat, Export ▾, color out of Options, How to use step 3, coords on map (U1–U5); changelog trim, #obj-list-items CSS (C1–C2). |
+| 0.8.1   | 2026-02-26 | Tier 4 refactor: named constants; state grouped with comments; architecture note. Deferred by design: single-file; state as separate variables. |
+| 0.8.0   | 2026-02-26 | UX quick wins: contextual status line; How to use ▾ panel; tooltips and aria-labels; Undo hint after Clear/Delete. |
+| 0.7.9   | 2026-02-26 | Tier 3: remove .place-btn and elongated-hexagon; version single source; dragEndedAt + single mouseup; makeCollapsible for Options/Setup. |
+| 0.7.8   | 2026-02-26 | Export PDF: operation name, scale, zones, object list (no map image). |
+| 0.7.7   | 2026-02-26 | Search results dropdown positioned under search (no header layout shift); Placed list pinned at bottom of sidebar with internal scroll. |
+| 0.7.6   | 2026-02-26 | Tier 2: Custom label scope hint ("Applied to next placement"); map mode indicator (green/orange border); Clear All confirm text; scale ratio after session restore. |
+| 0.7.5   | 2026-02-26 | Tier 1: polygon-level overlap detection (SAT); editable label in Placed list; distance measure start-point marker; role set once in placeObject. |
+| 0.7.4   | 2026-02-26 | Sidebar UX refactor: removed Place on Map / Cancel and Back to View; Undo/Redo moved to header; Label & Style **Options ▾** (color, opacity, rotation, buffer); contextual Measure buttons (Finish Area / Clear when relevant); **Setup ▾** (scale presets + Operation Name, collapsed by default); section reorder; Apply Buffer to All confirm dialog; tooltips on key controls (Quick Start–aligned); Custom Size section and copy. |
+| 0.7.3   | 2026-02-26 | Undo/redo for object placement, moves, rotation, delete, role change, buffer-to-all, and clear all (Ctrl+Z / Ctrl+Y; up to 50 steps). |
+| 0.7.2   | 2026-02-26 | Tier 2 #10: Rotate handle direction fixed (clockwise drag = clockwise rotation). Optional: Save Plan / Open Plan UI. |
+| 0.7.1   | 2026-02-26 | Tier 2 #5: Zone/role tagging (Triage, Ward, ICU, Pharmacy, Support, Morgue); list + tooltips + zone summary in print and GeoJSON. |
+| 0.7.0   | 2026-02-26 | Tier 2 #4: Autosave/local backup — "Last saved at" indicator in status bar; updates on save and when restoring/loading. |
+| 0.6.9   | 2026-02-26 | Tier 1 #2: Offline banner; Go to coordinates (lat,lng in search) without network. |
+| 0.6.8   | 2026-02-26 | Session restore (Tier 1 #1): persist map view + objects to localStorage; restore on load. |
+| 0.6.7   | 2026-02-26 | Page title and header renamed to "VPC Mapping Tool." |
+| 0.6.6   | 2026-02-26 | GK20 dimensions updated from SW-20 spec: 18'7"×18'7", 286 sq ft. |
+| 0.6.5   | 2026-02-26 | Non-rectangular shapes from spec docs: ellipse for 8D36 dome footprint; GK1935 elongated-octagon confirmed per SW-1935. |
+| 0.6.4   | 2026-02-26 | TENT_DB updated from vendor spec docs: Blu-Med 7×8 vestibule; DLX X-24/X-32 21.5' width; Zumro 400/600 exterior dims; HDT 8D36 added. |
 | 0.6.3   | 2026-02-26 | Added on-map rotate handle for placed objects; click to select, drag object body to move, drag handle to rotate (Shift for 5° snap). |
 | 0.6.2   | 2026-02-26 | Switched to click-then-place workflow and added true drag-to-move for placed objects on the map. |
 | 0.6.1   | 2026-02-26 | Added drag-and-drop tent placement from sidebar to map for faster field workflow. |
@@ -93,16 +119,14 @@ Web-based site planning tool for placing field hospital/tent footprints on real-
 ### 2) Set planning context
 
 - Use satellite + hybrid labels for real-world siting.
-- Use scale presets (`1:100`, `1:150`, etc.) as needed for standardized views.
-- Enter `Operation Name` before printing/exporting.
+- Open **Setup ▾** for scale presets (`1:100`, `1:150`, etc.) and **Operation Name** (enter before printing/exporting).
 
 ### 3) Place tents/shelters
 
-- Select vendor and model.
-- Set color, opacity, rotation, and clearance buffer.
+- Select vendor and model. Use **Label & Style** for custom label and role; open **Options ▾** for color, opacity, rotation, and clearance buffer.
 - Click a tent model (green highlight), then click map location.
 - Drag placed objects directly on the map to fine-tune position.
-- Use custom rectangle when exact tent model is not listed.
+- Use **Custom Size** (enter dimensions, then click map) when exact tent model is not listed.
 
 ### 4) Validate fit and spacing
 
@@ -112,21 +136,74 @@ Web-based site planning tool for placing field hospital/tent footprints on real-
 
 ### 5) Save, share, and print
 
-- `Save Scenario` for full working state backup/reload.
+- **Undo** / **Redo** in the header (or Ctrl+Z / Ctrl+Y) to revert placement, moves, rotation, deletes, role or buffer changes.
+- `Save Plan` for full working state backup/reload.
 - `Export GeoJSON` for GIS/coordination workflows.
 - `Print Fit` to frame objects for print output with metadata footer.
 
+### Tooltips
+
+- Key controls (search, Save Plan, Open Plan, Export GeoJSON, Print Fit, Undo, Redo, Measure, scale presets, Clear All, etc.) have **hover tooltips** aligned with the Quick Start and this guide.
+
 ### Keyboard Shortcuts
 
-- `Esc`: return to View mode.
+- `Esc`: return to View mode (or click the mode badge when it is clickable).
 - `/`: focus search input.
 - `P`: start placing selected tent.
+- `Ctrl+Z` (or Cmd+Z): Undo. `Ctrl+Y` or `Ctrl+Shift+Z`: Redo.
 
 ### Field Tips
 
-- Save scenario snapshots frequently during fast-moving operations.
+- Use Undo/Redo to try layout changes without losing work (history clears when you Open Plan or on new session).
+- Save plan snapshots frequently during fast-moving operations.
 - Use a consistent clearance preset across teams before final layout handoff.
 - Confirm final print/export after applying any scale preset or map move.
+
+---
+
+## Suggested Next Steps (Field Hospital Planning)
+
+Deep-dive recommendations to evolve the tool into a full **field hospital planning** workflow. Ordered by tier: critical → high-value → quality → optional.
+
+**Note:** The tool has not been released yet. **Backward compatibility with older scenario/GeoJSON files is not required** for now; schema and format can change freely.
+
+### Tier 1 – Critical for field use
+
+| # | Item | Rationale |
+|---|------|-----------|
+| 1 | **Session restore (no NYC reset)** | ~~Map reset to NYC on reload.~~ **Done (v0.6.8):** Last map center/zoom and placed objects saved to `localStorage`; restored on load. Status shows "Session restored" when applied. |
+| 2 | **Graceful degradation when offline** | **Done in part (v0.6.9):** Offline banner (“Using local data”); lat/lng in search to jump without geocoding; editing and layout work offline. Cached tiles or blank/grid fallback not implemented. |
+| 3 | **Align naming with “field hospital”** | ~~UI said “Emergency Tent Site Planner.”~~ **Done:** Page title and header now “VPC Mapping Tool.” |
+
+### Tier 2 – High-value operational
+
+| # | Item | Rationale |
+|---|------|-----------|
+| 4 | **Autosave / local backup** | **Done (v0.7.0):** Layout + view auto-save to `localStorage` on debounce (500 ms after object/map changes). Status bar shows "Saved: &lt;time&gt;" (or "—" before first save); updates on restore/load. Manual Save/Load remains for export/transfer. | Reduce reliance on manual “Save Scenario.” Auto-save layout + view to `localStorage` on a debounce (e.g. after object change, every 10–30 s). Optional “Last saved at …” indicator. Keeps manual Save/Load as export/transfer. |
+| 5 | **Zone / role tagging** | **Done (v0.7.1):** Role dropdown (—, Triage, Ward, ICU, Pharmacy, Support, Morgue); stored on object and in scenario/GeoJSON; list + tooltips + zone summary in print and GeoJSON. | Support field hospital semantics: tag each footprint with a **role** (e.g. Triage, Ward, ICU, Pharmacy, Support, Morgue). Store in object data and scenario JSON; show in list and tooltips; use in print/export summary (e.g. “3 Wards, 1 Triage”). |
+| 6 | **Layout templates** | Allow loading a **standard layout template** (e.g. minimal MSF-style: triage + wards + support) as a starting point. Templates define object types, sizes, and relative positions; user places the template’s origin on the map and optionally scales or adjusts. |
+| 7 | **Go-to coordinates (no search)** | **Done (v0.6.9):** Enter lat, lng in search bar and Search (or Enter) to jump; no Nominatim call. Works offline. |
+| 8 | **Vendor pre-assigned colors** | **Done:** Each vendor has a default color (BLU-MED, Western Shelter, DLX, ZUMRO, HDT); placed objects get that color automatically. User can change via color swatches. |
+| 9 | **Clear delete affordance** | **Done:** Red ✕ delete button when an object is selected (on map, next to rotate handle); confirm before delete. Shift+click and list ✕ also available. |
+| 10 | **Fix rotate handle direction** | **Done (v0.7.2):** Rotate handle direction aligned so clockwise drag rotates the footprint clockwise. |
+
+### Tier 3 – Quality and maintainability
+
+| # | Item | Rationale |
+|---|------|-----------|
+| 11 | **Structured template data** | Define templates as JSON (or in-app config): list of objects with relative offsets, dimensions, roles, labels. Single code path for “place template” and future template editor. |
+| 12 | **Validation rules** | Beyond overlap count: optional **minimum clearance** rule (warn if any gap &lt; X ft), and/or simple **access path** check (e.g. ensure no fully enclosed footprint). Configurable so different missions can enforce different standards. |
+| 13 | **Export enhancements** | **Done in part:** Zone summary (count by role) in GeoJSON metadata, print footer, and PDF. Optional legend (color/role) and schema version for downstream GIS not yet added. |
+| 14 | **Accessibility for new UI** | Any new controls (zone dropdown, template picker, coordinate input) should stay keyboard-operable and screen-reader friendly, consistent with existing Tier 3 accessibility. |
+
+### Optional (post-tier)
+
+- ~~Rename Save Scenario / Load Scenario to Save Plan / Open Plan~~ **Done (v0.7.2).**
+- **Offline tile package**: preload AOI tiles (e.g. MBTiles/PMTiles) for true offline basemap; larger implementation.
+- ~~**Undo/redo** for object placement and moves~~ **Done (v0.7.3):** Undo/Redo buttons and Ctrl+Z / Ctrl+Y; up to 50 steps; applies to place, move, rotate, delete, role change, Apply Buffer to All, and Clear All.
+- **Layer visibility**: toggle object groups by role (e.g. show only Triage + Ward) for clearer prints or review.
+- ~~**Snap connecting tents to rotation (and position)**~~ **Done (v0.8.3, refined v0.8.4):** Check "Snap to selected object" in Label & Style; select the target, pick the tent, click near the face to attach to (nearest of 4 faces: 2 length ends, 2 width ends). New tent matches rotation and is placed edge-to-edge. Most accurate for rect-to-rect; non-rectangular targets use bounding-box face midpoints. 
+---
 
 ## Notes
 

@@ -6,20 +6,9 @@
 <title>VPC Mapping Tool</title>
 <!--
   VPC Mapping Tool
-  Version: 0.8.6
-  Last Updated: 2026-03-27
-  Change Log: See README. APP_META.changelog holds current version only.
-    - 0.8.6: Export PDF includes map snapshot (html2canvas + jsPDF); tile layers crossOrigin; waitForTilesIdle; fallback to text-only on capture failure.
-    - 0.8.5: ZUMRO Interconnect added to TENT_DB (7.17'×6.92' rect per ZUMRO_Interconnect_Dimensions.md).
-    - 0.8.4: Snap face selection (4 faces: 2 length ends, 2 width ends); ROLES constant; snap hint + auto-uncheck.
-    - 0.8.2: v0.8.1 cleanup (bugs B1–B3, UX U1–U5, hygiene C1–C2).
-- 0.8.0: UX quick wins: contextual status line, How to use ▾ panel, tooltips/aria-labels on controls, Undo hint after Clear/Delete.
-- 0.7.9: Tier 3: remove .place-btn CSS and elongated-hexagon code; version in one place; dragEndedAt + single mouseup; makeCollapsible for Options/Setup.
-- 0.7.8: Export PDF (operation name, scale, zones, object list; map image added in v0.8.6).
-- 0.7.7: Search results dropdown under search (no header shift); Placed list pinned at bottom with internal scroll.
-    - 0.7.6: Tier 2 — Custom label scope hint; map mode indicator (green/orange border); Clear All confirm text; scale ratio after session restore.
-    - 0.7.5: Tier 1 — polygon-level overlap (SAT); editable label in Placed list; distance measure start-point marker; role set once in placeObject.
-    - 0.7.4: Sidebar UX refactor — removed Place on Map/Cancel and Back to View; Undo/Redo in header; Label & Style Options ▾; contextual Measure buttons; Setup ▾ (scale + print metadata); section reorder; Apply Buffer confirm; tooltips on key controls; Custom Size copy/rename.
+  Version: 0.7.3
+  Last Updated: 2026-02-26
+  Change Log:
     - 0.7.3: Undo/redo for placement, moves, rotation, delete, role, buffer-to-all, clear all (Ctrl+Z / Ctrl+Y; 50 steps).
     - 0.7.2: Tier 2 #10: Fix rotate handle direction (clockwise drag = clockwise rotation). Optional: UI renamed to Save Plan / Open Plan.
     - 0.7.1: Tier 2 #5: Zone/role tagging — Role dropdown (Triage, Ward, ICU, Pharmacy, Support, Morgue); stored on object and in scenario/GeoJSON; shown in list (inline change) and map tooltips; zone summary in print footer and GeoJSON metadata.
@@ -53,8 +42,6 @@
 -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
@@ -65,8 +52,7 @@ body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; hei
   display:flex; align-items:center; gap:12px; flex-wrap:wrap; z-index:1000;
 }
 #header h1 { font-size:16px; color:#58a6ff; white-space:nowrap; font-weight:600; }
-#search-wrap { position:relative; display:flex; flex:1; min-width:240px; align-items:center; gap:12px; flex-wrap:wrap; }
-#search-bar { display:flex; gap:6px; flex:1; min-width:200px; }
+#search-bar { display:flex; gap:6px; flex:1; min-width:240px; }
 #address-input {
   flex:1; padding:7px 10px; border-radius:6px;
   border:1px solid #30363d; background:#21262d; color:#e6edf3;
@@ -75,19 +61,8 @@ body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; hei
 #address-input:focus { border-color:#58a6ff; }
 #search-results {
   display:none;
-  position:absolute;
-  top:100%;
-  left:0;
-  margin-top:4px;
   min-width:260px;
   max-width:380px;
-  z-index:1001;
-  padding:6px 8px;
-  border-radius:6px;
-  border:1px solid #30363d;
-  background:#21262d;
-  color:#e6edf3;
-  font-size:12px;
 }
 #search-results.visible { display:block; }
 .search-opt {
@@ -124,17 +99,7 @@ button.danger:hover { background:#f85149; }
 
 #sidebar {
   width:290px; background:#161b22; border-right:1px solid #30363d;
-  display:flex; flex-direction:column; overflow:hidden; flex-shrink:0;
-}
-#sidebar-scroll {
-  flex:1; min-height:0; overflow-y:auto;
-}
-#sidebar-placed {
-  flex-shrink:0; display:flex; flex-direction:column;
-  border-top:1px solid #30363d; height:220px;
-}
-#sidebar-placed #obj-list-items {
-  flex:1; min-height:0; overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0;
 }
 
 .sb-section { padding:12px; border-bottom:1px solid #30363d; }
@@ -188,7 +153,14 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .scale-btn:hover { border-color:#58a6ff; color:#e6edf3; background:#1c2128; }
 .inline-controls { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 
-/* Placed objects (pinned list: #obj-list-items scroll inside #sidebar-placed; padding in #sidebar-placed #obj-list-items above) */
+/* Place button */
+.place-btn {
+  width:100%; margin-top:8px; padding:9px;
+  background:#238636; font-size:13px; font-weight:500;
+}
+
+/* Placed objects */
+#obj-list-items { padding:12px; }
 .obj-item {
   display:flex; align-items:center; gap:8px; padding:7px 8px;
   background:#21262d; border-radius:6px; margin-bottom:4px; font-size:12px;
@@ -200,8 +172,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 }
 .obj-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 .obj-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e6edf3; }
-.obj-name-input { background:transparent; border:none; padding:0; font:inherit; min-width:0; }
-.obj-name-input:focus { outline:1px solid #58a6ff; outline-offset:1px; }
 .obj-del { background:none; border:none; color:#8b949e; padding:2px 5px; font-size:13px; }
 .obj-del:hover { color:#f85149; background:none; }
 .obj-role-select {
@@ -221,14 +191,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .warn-text { color:#f78166; font-size:11px; margin-top:6px; }
 
 /* Map */
-#map { flex:1; position:relative; transition: box-shadow 0.2s; }
-#map.map-mode-place { box-shadow: inset 0 0 0 2px #3fb950; }
-#map.map-mode-measure { box-shadow: inset 0 0 0 2px #ffa657; }
-.map-coords-overlay {
-  position:absolute; bottom:8px; right:10px; z-index:1000;
-  font-size:10px; color:#8b949e; background:rgba(13,17,23,0.85);
-  padding:2px 6px; border-radius:4px; pointer-events:none;
-}
+#map { flex:1; }
 
 /* Status */
 #statusbar {
@@ -241,12 +204,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .mode-badge {
   padding:3px 8px; border-radius:12px; font-size:11px;
   background:#1f2937; color:#58a6ff; border:1px solid #1f6feb;
-}
-.mode-badge.mode-badge-action {
-  cursor: pointer;
-}
-.mode-badge.mode-badge-action:hover {
-  background:#161b22; border-color:#58a6ff;
 }
 .version-badge {
   position:fixed; right:10px; bottom:8px; z-index:1200;
@@ -280,7 +237,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 @media print {
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
-  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay { display:none !important; }
+  #header, #offline-banner, #sidebar, #statusbar, #version-display { display:none !important; }
   #main { display:block !important; height:100vh !important; }
   #map { width:100vw !important; height:100vh !important; }
   .leaflet-control-container { display:none !important; }
@@ -292,30 +249,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 <div id="header">
   <h1>VPC Mapping Tool</h1>
-  <div id="search-wrap">
-    <div id="search-bar">
-      <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng (press / to focus)" />
-      <button class="blue" onclick="searchLocation()" title="Search by address/place or lat, lng (focus with /)">Search</button>
-    </div>
-    <select id="search-results" aria-label="Search result matches" title="Pick a search result (or use first match)"></select>
+  <div id="search-bar">
+    <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" />
+    <button class="blue" onclick="searchLocation()">Search</button>
   </div>
-  <div id="mode-display" class="mode-badge" role="status" aria-live="polite" title="Current action; click or press Esc to return to view">Select a tent below, then click the map to place.</div>
-  <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
-  <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo (Ctrl+Y)">Redo</button>
-  <div style="position:relative;display:inline-block;">
-    <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distance or area on the map">Measure ▾</button>
-    <div id="measure-menu-panel" role="menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
-      <button type="button" class="ghost" role="menuitem" style="width:100%;font-size:11px;margin:0;padding:6px 10px;" onclick="measureMenuPickDistance(event)">Measure Distance</button>
-      <button type="button" class="ghost" role="menuitem" style="width:100%;font-size:11px;margin-top:4px;padding:6px 10px;" onclick="measureMenuPickArea(event)">Measure Area</button>
-    </div>
-    <div id="measure-strip" style="display:none;position:absolute;top:100%;right:0;left:auto;margin-top:4px;z-index:1001;min-width:220px;max-width:calc(100vw - 16px);align-items:center;gap:12px;flex-wrap:wrap;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:4px 16px;font-size:11px;color:#8b949e;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
-      <span id="measure-readout-header" style="flex:1;min-width:0;"></span>
-      <button type="button" class="ghost header-btn" id="btn-finish-area-header" onclick="finishAreaMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Close the polygon and show area" aria-label="Finish area measurement">Finish Area</button>
-      <button type="button" class="ghost header-btn" id="btn-clear-measure-header" onclick="clearMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Remove distance or area from map" aria-label="Clear measurement">Clear</button>
-    </div>
-  </div>
-  <span id="autosave-indicator" style="font-size:11px;color:#8b949e;">Not yet saved</span>
-  <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last autosaved layout from this browser">Restore Autosave</button>
+  <label class="search-opt"><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
+  <select id="search-results" aria-label="Search result matches"></select>
+  <div id="mode-display" class="mode-badge" role="status" aria-live="polite">View Mode</div>
+  <button class="ghost header-btn" onclick="resetViewMode()">Back to View</button>
+  <button class="ghost header-btn" onclick="printFitToPage()">Print Fit</button>
 </div>
 <div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;">
   Offline — using local data. Map imagery may not load. Enter <strong>lat, lng</strong> in search to go to a location.
@@ -323,41 +265,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 <div id="main">
   <div id="sidebar">
-    <div id="sidebar-scroll">
-    <div id="measure-readout" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">No measurement.</div>
-    <!-- Setup (operation name, search bias, scale presets) -->
-    <div class="sb-section">
-      <button type="button" class="ghost" id="setup-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="setup-panel" aria-label="Toggle setup (scale and operation name)" title="Scale presets and operation name for print/export">Setup ▾</button>
-      <div id="setup-panel" style="display:none;" role="region" aria-labelledby="setup-toggle">
-        <h3 style="font-size:11px;margin-top:8px;color:#8b949e;">Print Metadata</h3>
-        <label>Operation Name</label>
-        <input type="text" id="operation-name" placeholder="e.g. UC Davis Parking Lot Surge Site" aria-label="Operation name for print metadata" title="Enter before printing or exporting" />
-        <label class="search-opt" style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;" title="Search near current map area first; uncheck for global search"><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
-        <h3 style="font-size:11px;margin-top:12px;color:#8b949e;">Scale Presets</h3>
-        <div class="scale-btn-row">
-          <button class="scale-btn" onclick="applyScalePreset(100)" title="Set scale 1:100; manual zoom still enabled">1:100</button>
-          <button class="scale-btn" onclick="applyScalePreset(150)" title="Set scale 1:150">1:150</button>
-          <button class="scale-btn" onclick="applyScalePreset(200)" title="Set scale 1:200">1:200</button>
-          <button class="scale-btn" onclick="applyScalePreset(500)" title="Set scale 1:500">1:500</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- How to use -->
-    <div class="sb-section">
-      <button type="button" class="ghost" id="how-to-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="how-to-panel" title="Expand for first-time steps">How to use ▾</button>
-      <div id="how-to-panel" style="display:none;" role="region" aria-labelledby="how-to-toggle">
-        <ol style="font-size:11px;color:#8b949e;margin:8px 0 0 0;padding-left:18px;line-height:1.6;">
-          <li>Select a tent from the list (or enter Custom Size and click Place Custom).</li>
-          <li>Click the map to place it. Repeat to add more.</li>
-          <li>Click a placed object to select it; drag to move, drag the orange handle to rotate. Use the red ✕ to delete (or Shift+click).</li>
-          <li>To attach a tent to another (e.g. Vestibule to GK1935): select the target object, check <strong>Snap to selected object</strong>, pick the tent, then click near the end you want to attach to.</li>
-          <li>Use Plan to Save, Open, or Export (GeoJSON/PDF).</li>
-          <li>Use Undo / Redo in the header to reverse actions.</li>
-          <li>Press Esc to return to view mode.</li>
-        </ol>
-      </div>
-    </div>
 
     <!-- Vendor Tabs -->
     <div class="sb-section">
@@ -371,101 +278,118 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <h3>Label & Style</h3>
 
       <label>Custom Label (optional)</label>
-      <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" title="Label for the next object you place" />
-      <p class="dim-note">Applied to next placement.</p>
-
-      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Next placement will match selected object's rotation and attach to its nearest end">
-        <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
-      </label>
-      <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then click near the face you want to attach to. New tent matches rotation. Click near a length end or width end — nearest face wins. Best for rect-to-rect. Stays active until unchecked.</p>
+      <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" />
 
       <label>Role / Zone</label>
-      <select id="obj-role" aria-label="Object role or zone" title="e.g. Triage, Ward, ICU — used in list and export"></select>
-      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-        <input type="text" id="custom-role-input" placeholder="Add custom role..." aria-label="Add custom role or zone" title="Type a role name and click Add"
-          style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:11px;outline:none;" />
-        <button type="button" class="ghost scale-btn" id="btn-add-role" title="Add this role to the list" aria-label="Add custom role">Add</button>
+      <select id="obj-role" aria-label="Object role or zone">
+        <option value="—">—</option>
+        <option value="Triage">Triage</option>
+        <option value="Ward">Ward</option>
+        <option value="ICU">ICU</option>
+        <option value="Pharmacy">Pharmacy</option>
+        <option value="Support">Support</option>
+        <option value="Morgue">Morgue</option>
+      </select>
+
+      <label>Color</label>
+      <div class="color-row" id="color-swatches"></div>
+
+      <label>Opacity: <span id="opacity-val">65</span>%</label>
+      <input type="range" id="obj-opacity" min="15" max="90" value="65" aria-label="Object opacity percentage"
+        oninput="document.getElementById('opacity-val').textContent=this.value" />
+
+      <label>Rotation: <span id="rotation-val">0</span>°</label>
+      <input type="range" id="obj-rotation" min="0" max="359" value="0" aria-label="Object rotation degrees"
+        oninput="document.getElementById('rotation-val').textContent=this.value" />
+
+      <label>Clearance Buffer: <span id="buffer-val">0</span> ft</label>
+      <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet"
+        oninput="document.getElementById('buffer-val').textContent=this.value" />
+      <div class="inline-controls">
+        <button class="scale-btn" onclick="applyBufferPreset(0)">None</button>
+        <button class="scale-btn" onclick="applyBufferPreset(5)">Std 5 ft</button>
+        <button class="scale-btn" onclick="applyBufferPreset(10)">High 10 ft</button>
       </div>
-      <button type="button" class="ghost scale-btn" id="btn-manage-roles" style="width:100%;margin-top:6px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="manage-roles-panel">Manage roles ▾</button>
-      <div id="manage-roles-panel" style="display:none;margin-top:6px;padding:8px;border:1px solid #30363d;border-radius:6px;background:#161b22;" role="region" aria-labelledby="btn-manage-roles">
-        <div id="manage-roles-list"></div>
-        <p class="dim-note" style="margin-top:8px;margin-bottom:0;font-size:10px;">Removed roles stay on existing structures.</p>
-      </div>
+      <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;">Apply Buffer to All Placed</button>
 
-      <label title="Click a swatch to set color for the next placement">Color</label>
-      <div class="color-row" id="color-swatches" role="group" aria-label="Color for next placement"></div>
-
-      <button type="button" class="ghost" id="style-options-toggle" style="width:100%;font-size:11px;margin-top:4px;" aria-expanded="false" aria-controls="style-advanced" aria-label="Toggle label and style options" title="Opacity, rotation, clearance buffer">Options ▾</button>
-      <div id="style-advanced" style="display:none;" role="region" aria-labelledby="style-options-toggle">
-        <label>Opacity: <span id="opacity-val">65</span>%</label>
-        <input type="range" id="obj-opacity" min="15" max="90" value="65" aria-label="Object opacity percentage" title="Opacity for next placement (15–90%)"
-          oninput="document.getElementById('opacity-val').textContent=this.value" />
-
-        <label>Rotation: <span id="rotation-val">0</span>°</label>
-        <input type="range" id="obj-rotation" min="0" max="359" value="0" aria-label="Object rotation degrees" title="Rotation for next placement (0–359°)"
-          oninput="document.getElementById('rotation-val').textContent=this.value" />
-
-        <label>Clearance Buffer: <span id="buffer-val">0</span> ft</label>
-        <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet" title="Clearance buffer in feet around footprint (0–30)"
-          oninput="document.getElementById('buffer-val').textContent=this.value" />
-        <div class="inline-controls">
-          <button class="scale-btn" onclick="applyBufferPreset(0)" title="No clearance buffer">None</button>
-          <button class="scale-btn" onclick="applyBufferPreset(5)" title="5 ft clearance around footprint">Std 5 ft</button>
-          <button class="scale-btn" onclick="applyBufferPreset(10)" title="10 ft clearance around footprint">High 10 ft</button>
-        </div>
-        <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;" title="Apply current clearance buffer to every placed object">Apply Buffer to All Placed</button>
-      </div>
+      <button class="place-btn" onclick="startPlacing()">📍 Place on Map</button>
+      <button class="ghost" onclick="cancelPlacing()" style="width:100%;margin-top:4px;font-size:12px;">Cancel</button>
     </div>
 
     <!-- Custom shape -->
     <div class="sb-section">
-      <h3>Custom Size</h3>
-      <p style="font-size:11px;color:#8b949e;margin-bottom:6px;">Enter dimensions, then click the map to place.</p>
+      <h3>Custom Rectangle</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:6px;">Drag a box on the map to place a custom-sized shelter.</p>
       <div style="display:flex;gap:6px;">
         <div style="flex:1">
           <label>Width (ft)</label>
-          <input type="number" id="custom-w" value="20" min="1" aria-label="Custom width in feet" title="Width of custom footprint in feet" />
+          <input type="number" id="custom-w" value="20" min="1" aria-label="Custom width in feet" />
         </div>
         <div style="flex:1">
           <label>Length (ft)</label>
-          <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" title="Length of custom footprint in feet" />
+          <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" />
         </div>
       </div>
-      <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" title="Optional label for this custom object" />
-      <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;" title="Enter width/length above, then click map to place">Place Custom</button>
+      <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" />
+      <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;">Place Custom</button>
+    </div>
+
+    <!-- Scale presets -->
+    <div class="sb-section">
+      <h3>Scale Presets</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:4px;">Set map scale once, then continue normal zoom/pan.</p>
+      <div class="scale-btn-row">
+        <button class="scale-btn" onclick="applyScalePreset(100)">1:100</button>
+        <button class="scale-btn" onclick="applyScalePreset(150)">1:150</button>
+        <button class="scale-btn" onclick="applyScalePreset(200)">1:200</button>
+        <button class="scale-btn" onclick="applyScalePreset(500)">1:500</button>
+      </div>
+    </div>
+
+    <!-- Print metadata -->
+    <div class="sb-section">
+      <h3>Print Metadata</h3>
+      <label>Operation Name</label>
+      <input type="text" id="operation-name" placeholder="e.g. UC Davis Parking Lot Surge Site" aria-label="Operation name for print metadata" />
     </div>
 
     <!-- Plan -->
     <div class="sb-section">
       <h3>Plan</h3>
-      <button class="blue" onclick="saveScenario()" style="width:100%;" title="Save map view, placed objects, and key settings to a JSON plan file (backup/handoff)">Save Plan</button>
-      <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Open a previously saved plan file">Open Plan</button>
-      <button type="button" class="ghost" id="export-toggle" style="width:100%;margin-top:4px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="export-panel" aria-label="Toggle export options (GeoJSON, PDF)" title="Expand for GeoJSON and PDF export">Export ▾</button>
-      <div id="export-panel" style="display:none;" role="region" aria-labelledby="export-toggle">
-        <button class="ghost" onclick="exportGeoJSON()" style="width:100%;margin-top:4px;" title="Export layout as GeoJSON for GIS coordination">Export GeoJSON</button>
-        <button class="ghost" onclick="exportPDF()" style="width:100%;margin-top:4px;" title="Download PDF with map snapshot and summary (operation name, scale, zones, object list)">Export PDF</button>
-        <p class="dim-note" style="margin-top:6px;">Requires network connection to load PDF and html2canvas libraries.</p>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <button type="button" class="ghost" id="btn-undo" onclick="undo()" style="flex:1;" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+        <button type="button" class="ghost" id="btn-redo" onclick="redo()" style="flex:1;" aria-label="Redo" title="Redo (Ctrl+Y)">Redo</button>
       </div>
-      <button class="ghost" onclick="printFitToPage()" style="width:100%;margin-top:4px;" aria-label="Print fit to page" title="Frame placed objects for print, then open print dialog">Print Fit</button>
+      <button class="blue" onclick="saveScenario()" style="width:100%;">Save Plan</button>
+      <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;">Open Plan</button>
+      <button class="ghost" onclick="exportGeoJSON()" style="width:100%;margin-top:4px;">Export GeoJSON</button>
+      <p style="font-size:11px;color:#8b949e;margin-top:6px;">Saves map view, placed objects, and key settings to a JSON plan file.</p>
     </div>
 
-    </div><!-- /sidebar-scroll -->
-
-    <!-- Placed objects list (pinned at bottom, list scrolls inside) -->
-    <div id="sidebar-placed">
-      <div style="padding:10px 12px 6px;flex-shrink:0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
-          <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;" title="Remove all placed objects (Undo restores)">Clear All</button>
-        </div>
-        <div id="overlap-warning" class="warn-text" style="display:none;"></div>
-      </div>
-      <div id="obj-list-items"><p style="font-size:11px;color:#484f58;padding:10px;">No tents placed yet.</p></div>
+    <!-- Measure -->
+    <div class="sb-section">
+      <h3>Measure</h3>
+      <p style="font-size:11px;color:#8b949e;margin-bottom:4px;">Distance: 2 clicks. Area: 3+ clicks, then finish.</p>
+      <button class="ghost" onclick="toggleMeasureMode()" style="width:100%;">Measure Distance</button>
+      <button class="ghost" onclick="toggleAreaMeasureMode()" style="width:100%;margin-top:4px;">Measure Area</button>
+      <button class="ghost" onclick="finishAreaMeasure()" style="width:100%;margin-top:4px;">Finish Area</button>
+      <button class="ghost" onclick="clearMeasure()" style="width:100%;margin-top:4px;">Clear Measurement</button>
+      <div id="measure-readout" style="font-size:11px;color:#8b949e;margin-top:6px;">No measurement.</div>
     </div>
+
+    <!-- Placed objects list -->
+    <div style="border-bottom:1px solid #30363d;padding:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
+        <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;">Clear All</button>
+      </div>
+      <div id="overlap-warning" class="warn-text" style="display:none;"></div>
+    </div>
+    <div id="obj-list-items"><p style="font-size:11px;color:#484f58;padding:10px;">No tents placed yet.</p></div>
 
   </div>
 
-  <div id="map"><div id="cursor-pos" class="map-coords-overlay">Hover map for coords</div></div>
+  <div id="map"></div>
 </div>
 
 <div id="statusbar">
@@ -473,8 +397,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <div>Scale: <span id="scale-ratio">1:0</span></div>
   <div>Tents: <span id="tent-count">0</span></div>
   <div>Overlaps: <span id="overlap-count">0</span></div>
+  <div id="last-saved" title="Auto-saved layout and map view to this browser">Saved: —</div>
+  <div id="cursor-pos">Hover map for coords</div>
 </div>
-<div id="version-display" class="version-badge">v—</div>
+<div id="version-display" class="version-badge">v0.7.3</div>
 <div id="print-meta">
   Operation: <span id="print-meta-operation">Untitled</span> |
   Printed: <span id="print-meta-date">-</span> |
@@ -485,37 +411,43 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 <input type="file" id="scenario-file-input" accept=".json,application/json" style="display:none;" />
 
 <script>
-/**
- * VPC Mapping Tool — single-file app.
- * Flow: constants & data → mutable state → map & layers → UI (tabs, collapsibles) →
- * placement, measure, drag, undo → save/load & geometry helpers → map events → init.
- */
 const APP_META = {
   name: 'VPC Mapping Tool',
-  version: '0.8.6',
-  lastUpdated: '2026-03-27',
+  version: '0.7.3',
+  lastUpdated: '2026-02-26',
   changelog: [
-    { version: '0.8.6', date: '2026-03-27', note: 'Export PDF: map snapshot via html2canvas + jsPDF; crossOrigin on tile layers; waitForTilesIdle (idle or tileload debounce, 4s max); setExportChromeVisible; text-only fallback if capture fails.' },
-    { version: '0.8.5', date: '2026-02-26', note: 'ZUMRO Interconnect added to TENT_DB: 7.17\'×6.92\' rect (86"×83"); connects Zumro to Western Shelter; dimensions from ZUMRO_Interconnect_Dimensions.md.' },
-    { version: '0.8.4', date: '2026-03-10', note: 'Snap face selection: click near any of target\'s 4 faces (2 length ends, 2 width ends); offset uses correct half-dimension per axis. ROLES constant; snap hint text; postMode order; auto-uncheck after snap.' },
-    { version: '0.8.3', date: '2026-03-10', note: 'Snap to selected object: checkbox in Label & Style; next placement matches target rotation and attaches to end nearest click (e.g. Vestibule to GK1935).' },
-    { version: '0.8.2', date: '2026-03-10', note: 'v0.8.1 cleanup: B1–B3 (mode badge click, map border clear, SAT origin); U1–U5 (PDF caveat, Export ▾, color out of Options, How to use step 3, coords overlay); C1–C2 (changelog trim, #obj-list-items CSS).' }
+    { version: '0.7.3', date: '2026-02-26', note: 'Undo/redo (Ctrl+Z / Ctrl+Y); 50 steps.' },
+    { version: '0.7.2', date: '2026-02-26', note: 'Tier 2 #10: Rotate handle direction fixed; Save Plan / Open Plan UI.' },
+    { version: '0.7.1', date: '2026-02-26', note: 'Tier 2 #5: Zone/role tagging (Triage, Ward, ICU, etc.); list + tooltips + print/export zone summary.' },
+    { version: '0.7.0', date: '2026-02-26', note: 'Tier 2 #4: Autosave/local backup — "Last saved at" indicator in status bar.' },
+    { version: '0.6.9', date: '2026-02-26', note: 'Offline banner + Go to coordinates without search (lat,lng works offline).' },
+    { version: '0.6.8', date: '2026-02-26', note: 'Session restore: persist map + objects to localStorage, restore on load (no NYC reset).' },
+    { version: '0.6.7', date: '2026-02-26', note: 'Page title and header renamed to VPC Mapping Tool.' },
+    { version: '0.6.6', date: '2026-02-26', note: 'GK20 dimensions from SW-20 spec: 18\'7"×18\'7", 286 sq ft.' },
+    { version: '0.6.5', date: '2026-02-26', note: 'Non-rectangular shapes from spec docs: ellipse for 8D36 dome; GK1935 elongated-octagon per SW-1935.' },
+    { version: '0.6.4', date: '2026-02-26', note: 'TENT_DB updated from vendor spec docs: Blu-Med 7×8 vestibule; DLX X-24/X-32 21.5\' width; Zumro 400/600 exterior dims; HDT 8D36 added.' },
+    { version: '0.6.3', date: '2026-02-26', note: 'Added on-map rotate handle with separate move-vs-rotate interactions.' },
+    { version: '0.6.2', date: '2026-02-26', note: 'Switched to click-then-place workflow and added true drag-to-move for placed objects.' },
+    { version: '0.6.1', date: '2026-02-26', note: 'Added drag-and-drop tent placement from sidebar to map.' },
+    { version: '0.6.0', date: '2026-02-26', note: 'Completed Tier 3 with performance and modular refactor pass.' },
+    { version: '0.5.2', date: '2026-02-26', note: 'Tier 3 accessibility/keyboard pass (focus visibility, keyboard-selectable lists, and shortcuts).' },
+    { version: '0.5.1', date: '2026-02-26', note: 'Tier 3 security hardening (sanitized labels and normalized colors for rendered HTML).' },
+    { version: '0.5.0', date: '2026-02-26', note: 'Completed Tier 2 with area measurement and GeoJSON export.' },
+    { version: '0.4.0', date: '2026-02-26', note: 'Added scenario save/load (JSON) with map view and object restoration.' },
+    { version: '0.3.2', date: '2026-02-26', note: 'Added clearance presets and apply-to-all buffer action.' },
+    { version: '0.3.1', date: '2026-02-26', note: 'Added configurable clearance buffers with buffered overlap checks.' },
+    { version: '0.3.0', date: '2026-02-26', note: 'Started Tier 2 with distance measurement tool and overlap warnings.' },
+    { version: '0.2.7', date: '2026-02-26', note: 'Hardened search/print edge cases (response checks, antimeridian-safe bias, print restore fallback).' },
+    { version: '0.2.6', date: '2026-02-26', note: 'Added map-area-biased search with automatic global fallback.' },
+    { version: '0.2.5', date: '2026-02-26', note: 'Added printable operation name field and hybrid labels overlay for satellite context.' },
+    { version: '0.2.4', date: '2026-02-26', note: 'Added print footer with date/time, scale, and center coordinates.' },
+    { version: '0.2.3', date: '2026-02-26', note: 'Added Back to View Mode action and Print Fit to Page workflow.' },
+    { version: '0.2.2', date: '2026-02-26', note: 'Added fixed-scale preset buttons (set-once, manual zoom still enabled).' },
+    { version: '0.2.1', date: '2026-02-26', note: 'Added multi-result search picker for choosing exact geocode matches.' },
+    { version: '0.2.0', date: '2026-02-26', note: 'Added Tier 1 core upgrades (satellite basemap default, basemap toggle, rotation control, and live scale ratio).' },
+    { version: '0.1.0', date: '2026-02-26', note: 'Initial versioned baseline cloned from emergency-tent-placer.html.' }
   ]
 };
-
-// ─── Constants ─────────────────────────────────────────────────────────────────
-const DRAG_SUPPRESS_MS = 250;       // Ignore click shortly after drag (avoid accidental delete)
-const SESSION_DEBOUNCE_MS = 500;    // Delay before writing session to localStorage
-const UNDO_MAX = 50;
-const FT_TO_M = 0.3048;
-const MAX_LABEL_LENGTH = 80;
-const SESSION_KEY = 'vpc-mapping-session';
-const STORAGE_KEY_HOWTO = 'vpc_howto_open';
-const STORAGE_KEY_OPTIONS = 'vpc_options_open';
-const STORAGE_KEY_SETUP = 'vpc_setup_open';
-const STORAGE_KEY_EXPORT = 'vpc_export_open';
-const CUSTOM_ROLES_KEY = 'vpc-custom-roles';
-const ROLES = ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue'];
 
 // ─── Tent Database ──────────────────────────────────────────────────────────────
 // All dimensions in feet (width × length). Circles use widthFt as diameter.
@@ -561,8 +493,6 @@ const TENT_DB = {
       note:"Model 400 – 21'L×20'W exterior (Zumro 400 Specs), 400 sq ft" },
     { name:"Model 600", widthFt:20.4, lengthFt:31, shape:"rect",
       note:"Model 600 – 31'L×20.4'W exterior (Zumro 600 Specs), 600 sq ft" },
-    { name:"Interconnect", widthFt:7.17, lengthFt:6.92, shape:"rect",
-      note:"Interconnect – 7.17'×6.92' (86\"×83\") rect; connects Zumro to WS; ZUMRO_Interconnect_Dimensions.md / engineering drawing" },
   ],
   "HDT": [
     { name:"Base-X 305", widthFt:18, lengthFt:25, shape:"rect",
@@ -583,56 +513,46 @@ const VENDOR_COLORS = {
 function getVendorColor(vendor) {
   return (vendor && VENDOR_COLORS[vendor]) || selectedColor;
 }
-
-// ─── State (mutable) ───────────────────────────────────────────────────────────
-// Placement: selection and mode
+const MAX_LABEL_LENGTH = 80;
 let selectedColor = COLORS[0];
 let selectedTent = null;
 let placingMode = false;
 let customMode = false;
 let objects = [];
 let objectId = 0;
-// Measure
+let pendingSearchResults = [];
 let measureMode = false;
 let measureStart = null;
-let measureStartMarker = null;
 let measureTempLayer = null;
 let areaMeasureMode = false;
 let areaMeasurePoints = [];
 let areaMeasureLayer = null;
-// Drag, select, handles
+let overlapRaf = 0;
 let activeObjectDrag = null;
-let dragEndedAt = 0;
 let activeRotateDrag = null;
 let selectedObjectId = null;
 let rotateHandleLayer = null;
 let deleteHandleLayer = null;
-// Undo/redo
+const UNDO_MAX = 50;
 let undoStack = [];
 let redoStack = [];
-// Session autosave
+const SESSION_KEY = 'vpc-mapping-session';
 let sessionSaveTimer = 0;
-// Search & overlap
-let pendingSearchResults = [];
-let overlapRaf = 0;
 
 // ─── Map ────────────────────────────────────────────────────────────────────────
 const map = L.map('map').setView([40.7128,-74.0060], 16);
 const mapContainer = map.getContainer();
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   attribution: 'Tiles © Esri',
-  maxZoom: 21,
-  crossOrigin: true
+  maxZoom: 21
 });
 const labelsLayer = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
   attribution: 'Labels © Esri',
-  maxZoom: 21,
-  crossOrigin: true
+  maxZoom: 21
 });
 const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '© OpenStreetMap © CARTO',
-  maxZoom: 21,
-  crossOrigin: true
+  maxZoom: 21
 });
 
 satelliteLayer.addTo(map);
@@ -689,6 +609,7 @@ function tentShapeBadge(shape) {
   if (shape === 'circle') return '⬤ Circle';
   if (shape === 'octagon') return '⯃ Octagon';
   if (shape === 'elongated-octagon') return '⯃ Elong. Octagon';
+  if (shape === 'elongated-hexagon') return '⬡ Elong. Hexagon';
   if (shape === 'plus') return '✛ Plus/Cross';
   if (shape === 'ellipse') return '◯ Ellipse';
   return '▬ Rectangle';
@@ -738,6 +659,7 @@ function dimStr(tent) {
   if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
   if (tent.shape === 'octagon') return `⯃ ${tent.widthFt}' octagon`;
   if (tent.shape === 'elongated-octagon') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated oct.`;
+  if (tent.shape === 'elongated-hexagon') return `⬡ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated hex.`;
   if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
   if (tent.shape === 'ellipse') return `◯ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
   return `${tent.widthFt}' × ${tent.lengthFt}'`;
@@ -756,15 +678,15 @@ COLORS.forEach(c => {
   const s = document.createElement('div');
   s.className = 'color-swatch' + (c === selectedColor ? ' active' : '');
   s.style.background = c;
-  s.setAttribute('role', 'button');
-  s.setAttribute('aria-label', 'Set color for next placement');
-  s.title = 'Set color for next placement';
   s.onclick = () => {
     selectedColor = c;
     syncColorSwatches();
   };
   swatchContainer.appendChild(s);
 });
+
+// ─── Unit helpers ────────────────────────────────────────────────────────────────
+const FT_TO_M = 0.3048;
 
 // ─── Place from selected tent ────────────────────────────────────────────────────
 function startPlacing() {
@@ -792,31 +714,8 @@ function cancelPlacing() {
   setMode('View Mode');
 }
 
-function getDefaultModeMessage() {
-  return 'Select a tent from the sidebar, then click the map to place.';
-}
-
 function setMode(txt) {
-  const mapEl = document.getElementById('map');
-  if (mapEl) mapEl.classList.remove('map-mode-place', 'map-mode-measure');
-  const el = document.getElementById('mode-display');
-  const displayTxt = (txt === 'View Mode') ? getDefaultModeMessage() : txt;
-  el.textContent = displayTxt;
-  if (mapEl) {
-    if (txt !== 'View Mode') {
-      if (txt.startsWith('Click to place')) mapEl.classList.add('map-mode-place');
-      else if (txt.indexOf('Measure') !== -1) mapEl.classList.add('map-mode-measure');
-    }
-  }
-  if (txt === 'View Mode') {
-    el.classList.remove('mode-badge-action');
-    el.setAttribute('role', 'status');
-    el.removeAttribute('tabindex');
-  } else {
-    el.classList.add('mode-badge-action');
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
-  }
+  document.getElementById('mode-display').textContent = txt;
 }
 
 function resetViewMode() {
@@ -826,100 +725,6 @@ function resetViewMode() {
   endObjectDrag();
   endRotateDrag();
   setMode('View Mode');
-}
-
-(function initModeBadgeClick() {
-  const el = document.getElementById('mode-display');
-  if (!el) return;
-  function goBack() {
-    if (el.textContent !== getDefaultModeMessage()) resetViewMode();
-  }
-  el.addEventListener('click', goBack);
-  el.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goBack(); }
-  });
-})();
-
-function makeCollapsible(panelId, btnId, storageKey, labels) {
-  const panel = document.getElementById(panelId);
-  const btn = document.getElementById(btnId);
-  if (!panel || !btn) return;
-  const closedLabel = labels.closed;
-  const openLabel = labels.open;
-  function toggle() {
-    const isOpen = panel.style.display !== 'none';
-    panel.style.display = isOpen ? 'none' : 'block';
-    btn.textContent = isOpen ? closedLabel : openLabel;
-    btn.setAttribute('aria-expanded', String(!isOpen));
-    try { localStorage.setItem(storageKey, !isOpen ? 'true' : 'false'); } catch (_) {}
-  }
-  btn.onclick = toggle;
-  const raw = localStorage.getItem(storageKey);
-  const wasOpen = panelId === 'setup-panel'
-    ? (raw === null || raw === 'true')
-    : raw === 'true';
-  if (wasOpen) {
-    panel.style.display = 'block';
-    btn.textContent = openLabel;
-    btn.setAttribute('aria-expanded', 'true');
-  }
-}
-makeCollapsible('how-to-panel', 'how-to-toggle', STORAGE_KEY_HOWTO, { closed: 'How to use ▾', open: 'How to use ▴' });
-makeCollapsible('style-advanced', 'style-options-toggle', STORAGE_KEY_OPTIONS, { closed: 'Options ▾', open: 'Options ▴' });
-makeCollapsible('setup-panel', 'setup-toggle', STORAGE_KEY_SETUP, { closed: 'Setup ▾', open: 'Setup ▴' });
-makeCollapsible('export-panel', 'export-toggle', STORAGE_KEY_EXPORT, { closed: 'Export ▾', open: 'Export ▴' });
-
-function updateMeasureUI() {
-  const finishBtn = document.getElementById('btn-finish-area');
-  const clearBtn = document.getElementById('btn-clear-measure');
-  if (finishBtn) finishBtn.style.display = areaMeasureMode ? 'block' : 'none';
-  const hasMeasurement = !!measureTempLayer || !!areaMeasureLayer || (measureMode && measureStart !== null) || (areaMeasureMode && areaMeasurePoints.length > 0);
-  if (clearBtn) clearBtn.style.display = hasMeasurement ? 'block' : 'none';
-
-  const measureMenuBtn = document.getElementById('btn-measure-menu');
-  if (measureMenuBtn) {
-    if (measureMode || areaMeasureMode) measureMenuBtn.classList.add('blue');
-    else measureMenuBtn.classList.remove('blue');
-  }
-
-  const strip = document.getElementById('measure-strip');
-  if (strip) {
-    if (measureMode || areaMeasureMode) strip.style.display = 'flex';
-    else {
-      strip.style.display = 'none';
-      const rohHide = document.getElementById('measure-readout-header');
-      if (rohHide) rohHide.textContent = '';
-    }
-  }
-
-  const finishHdr = document.getElementById('btn-finish-area-header');
-  if (finishHdr) finishHdr.style.display = areaMeasureMode ? 'inline-block' : 'none';
-
-  const clearHdr = document.getElementById('btn-clear-measure-header');
-  if (clearHdr) clearHdr.style.display = hasMeasurement ? 'inline-block' : 'none';
-
-  const ro = document.getElementById('measure-readout');
-  const roh = document.getElementById('measure-readout-header');
-  if (ro && roh && (measureMode || areaMeasureMode)) roh.textContent = ro.textContent;
-}
-
-function closeMeasureMenu() {
-  const panel = document.getElementById('measure-menu-panel');
-  const btn = document.getElementById('btn-measure-menu');
-  if (panel) panel.style.display = 'none';
-  if (btn) btn.setAttribute('aria-expanded', 'false');
-}
-
-function measureMenuPickDistance(ev) {
-  if (ev) ev.stopPropagation();
-  closeMeasureMenu();
-  toggleMeasureMode();
-}
-
-function measureMenuPickArea(ev) {
-  if (ev) ev.stopPropagation();
-  closeMeasureMenu();
-  toggleAreaMeasureMode();
 }
 
 function toggleMeasureMode() {
@@ -932,21 +737,13 @@ function toggleMeasureMode() {
   }
   measureMode = !measureMode;
   measureStart = null;
-  clearMeasureStartMarker();
-  setMode(measureMode ? 'Measure Mode' : 'View Mode');
-  map.getContainer().style.cursor = measureMode ? 'crosshair' : '';
-  updateMeasureUI();
-  if (measureMode) {
-    const hdr = document.getElementById('measure-readout-header');
-    if (hdr) hdr.textContent = 'Click a start point on the map.';
-  }
+  setMode(measureMode ? 'Measure Mode: click start and end points' : 'View Mode');
 }
 
 function toggleAreaMeasureMode() {
   if (placingMode) cancelPlacing();
   measureMode = false;
   measureStart = null;
-  clearMeasureStartMarker();
   if (measureTempLayer) {
     map.removeLayer(measureTempLayer);
     measureTempLayer = null;
@@ -960,16 +757,13 @@ function toggleAreaMeasureMode() {
   document.getElementById('measure-readout').textContent = areaMeasureMode
     ? 'Area mode active. Click 3+ points, then click Finish Area.'
     : 'No measurement.';
-  setMode(areaMeasureMode ? 'Area Measure Mode' : 'View Mode');
-  map.getContainer().style.cursor = areaMeasureMode ? 'crosshair' : '';
-  updateMeasureUI();
+  setMode(areaMeasureMode ? 'Area Measure Mode: click points, then Finish Area' : 'View Mode');
 }
 
 function clearMeasure() {
   measureMode = false;
   areaMeasureMode = false;
   measureStart = null;
-  clearMeasureStartMarker();
   if (measureTempLayer) {
     map.removeLayer(measureTempLayer);
     measureTempLayer = null;
@@ -981,8 +775,6 @@ function clearMeasure() {
   }
   document.getElementById('measure-readout').textContent = 'No measurement.';
   setMode('View Mode');
-  map.getContainer().style.cursor = '';
-  updateMeasureUI();
 }
 
 function startObjectDrag(obj, startLatlng) {
@@ -1005,7 +797,7 @@ function endObjectDrag() {
   map.dragging.enable();
   mapContainer.style.cursor = '';
   if (moved) {
-    dragEndedAt = Date.now();
+    obj._suppressDeleteUntil = Date.now() + 250;
     updateList();
     scheduleOverlapSummary();
     setMode(`Moved ${sanitizeLabel(obj.label)}`);
@@ -1024,7 +816,6 @@ function startRotateDrag(obj) {
 function endRotateDrag() {
   if (!activeRotateDrag) return;
   activeRotateDrag = null;
-  dragEndedAt = Date.now();
   map.dragging.enable();
   mapContainer.style.cursor = '';
   updateList();
@@ -1201,9 +992,8 @@ function applyBufferToAll() {
     setMode('No placed objects to update');
     return;
   }
-  const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
-  if (!confirm(`Apply ${bufferFt} ft buffer to all ${objects.length} placed object(s)?`)) return;
   pushStateToUndo();
+  const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
   objects.forEach(o => {
     o.bufferFt = bufferFt;
     drawObject(o);
@@ -1217,125 +1007,6 @@ function applyBufferToAll() {
 function sanitizeLabel(value, fallback = 'Untitled') {
   const trimmed = String(value || '').trim().slice(0, MAX_LABEL_LENGTH);
   return trimmed || fallback;
-}
-
-function getCustomRolesFromStorage() {
-  try {
-    const raw = localStorage.getItem(CUSTOM_ROLES_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr
-      .filter(x => typeof x === 'string')
-      .map(x => x.trim())
-      .filter(x => x.length > 0);
-  } catch (e) {
-    return [];
-  }
-}
-
-function getEffectiveRoles() {
-  const custom = getCustomRolesFromStorage();
-  const seen = new Set(ROLES.map(r => r.toLowerCase()));
-  const out = ROLES.slice();
-  for (const c of custom) {
-    const low = c.toLowerCase();
-    if (!seen.has(low)) {
-      seen.add(low);
-      out.push(c);
-    }
-  }
-  return out;
-}
-
-function addCustomRole(value) {
-  const s = sanitizeLabel(value, '').slice(0, 40);
-  if (!s) return false;
-  const existing = getEffectiveRoles();
-  if (existing.some(r => r.toLowerCase() === s.toLowerCase())) return false;
-  const custom = getCustomRolesFromStorage();
-  custom.push(s);
-  try {
-    localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(custom));
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
-
-function rebuildRoleDropdowns() {
-  const sel = document.getElementById('obj-role');
-  if (!sel) return;
-  const roles = getEffectiveRoles();
-  const prev = sel.value;
-  sel.textContent = '';
-  roles.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = r;
-    sel.appendChild(opt);
-  });
-  const matchPrev = roles.find(r => r === prev);
-  sel.value = matchPrev != null ? matchPrev : '—';
-}
-
-function rebuildManageRolesPanel() {
-  const mount = document.getElementById('manage-roles-list');
-  if (!mount) return;
-  mount.textContent = '';
-  const custom = getCustomRolesFromStorage();
-  if (!custom.length) {
-    const p = document.createElement('p');
-    p.style.fontSize = '11px';
-    p.style.color = '#8b949e';
-    p.style.margin = '0';
-    p.textContent = 'No custom roles added yet.';
-    mount.appendChild(p);
-    return;
-  }
-  custom.forEach((roleName, idx) => {
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.alignItems = 'center';
-    row.style.justifyContent = 'space-between';
-    row.style.gap = '8px';
-    row.style.marginTop = idx === 0 ? '0' : '6px';
-    const label = document.createElement('span');
-    label.style.fontSize = '11px';
-    label.style.color = '#e6edf3';
-    label.style.wordBreak = 'break-word';
-    label.textContent = roleName;
-    const rm = document.createElement('button');
-    rm.type = 'button';
-    rm.className = 'obj-del';
-    rm.style.flexShrink = '0';
-    rm.textContent = '×';
-    rm.setAttribute('aria-label', 'Remove role ' + roleName);
-    rm.title = 'Remove from list';
-    rm.onclick = function () {
-      removeCustomRole(roleName);
-    };
-    row.appendChild(label);
-    row.appendChild(rm);
-    mount.appendChild(row);
-  });
-}
-
-function removeCustomRole(value) {
-  const v = String(value || '').trim();
-  if (!v) return;
-  const custom = getCustomRolesFromStorage();
-  const low = v.toLowerCase();
-  const next = custom.filter(r => r.toLowerCase() !== low);
-  if (next.length === custom.length) return;
-  try {
-    localStorage.setItem(CUSTOM_ROLES_KEY, JSON.stringify(next));
-  } catch (e) {
-    return;
-  }
-  rebuildRoleDropdowns();
-  rebuildManageRolesPanel();
-  updateList();
 }
 
 function normalizeColor(value) {
@@ -1386,8 +1057,7 @@ function buildScenarioData() {
       cornerCutL: o.cornerCutL,
       endCapFt: o.endCapFt,
       armWidthFt: o.armWidthFt
-    })),
-    customRoles: getEffectiveRoles().filter(r => !ROLES.includes(r))
+    }))
   };
 }
 
@@ -1443,156 +1113,7 @@ function exportGeoJSON() {
   setMode(`GeoJSON exported (${features.length} feature(s))`);
 }
 
-function setExportChromeVisible(visible) {
-  ['header', 'sidebar', 'statusbar'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.visibility = visible ? '' : 'hidden';
-  });
-}
-
-function waitForTilesIdle() {
-  return new Promise((resolve) => {
-    if (!map._tilesToLoad || map._tilesToLoad === 0) {
-      resolve();
-      return;
-    }
-    const maxTimer = setTimeout(() => {
-      cleanup();
-      resolve();
-    }, 4000);
-    let debounceTimer = null;
-    function cleanup() {
-      clearTimeout(maxTimer);
-      if (debounceTimer) clearTimeout(debounceTimer);
-      map.off('tileload', onTileLoad);
-      map.off('tileerror', onTileLoad);
-      map.off('idle', onIdle);
-    }
-    function finish() {
-      cleanup();
-      resolve();
-    }
-    function onTileLoad() {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(finish, 150);
-    }
-    function onIdle() {
-      finish();
-    }
-    if (map.listens && map.listens('idle')) {
-      map.once('idle', onIdle);
-    } else {
-      map.on('tileload', onTileLoad);
-      map.on('tileerror', onTileLoad);
-    }
-  });
-}
-
-async function exportPDF() {
-  if (typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
-    setMode('PDF export requires network connection to load libraries.');
-    return;
-  }
-  const { jsPDF } = window.jspdf;
-  const h2c = window.html2canvas;
-  const previousCenter = map.getCenter();
-  const previousZoom = map.getZoom();
-  const filename = `vpc-summary-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.pdf`;
-
-  const opEl = document.getElementById('operation-name');
-  const operationName = (opEl && opEl.value.trim()) ? opEl.value.trim() : 'Untitled';
-  const scaleEl = document.getElementById('scale-ratio');
-  const scaleText = (scaleEl && scaleEl.textContent) ? scaleEl.textContent.trim() : '1:?';
-  const timestamp = new Date().toLocaleString();
-  const zoneSummary = getZoneSummary();
-
-  function appendPdfSummary(doc, startY) {
-    const margin = 20;
-    const lineHeight = 6;
-    const pageH = doc.internal.pageSize.getHeight ? doc.internal.pageSize.getHeight() : doc.internal.pageSize.height;
-    const maxY = pageH - 20;
-    let y = startY;
-
-    function addLine(text, fontSize) {
-      if (fontSize) doc.setFontSize(fontSize);
-      if (y > maxY) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.text(String(text), margin, y);
-      y += (fontSize === 14 ? 8 : lineHeight);
-    }
-
-    doc.setFontSize(14);
-    addLine(operationName, 14);
-    doc.setFontSize(10);
-    addLine('Exported: ' + timestamp);
-    addLine('Scale: ' + scaleText);
-    addLine('Zones: ' + zoneSummary);
-    y += lineHeight;
-    addLine('Objects', 11);
-    if (objects.length === 0) {
-      addLine('(none)');
-    } else {
-      objects.forEach((o, i) => {
-        const dims = (o.widthM != null && o.lengthM != null)
-          ? `${(o.widthM * 3.28084).toFixed(1)}×${(o.lengthM * 3.28084).toFixed(1)} ft`
-          : '—';
-        const role = String(o.role || '—');
-        addLine(`${i + 1}. ${o.label || 'Unlabeled'} — ${dims} — ${role}`);
-      });
-    }
-    y += lineHeight;
-    addLine('Open the saved plan file in VPC Mapping Tool for the interactive map.', 9);
-  }
-
-  try {
-    setExportChromeVisible(false);
-    map.invalidateSize();
-    await waitForTilesIdle();
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const mapEl = document.getElementById('map');
-    const canvas = await h2c(mapEl, {
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      scale: Math.min(2, window.devicePixelRatio || 1)
-    });
-    const doc = new jsPDF();
-    const margin = 10;
-    const pageW = doc.internal.pageSize.getWidth ? doc.internal.pageSize.getWidth() : doc.internal.pageSize.width;
-    const pageH = doc.internal.pageSize.getHeight ? doc.internal.pageSize.getHeight() : doc.internal.pageSize.height;
-    const imgW = pageW - 2 * margin;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    const maxImgH = pageH * 0.55;
-    let drawW = imgW;
-    let drawH = imgH;
-    if (imgH > maxImgH) {
-      drawH = maxImgH;
-      drawW = (canvas.width * drawH) / canvas.height;
-    }
-    const imgX = (pageW - drawW) / 2;
-    doc.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', imgX, margin, drawW, drawH);
-    appendPdfSummary(doc, margin + drawH + 8);
-    doc.save(filename);
-    setMode('PDF exported: ' + filename);
-  } catch (err) {
-    console.error(err);
-    const doc = new jsPDF();
-    appendPdfSummary(doc, 20);
-    doc.save(filename);
-    setMode('PDF exported without map image (map capture failed).');
-  } finally {
-    setExportChromeVisible(true);
-    map.invalidateSize();
-    map.setView(previousCenter, previousZoom);
-  }
-}
-
 function loadScenarioPrompt() {
-  if (objects.length > 0) {
-    if (!confirm('Warning: opening a plan will replace your current layout, including your autosaved session. To keep your current work, use Save Plan to download it first. Continue?')) return;
-  }
   document.getElementById('scenario-file-input').click();
 }
 
@@ -1638,46 +1159,29 @@ function loadScenarioFromData(data, options) {
     }
   }
 
-  if (Array.isArray(data.customRoles) && data.customRoles.length > 0) {
-    data.customRoles.forEach(entry => {
-      if (typeof entry === 'string') addCustomRole(entry);
-    });
-  }
-  rebuildRoleDropdowns();
-
   updateList();
   scheduleOverlapSummary();
   updatePrintMeta();
-  updateLastSavedIndicator(data.savedAt ? new Date(data.savedAt) : undefined);
+  updateLastSavedIndicator(data.savedAt ? new Date(data.savedAt) : null);
   undoStack = [];
   redoStack = [];
   updateUndoRedoButtons();
-  setMode(options.fromRestore ? 'View Mode' : `Plan loaded (${objects.length} object(s))`);
+  setMode(options.fromRestore ? 'Session restored' : `Plan loaded (${objects.length} object(s))`);
   if (!options.fromRestore) scheduleSaveSession();
 }
 
 function formatLastSaved(date) {
   if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '—';
-  const md = `${date.getMonth() + 1}/${date.getDate()}`;
-  const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true });
-  return 'Autosaved ' + md + ' ' + time;
+  const now = new Date();
+  const sameDay = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  if (sameDay) return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }) + ' ' + date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
 function updateLastSavedIndicator(date) {
-  const el = document.getElementById('autosave-indicator');
+  const el = document.getElementById('last-saved');
   if (!el) return;
-  if (date === null) {
-    el.textContent = 'Autosave failed — use Save Plan';
-    el.style.color = '#f85149';
-    return;
-  }
-  if (date === undefined || !(date instanceof Date) || isNaN(date.getTime())) {
-    el.style.removeProperty('color');
-    el.textContent = 'Not yet saved';
-    return;
-  }
-  el.style.removeProperty('color');
-  el.textContent = formatLastSaved(date);
+  el.textContent = 'Saved: ' + formatLastSaved(date);
 }
 
 function saveSession() {
@@ -1685,96 +1189,14 @@ function saveSession() {
     const data = buildScenarioData();
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
     updateLastSavedIndicator(new Date());
-    updateRestoreButtonState();
   } catch (e) {
-    updateLastSavedIndicator(null);
-    setMode('Autosave failed. Please use Save Plan to export your plan manually.');
+    // Quota exceeded or other; fail silently
   }
 }
 
 function scheduleSaveSession() {
   clearTimeout(sessionSaveTimer);
-  sessionSaveTimer = setTimeout(saveSession, SESSION_DEBOUNCE_MS);
-}
-
-function updateRestoreButtonState() {
-  const btn = document.getElementById('btn-restore-autosave');
-  if (!btn) return;
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) {
-      btn.disabled = true;
-      return;
-    }
-    const data = JSON.parse(raw);
-    if (!data || !Array.isArray(data.objects)) {
-      btn.disabled = true;
-      return;
-    }
-    if (!data.map || !Array.isArray(data.map.center) || data.map.center.length !== 2) {
-      btn.disabled = true;
-      return;
-    }
-    const lat = toNumber(data.map.center[0], null);
-    const lng = toNumber(data.map.center[1], null);
-    const zoom = toNumber(data.map.zoom, null);
-    const valid = lat != null && lng != null && zoom != null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && zoom >= 0 && zoom <= 22;
-    btn.disabled = !valid;
-  } catch (e) {
-    btn.disabled = true;
-  }
-}
-
-function restoreAutosave() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) {
-      setMode('No autosave found.');
-      updateRestoreButtonState();
-      return;
-    }
-    const data = JSON.parse(raw);
-    if (!data || !Array.isArray(data.objects)) {
-      setMode('No autosave found.');
-      updateRestoreButtonState();
-      return;
-    }
-    if (!data.map || !Array.isArray(data.map.center) || data.map.center.length !== 2) {
-      setMode('No autosave found.');
-      updateRestoreButtonState();
-      return;
-    }
-    const lat = toNumber(data.map.center[0], null);
-    const lng = toNumber(data.map.center[1], null);
-    const zoom = toNumber(data.map.zoom, null);
-    if (lat == null || lng == null || zoom == null || lat < -90 || lat > 90 || lng < -180 || lng > 180 || zoom < 0 || zoom > 22) {
-      setMode('No autosave found.');
-      updateRestoreButtonState();
-      return;
-    }
-    if (objects.length > 0) {
-      if (!confirm('This will replace your current layout with the autosaved session. Unsaved work will be lost. Continue?')) {
-        updateRestoreButtonState();
-        return;
-      }
-    }
-    loadScenarioFromData(data, { fromRestore: true });
-    updateScaleRatio();
-    const restoreBtn = document.getElementById('btn-restore-autosave');
-    if (restoreBtn) {
-      const prevRestoreLabel = restoreBtn.textContent;
-      restoreBtn.textContent = 'Restored!';
-      restoreBtn.classList.add('blue');
-      setTimeout(() => {
-        restoreBtn.textContent = prevRestoreLabel;
-        restoreBtn.classList.remove('blue');
-      }, 2000);
-    }
-    updateRestoreButtonState();
-  } catch (e) {
-    setMode('No autosave found.');
-    updateRestoreButtonState();
-  }
+  sessionSaveTimer = setTimeout(saveSession, 500);
 }
 
 function restoreSession() {
@@ -1790,7 +1212,6 @@ function restoreSession() {
     if (lat == null || lng == null || zoom == null) return;
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180 || zoom < 0 || zoom > 22) return;
     loadScenarioFromData(data, { fromRestore: true });
-    updateScaleRatio();
   } catch (e) {
     // Corrupt or invalid; use default NYC view
   }
@@ -1867,36 +1288,8 @@ map.on('click', e => {
   extra.role = roleEl ? roleEl.value : '—';
 
   const color = getVendorColor(vendor);
-  let placeLatLng = e.latlng;
-  let placeAngle = angleDeg;
-  let attachedToLabel = null;
-  let attachedFace = null;
-  const snapCheck = document.getElementById('snap-to-selected');
-  if (snapCheck && snapCheck.checked && selectedObjectId != null) {
-    const target = getObjectById(selectedObjectId);
-    if (target && objects.includes(target)) {
-      const result = getSnapAttachLatLng(target, lengthFt * FT_TO_M, widthFt * FT_TO_M, e.latlng);
-      if (result) {
-        placeLatLng = result.latlng;
-        placeAngle = normalizeAngle(target.angleDeg || 0);
-        attachedToLabel = target.label;
-        attachedFace = result.face;
-      }
-    }
-  }
-  placeObject(placeLatLng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, color, opacity, placeAngle, bufferFt, vendor, extra);
-
-  const postMode = attachedToLabel
-    ? `Attached to ${sanitizeLabel(attachedToLabel)} (${attachedFace} face)`
-    : null;
+  placeObject(e.latlng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, color, opacity, angleDeg, bufferFt, vendor, extra);
   cancelPlacing();
-  if (postMode) setMode(postMode);
-
-  if (attachedToLabel) {
-    const snapHint = document.getElementById('snap-hint');
-    if (snapCheck) snapCheck.checked = false;
-    if (snapHint) snapHint.style.display = 'none';
-  }
 });
 
 map.on('mousemove', e => {
@@ -1931,17 +1324,13 @@ map.on('zoomend', () => {
   updateScaleRatio();
   scheduleSaveSession();
 });
-map.on('mouseup', () => {
-  endObjectDrag();
-  endRotateDrag();
-});
+map.on('mouseup', () => endObjectDrag());
+map.on('mouseup', () => endRotateDrag());
 
 // ─── Object Placement & Drawing ──────────────────────────────────────────────────
 function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angleDeg, bufferFt, vendor, extra={}) {
   pushStateToUndo();
   const id = ++objectId;
-  const role = String(extra.role != null ? extra.role : (document.getElementById('obj-role')?.value || '—'));
-  const { role: _r, ...extraWithoutRole } = extra;
   const obj = {
     id,
     latlng,
@@ -1954,11 +1343,11 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
     angleDeg,
     bufferFt,
     vendor,
-    role,
     layer: null,
     layerBuffer: null,
-    ...extraWithoutRole
+    ...extra
   };
+  obj.role = String(extra.role != null ? extra.role : (document.getElementById('obj-role')?.value || '—'));
   objects.push(obj);
   drawObject(obj);
   setSelectedObject(obj.id);
@@ -2003,6 +1392,8 @@ function drawObject(obj) {
     ? `<b>${safeLabel}</b><br>Octagon Ø ${wFt} ft`
     : obj.shape === 'elongated-octagon'
     ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' elong. octagon`
+    : obj.shape === 'elongated-hexagon'
+    ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' elongated hexagon`
     : obj.shape === 'plus'
     ? `<b>${safeLabel}</b><br>${wFt}' plus/cross (arm w: ${Math.round(obj.armWidthFt||0)}')`
     : obj.shape === 'ellipse'
@@ -2023,7 +1414,7 @@ function drawObject(obj) {
   };
   const bindSelect = layer => {
     layer.on('click', ev => {
-      if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+      if (obj._suppressDeleteUntil && Date.now() < obj._suppressDeleteUntil) return;
       if (ev.originalEvent && ev.originalEvent.shiftKey) {
         if (confirm(`Delete "${obj.label}"?`)) deleteObj(obj.id);
         return;
@@ -2054,6 +1445,10 @@ function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
     const cornerCutLm = ((obj.cornerCutL || 0) * FT_TO_M) + extraBufferM;
     return createGeoElongatedOctagon(obj.latlng, widthBuffered, lengthBuffered, cornerCutWm, cornerCutLm, obj.angleDeg || 0, style);
   }
+  if (obj.shape === 'elongated-hexagon') {
+    const endCapM = ((obj.endCapFt || 0) * FT_TO_M) + extraBufferM;
+    return createGeoElongatedHexagon(obj.latlng, widthBuffered, lengthBuffered, endCapM, obj.angleDeg || 0, style);
+  }
   if (obj.shape === 'plus') {
     const armWidthBase = obj.armWidthFt ? obj.armWidthFt * FT_TO_M : widthM * 0.7;
     const armWidthM = armWidthBase + extraBufferM * 2;
@@ -2065,50 +1460,13 @@ function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
   return createGeoRect(obj.latlng, widthBuffered, lengthBuffered, obj.angleDeg || 0, style);
 }
 
-// Convert meters offset to lat/lng delta from center (dx = east, dy = north)
+// Convert meters offset to lat/lng delta from center
 function metersToDeg(center, dx, dy) {
   const R = 6371000;
   const latRad = center.lat * Math.PI / 180;
   const dLat = (dy / R) * (180 / Math.PI);
   const dLng = (dx / R) * (180 / Math.PI) / Math.cos(latRad);
   return [center.lat + dLat, center.lng + dLng];
-}
-
-// Given a target object and the new tent's dimensions, return { latlng, face } where
-// latlng is the new tent center and face is 'length' or 'width'.
-// The click point determines which of the target's 4 face midpoints is nearest.
-// Both tents share the target's rotation. Returns null if target has no usable dimensions.
-function getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng) {
-  const tHL = (target.lengthM != null ? target.lengthM : target.widthM) / 2;
-  const tHW = target.widthM / 2;
-  if (!tHL || tHL <= 0 || !tHW || tHW <= 0) return null;
-
-  const angleDeg = normalizeAngle(target.angleDeg || 0);
-  const rad = angleDeg * Math.PI / 180;
-  const sinA = Math.sin(rad);
-  const cosA = Math.cos(rad);
-  const center = target.latlng;
-
-  const faces = [
-    { pt: L.latLng(metersToDeg(center, -tHL * sinA, tHL * cosA)), axis: 'length', dir: 1 },
-    { pt: L.latLng(metersToDeg(center, tHL * sinA, -tHL * cosA)), axis: 'length', dir: -1 },
-    { pt: L.latLng(metersToDeg(center, -tHW * cosA, -tHW * sinA)), axis: 'width', dir: -1 },
-    { pt: L.latLng(metersToDeg(center, tHW * cosA, tHW * sinA)), axis: 'width', dir: 1 },
-  ];
-
-  let nearest = null, nearestDist = Infinity;
-  faces.forEach(f => {
-    const d = clickLatlng.distanceTo(f.pt);
-    if (d < nearestDist) { nearestDist = d; nearest = f; }
-  });
-  if (!nearest) return null;
-
-  const newHalf = nearest.axis === 'length' ? newLengthM / 2 : newWidthM / 2;
-  const [lat, lng] = nearest.axis === 'length'
-    ? metersToDeg(nearest.pt, -newHalf * sinA * nearest.dir, newHalf * cosA * nearest.dir)
-    : metersToDeg(nearest.pt, newHalf * cosA * nearest.dir, newHalf * sinA * nearest.dir);
-
-  return { latlng: L.latLng(lat, lng), face: nearest.axis };
 }
 
 function normalizeAngle(deg) {
@@ -2200,6 +1558,32 @@ function createGeoEllipse(center, widthM, lengthM, angleDeg, style) {
 // Elongated hexagon (HDT Base-X Dome shape):
 // widthM = flat-to-flat width (E-W), lengthM = total length (N-S)
 // endCapM = depth of the pointed triangular end cap at N and S ends
+// Shape: two long parallel sides + two angled faces meeting at a point on each end
+// 6 vertices total:
+//   N tip:  (0, +hl)
+//   NE:     (+hw, +hl - endCapM)
+//   SE:     (+hw, -hl + endCapM)
+//   S tip:  (0, -hl)
+//   SW:     (-hw, -hl + endCapM)
+//   NW:     (-hw, +hl - endCapM)
+function createGeoElongatedHexagon(center, widthM, lengthM, endCapM, angleDeg, style) {
+  const hw = widthM / 2;
+  const hl = lengthM / 2;
+  const ec = endCapM;
+
+  const offsets = [
+    [ 0,       hl     ],  // N tip
+    [ hw,  hl - ec    ],  // NE
+    [ hw, -hl + ec    ],  // SE
+    [ 0,      -hl     ],  // S tip
+    [-hw, -hl + ec    ],  // SW
+    [-hw,  hl - ec    ],  // NW
+  ];
+
+  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
+  return L.polygon(points, style);
+}
+
 // Plus / Cross shape (DLX X-HUB, Zumro Quad Interface):
 // totalWM   = full E-W tip-to-tip span
 // totalLM   = full N-S tip-to-tip span
@@ -2259,7 +1643,6 @@ function deleteObj(id) {
   updateList();
   scheduleOverlapSummary();
   scheduleSaveSession();
-  setMode('Object deleted. Use Undo in the header to restore.');
 }
 
 function resetPlacedObjects() {
@@ -2279,11 +1662,10 @@ function resetPlacedObjects() {
 
 function clearAll() {
   if (!objects.length) return;
-  if (!confirm('Clear all placed objects?')) return;
-  pushStateToUndo(); // so one Undo restores all
+  if (!confirm('Clear all placed tents?')) return;
+  pushStateToUndo();
   resetPlacedObjects();
   scheduleSaveSession();
-  setMode('All objects cleared. Use Undo in the header to restore.');
 }
 
 function updateList() {
@@ -2312,6 +1694,7 @@ function createObjectListItem(o) {
   const dims = o.shape === 'circle' ? `Ø${wFt}'`
     : o.shape === 'octagon' ? `Oct Ø${wFt}'`
     : o.shape === 'elongated-octagon' ? `${wFt}'×${lFt}' Oct`
+    : o.shape === 'elongated-hexagon' ? `${wFt}'×${lFt}' Hex`
     : o.shape === 'plus' ? `${wFt}' Plus`
     : o.shape === 'ellipse' ? `${wFt}'×${lFt}' ◯`
     : `${wFt}'×${lFt}'`;
@@ -2331,21 +1714,9 @@ function createObjectListItem(o) {
   dot.className = 'obj-color-dot';
   dot.style.background = normalizeColor(o.color);
 
-  const name = document.createElement('input');
-  name.type = 'text';
-  name.className = 'obj-name obj-name-input';
-  name.value = sanitizeLabel(o.label);
-  name.setAttribute('aria-label', `Label for ${sanitizeLabel(o.label)}`);
-  name.onclick = ev => ev.stopPropagation();
-  name.onblur = () => {
-    const newLabel = sanitizeLabel(name.value);
-    if (newLabel === o.label) return;
-    pushStateToUndo();
-    o.label = newLabel;
-    drawObject(o);
-    updateList();
-    scheduleSaveSession();
-  };
+  const name = document.createElement('div');
+  name.className = 'obj-name';
+  name.textContent = sanitizeLabel(o.label);
 
   const meta = document.createElement('div');
   meta.style.fontSize = '10px';
@@ -2356,7 +1727,7 @@ function createObjectListItem(o) {
   const roleSelect = document.createElement('select');
   roleSelect.className = 'obj-role-select';
   roleSelect.setAttribute('aria-label', `Role for ${sanitizeLabel(o.label)}`);
-  getEffectiveRoles().forEach(r => {
+  ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue'].forEach(r => {
     const opt = document.createElement('option');
     opt.value = r;
     opt.textContent = r;
@@ -2388,42 +1759,24 @@ function createObjectListItem(o) {
   return row;
 }
 
-function clearMeasureStartMarker() {
-  if (measureStartMarker) {
-    map.removeLayer(measureStartMarker);
-    measureStartMarker = null;
-  }
-}
-
 function handleMeasureClick(latlng) {
   if (!measureStart) {
     measureStart = latlng;
-    clearMeasureStartMarker();
-    measureStartMarker = L.circleMarker(latlng, {
-      radius: 4,
-      color: '#58a6ff',
-      fillColor: '#58a6ff',
-      fillOpacity: 0.8,
-      weight: 1
-    }).addTo(map);
     if (measureTempLayer) {
       map.removeLayer(measureTempLayer);
       measureTempLayer = null;
     }
     document.getElementById('measure-readout').textContent = 'Start point set. Click end point.';
-    updateMeasureUI();
     return;
   }
 
   const meters = map.distance(measureStart, latlng);
   const feet = meters / FT_TO_M;
-  clearMeasureStartMarker();
   if (measureTempLayer) map.removeLayer(measureTempLayer);
   measureTempLayer = L.polyline([measureStart, latlng], { color: '#ffa657', weight: 2.5, opacity: 0.95 }).addTo(map);
   measureTempLayer.bindTooltip(`${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`, { permanent: true, direction: 'center' });
   document.getElementById('measure-readout').textContent = `Distance: ${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`;
   measureStart = null;
-  updateMeasureUI();
 }
 
 function handleAreaMeasureClick(latlng) {
@@ -2434,7 +1787,6 @@ function handleAreaMeasureClick(latlng) {
   } else {
     document.getElementById('measure-readout').textContent = `Area points: ${areaMeasurePoints.length}. Click Finish Area to calculate.`;
   }
-  updateMeasureUI();
 }
 
 function drawAreaMeasureLayer() {
@@ -2470,7 +1822,6 @@ function finishAreaMeasure() {
   areaMeasureMode = false;
   areaMeasurePoints = [];
   setMode('View Mode');
-  updateMeasureUI();
 }
 
 function polygonAreaMeters(latlngs) {
@@ -2498,103 +1849,20 @@ function scheduleOverlapSummary() {
   });
 }
 
-// Get polygon vertices in latlng from a layer (buffer or main footprint)
-function getLayerVertices(layer) {
-  if (!layer) return null;
-  if (layer.getLatLngs) {
-    const rings = layer.getLatLngs();
-    const first = Array.isArray(rings[0]) ? rings[0] : rings;
-    return first.length >= 3 ? first : null;
-  }
-  if (layer.getLatLng && layer.getRadius) {
-    const center = layer.getLatLng();
-    const r = layer.getRadius();
-    const mPerDegLat = 111320;
-    const points = [];
-    for (let i = 0; i < 36; i++) {
-      const t = (i / 36) * 2 * Math.PI;
-      const latOffset = (r / mPerDegLat) * Math.cos(t);
-      const lngOffset = (r / (mPerDegLat * Math.cos(center.lat * Math.PI / 180))) * Math.sin(t);
-      points.push(L.latLng(center.lat + latOffset, center.lng + lngOffset));
-    }
-    return points;
-  }
-  return null;
-}
-
-// Convert latlng to meters relative to origin (tangent plane)
-function latlngToMeters(lat, lng, originLat, originLng) {
-  const R = 6371000;
-  const latRad = originLat * Math.PI / 180;
-  const dLat = (lat - originLat) * Math.PI / 180;
-  const dLng = (lng - originLng) * Math.PI / 180;
-  const x = R * dLng * Math.cos(latRad);
-  const y = R * dLat;
-  return [x, y];
-}
-
-// SAT: do two convex polygons (arrays of [x,y]) overlap?
-function polygonsOverlapSat(vertsA, vertsB) {
-  const project = (verts, axis) => {
-    let min = Infinity, max = -Infinity;
-    for (let i = 0; i < verts.length; i++) {
-      const p = verts[i];
-      const proj = p[0] * axis[0] + p[1] * axis[1];
-      if (proj < min) min = proj;
-      if (proj > max) max = proj;
-    }
-    return [min, max];
-  };
-  const getEdges = (verts) => {
-    const edges = [];
-    for (let i = 0; i < verts.length; i++) {
-      const a = verts[i];
-      const b = verts[(i + 1) % verts.length];
-      edges.push([b[0] - a[0], b[1] - a[1]]);
-    }
-    return edges;
-  };
-  const getNormals = (edges) => edges.map(([x, y]) => [-y, x]);
-  const allEdges = [...getEdges(vertsA), ...getEdges(vertsB)];
-  const axes = getNormals(allEdges);
-  for (let k = 0; k < axes.length; k++) {
-    const axis = axes[k];
-    const len = Math.sqrt(axis[0] * axis[0] + axis[1] * axis[1]);
-    if (len < 1e-10) continue;
-    axis[0] /= len;
-    axis[1] /= len;
-    const [minA, maxA] = project(vertsA, axis);
-    const [minB, maxB] = project(vertsB, axis);
-    if (maxA < minB || maxB < minA) return false;
-  }
-  return true;
-}
-
 function updateOverlapSummary() {
-  const polygons = [];
-  const center = map.getCenter();
-  let originLat = center.lat, originLng = center.lng;
-  let originSet = false;
-  objects.forEach((o) => {
+  const activeBounds = [];
+  objects.forEach(o => {
     const layer = o.layerBuffer || o.layer;
-    const latlngs = getLayerVertices(layer);
-    if (!latlngs || latlngs.length < 3) return;
-    if (!originSet) {
-      originLat = o.latlng.lat;
-      originLng = o.latlng.lng;
-      originSet = true;
-    }
-    const verts = latlngs.map(p => {
-      const ll = p.lat != null ? p : L.latLng(p[0], p[1]);
-      return latlngToMeters(ll.lat, ll.lng, originLat, originLng);
-    });
-    polygons.push(verts);
+    if (!layer || !layer.getBounds) return;
+    const bounds = layer.getBounds();
+    if (bounds && bounds.isValid()) activeBounds.push(bounds);
   });
 
   let overlapCount = 0;
-  for (let i = 0; i < polygons.length; i++) {
-    for (let j = i + 1; j < polygons.length; j++) {
-      if (polygonsOverlapSat(polygons[i], polygons[j])) overlapCount += 1;
+  for (let i = 0; i < activeBounds.length; i += 1) {
+    const a = activeBounds[i];
+    for (let j = i + 1; j < activeBounds.length; j += 1) {
+      if (a.intersects(activeBounds[j])) overlapCount += 1;
     }
   }
   document.getElementById('overlap-count').textContent = String(overlapCount);
@@ -2898,59 +2166,13 @@ style.textContent = `.map-tooltip { background:#161b22; color:#e6edf3; border:1p
 `;
 document.head.appendChild(style);
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// Initial
 document.getElementById('version-display').textContent = `v${APP_META.version}`;
-rebuildRoleDropdowns();
-rebuildManageRolesPanel();
-(function initCustomRoleControls() {
-  const addBtn = document.getElementById('btn-add-role');
-  const roleInp = document.getElementById('custom-role-input');
-  const manageBtn = document.getElementById('btn-manage-roles');
-  const managePanel = document.getElementById('manage-roles-panel');
-  if (manageBtn && managePanel) {
-    manageBtn.addEventListener('click', () => {
-      const isOpen = managePanel.style.display !== 'none';
-      managePanel.style.display = isOpen ? 'none' : 'block';
-      manageBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
-      manageBtn.textContent = isOpen ? 'Manage roles ▾' : 'Manage roles ▴';
-    });
-  }
-  if (!addBtn || !roleInp) return;
-  addBtn.addEventListener('click', () => {
-    if (addCustomRole(roleInp.value)) {
-      roleInp.value = '';
-      rebuildRoleDropdowns();
-      rebuildManageRolesPanel();
-      updateList();
-    }
-  });
-  roleInp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addBtn.click();
-    }
-  });
-})();
 updateOfflineBanner();
 updateUndoRedoButtons();
-updateMeasureUI();
-(function measureMenuInit() {
-  const menuBtn = document.getElementById('btn-measure-menu');
-  const panel = document.getElementById('measure-menu-panel');
-  if (menuBtn && panel) {
-    menuBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      const isOpen = panel.style.display === 'block';
-      panel.style.display = isOpen ? 'none' : 'block';
-      menuBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
-    });
-  }
-  document.addEventListener('click', closeMeasureMenu);
-})();
 window.addEventListener('online', updateOfflineBanner);
 window.addEventListener('offline', updateOfflineBanner);
-updateRestoreButtonState();
-document.getElementById('btn-restore-autosave').addEventListener('click', () => { restoreAutosave(); });
+restoreSession();
 document.getElementById('zoom-level').textContent = map.getZoom();
 updateScaleRatio();
 updatePrintMeta();
