@@ -6,9 +6,10 @@
 <title>VPC Mapping Tool</title>
 <!--
   VPC Mapping Tool
-  Version: 0.8.6
-  Last Updated: 2026-03-27
+  Version: 0.8.7
+  Last Updated: 2026-04-01
   Change Log: See README. APP_META.changelog holds current version only.
+    - 0.8.7: Two-tier overlap (footprint red / clearance buffer amber), intentionalBuffer + plan field, overlap pill & split status bar; layer-point overlap tests; map/list highlights + Intentional checkbox; tooltip/title/aria pass; tent tooltip sticky off, close on drag; handle offsets; header nowrap; README aligned.
     - 0.8.6: Export PDF includes map snapshot (html2canvas + jsPDF); tile layers crossOrigin; waitForTilesIdle; fallback to text-only on capture failure.
     - 0.8.5: ZUMRO Interconnect added to TENT_DB (7.17'×6.92' rect per ZUMRO_Interconnect_Dimensions.md).
     - 0.8.4: Snap face selection (4 faces: 2 length ends, 2 width ends); ROLES constant; snap hint + auto-uncheck.
@@ -62,13 +63,27 @@ body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; hei
 #header {
   padding:10px 16px; background:#161b22;
   border-bottom:1px solid #30363d;
-  display:flex; align-items:center; gap:12px; flex-wrap:wrap; z-index:1000;
+  display:flex; align-items:center; gap:8px; flex-wrap:nowrap;
+  z-index:1000;
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
 }
-#header h1 { font-size:16px; color:#58a6ff; white-space:nowrap; font-weight:600; }
-#search-wrap { position:relative; display:flex; flex:1; min-width:240px; align-items:center; gap:12px; flex-wrap:wrap; }
-#search-bar { display:flex; gap:6px; flex:1; min-width:200px; }
+#header::-webkit-scrollbar { height:5px; }
+#header::-webkit-scrollbar-thumb { background:#30363d; border-radius:3px; }
+#header h1 {
+  font-size:16px; color:#58a6ff; white-space:nowrap; font-weight:600;
+  flex-shrink:0;
+}
+#search-wrap {
+  position:relative; display:flex; flex:1 1 140px; min-width:100px;
+  align-items:center; gap:8px; flex-wrap:nowrap; min-width:0;
+}
+#search-bar { display:flex; gap:6px; flex:1; min-width:0; }
 #address-input {
-  flex:1; padding:7px 10px; border-radius:6px;
+  flex:1; min-width:0; padding:7px 10px; border-radius:6px;
   border:1px solid #30363d; background:#21262d; color:#e6edf3;
   font-size:13px; outline:none;
 }
@@ -118,7 +133,21 @@ button.ghost { background:#21262d; border:1px solid #30363d; }
 button.ghost:hover { background:#30363d; }
 button.danger { background:#da3633; }
 button.danger:hover { background:#f85149; }
-.header-btn { padding:6px 10px; font-size:11px; }
+.header-btn { padding:6px 10px; font-size:11px; flex-shrink:0; }
+#mode-display.mode-badge {
+  flex:0 1 260px;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#autosave-indicator {
+  flex:0 0 auto;
+  white-space:nowrap;
+  font-size:11px;
+  color:#8b949e;
+}
+.header-tool-slot { position:relative; display:inline-block; flex-shrink:0; }
 
 #main { display:flex; flex:1; overflow:hidden; }
 
@@ -229,6 +258,22 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   font-size:10px; color:#8b949e; background:rgba(13,17,23,0.85);
   padding:2px 6px; border-radius:4px; pointer-events:none;
 }
+#overlap-pill {
+  display:none;
+  position:absolute;
+  top:78px;
+  right:10px;
+  z-index:1000;
+  border-radius:20px;
+  padding:4px 12px;
+  font-size:11px;
+  font-weight:500;
+  cursor:pointer;
+  box-shadow:0 1px 4px rgba(0,0,0,0.35);
+  max-width:calc(100% - 24px);
+  line-height:1.3;
+}
+#overlap-pill:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
 
 /* Status */
 #statusbar {
@@ -280,7 +325,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 @media print {
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
-  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay { display:none !important; }
+  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill { display:none !important; }
   #main { display:block !important; height:100vh !important; }
   #map { width:100vw !important; height:100vh !important; }
   .leaflet-control-container { display:none !important; }
@@ -294,28 +339,28 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <h1>VPC Mapping Tool</h1>
   <div id="search-wrap">
     <div id="search-bar">
-      <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng (press / to focus)" />
-      <button class="blue" onclick="searchLocation()" title="Search by address/place or lat, lng (focus with /)">Search</button>
+      <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng — press / to focus. Works offline for coordinates only." />
+      <button class="blue" onclick="searchLocation()" title="Search by name or coordinates. Requires network unless entering lat, lng directly.">Search</button>
     </div>
     <select id="search-results" aria-label="Search result matches" title="Pick a search result (or use first match)"></select>
   </div>
-  <div id="mode-display" class="mode-badge" role="status" aria-live="polite" title="Current action; click or press Esc to return to view">Select a tent below, then click the map to place.</div>
-  <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
-  <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo (Ctrl+Y)">Redo</button>
-  <div style="position:relative;display:inline-block;">
-    <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distance or area on the map">Measure ▾</button>
+  <div id="mode-display" class="mode-badge" role="status" aria-live="polite">Select a tent below, then click the map to place.</div>
+  <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z). Up to 50 steps. Not preserved after page refresh — use Save Plan.">Undo</button>
+  <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y or Ctrl+Shift+Z).">Redo</button>
+  <div class="header-tool-slot">
+    <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distances or areas on the map. Use before or during placement to check site dimensions.">Measure ▾</button>
     <div id="measure-menu-panel" role="menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
       <button type="button" class="ghost" role="menuitem" style="width:100%;font-size:11px;margin:0;padding:6px 10px;" onclick="measureMenuPickDistance(event)">Measure Distance</button>
       <button type="button" class="ghost" role="menuitem" style="width:100%;font-size:11px;margin-top:4px;padding:6px 10px;" onclick="measureMenuPickArea(event)">Measure Area</button>
     </div>
     <div id="measure-strip" style="display:none;position:absolute;top:100%;right:0;left:auto;margin-top:4px;z-index:1001;min-width:220px;max-width:calc(100vw - 16px);align-items:center;gap:12px;flex-wrap:wrap;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:4px 16px;font-size:11px;color:#8b949e;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
       <span id="measure-readout-header" style="flex:1;min-width:0;"></span>
-      <button type="button" class="ghost header-btn" id="btn-finish-area-header" onclick="finishAreaMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Close the polygon and show area" aria-label="Finish area measurement">Finish Area</button>
-      <button type="button" class="ghost header-btn" id="btn-clear-measure-header" onclick="clearMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Remove distance or area from map" aria-label="Clear measurement">Clear</button>
+      <button type="button" class="ghost header-btn" id="btn-finish-area-header" onclick="finishAreaMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Close the polygon and calculate the enclosed area." aria-label="Finish area measurement">Finish Area</button>
+      <button type="button" class="ghost header-btn" id="btn-clear-measure-header" onclick="clearMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Remove the current measurement from the map and exit measure mode." aria-label="Clear measurement">Clear</button>
     </div>
   </div>
-  <span id="autosave-indicator" style="font-size:11px;color:#8b949e;">Not yet saved</span>
-  <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last autosaved layout from this browser">Restore Autosave</button>
+  <span id="autosave-indicator">Not yet saved</span>
+  <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last layout auto-saved in this browser. Browser-only — cannot be shared. If structures are placed you will be asked to confirm.">Restore Autosave</button>
 </div>
 <div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;">
   Offline — using local data. Map imagery may not load. Enter <strong>lat, lng</strong> in search to go to a location.
@@ -327,25 +372,25 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <div id="measure-readout" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">No measurement.</div>
     <!-- Setup (operation name, search bias, scale presets) -->
     <div class="sb-section">
-      <button type="button" class="ghost" id="setup-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="setup-panel" aria-label="Toggle setup (scale and operation name)" title="Scale presets and operation name for print/export">Setup ▾</button>
+      <button type="button" class="ghost" id="setup-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="setup-panel" aria-label="Toggle setup (scale and operation name)" title="Set operation name for PDF and print, configure search behavior, and apply map scale presets.">Setup ▾</button>
       <div id="setup-panel" style="display:none;" role="region" aria-labelledby="setup-toggle">
         <h3 style="font-size:11px;margin-top:8px;color:#8b949e;">Print Metadata</h3>
         <label>Operation Name</label>
-        <input type="text" id="operation-name" placeholder="e.g. UC Davis Parking Lot Surge Site" aria-label="Operation name for print metadata" title="Enter before printing or exporting" />
-        <label class="search-opt" style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;" title="Search near current map area first; uncheck for global search"><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
+        <input type="text" id="operation-name" placeholder="e.g. UC Davis Parking Lot Surge Site" aria-label="Operation name for print metadata" title="Appears on the PDF title block and print footer. Set this before exporting or printing." />
+        <label class="search-opt" style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;" title="Search prioritizes results near the current map view. Uncheck for global search. Falls back to global if no nearby match found."><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
         <h3 style="font-size:11px;margin-top:12px;color:#8b949e;">Scale Presets</h3>
         <div class="scale-btn-row">
-          <button class="scale-btn" onclick="applyScalePreset(100)" title="Set scale 1:100; manual zoom still enabled">1:100</button>
-          <button class="scale-btn" onclick="applyScalePreset(150)" title="Set scale 1:150">1:150</button>
-          <button class="scale-btn" onclick="applyScalePreset(200)" title="Set scale 1:200">1:200</button>
-          <button class="scale-btn" onclick="applyScalePreset(500)" title="Set scale 1:500">1:500</button>
+          <button class="scale-btn" onclick="applyScalePreset(100)" title="Zoom to approximately 1:100 scale. Manual zoom remains available after applying.">1:100</button>
+          <button class="scale-btn" onclick="applyScalePreset(150)" title="Zoom to approximately 1:150 scale. Manual zoom remains available after applying.">1:150</button>
+          <button class="scale-btn" onclick="applyScalePreset(200)" title="Zoom to approximately 1:200 scale. Manual zoom remains available after applying.">1:200</button>
+          <button class="scale-btn" onclick="applyScalePreset(500)" title="Zoom to approximately 1:500 scale. Manual zoom remains available after applying.">1:500</button>
         </div>
       </div>
     </div>
 
     <!-- How to use -->
     <div class="sb-section">
-      <button type="button" class="ghost" id="how-to-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="how-to-panel" title="Expand for first-time steps">How to use ▾</button>
+      <button type="button" class="ghost" id="how-to-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="how-to-panel" title="Step-by-step guide covering placement, snap attachment, saving, undo, and keyboard shortcuts.">How to use ▾</button>
       <div id="how-to-panel" style="display:none;" role="region" aria-labelledby="how-to-toggle">
         <ol style="font-size:11px;color:#8b949e;margin:8px 0 0 0;padding-left:18px;line-height:1.6;">
           <li>Select a tent from the list (or enter Custom Size and click Place Custom).</li>
@@ -371,22 +416,22 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <h3>Label & Style</h3>
 
       <label>Custom Label (optional)</label>
-      <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" title="Label for the next object you place" />
+      <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" title="Name for the next structure. Appears on the map tooltip and placed list. Vendor and model name used if blank." />
       <p class="dim-note">Applied to next placement.</p>
 
-      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Next placement will match selected object's rotation and attach to its nearest end">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Attaches next placement to the selected structure's nearest face and matches its rotation. Uncheck after placing to resume normal placement.">
         <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
       </label>
       <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then click near the face you want to attach to. New tent matches rotation. Click near a length end or width end — nearest face wins. Best for rect-to-rect. Stays active until unchecked.</p>
 
       <label>Role / Zone</label>
-      <select id="obj-role" aria-label="Object role or zone" title="e.g. Triage, Ward, ICU — used in list and export"></select>
+      <select id="obj-role" aria-label="Object role or zone" title="Functional zone for this structure. Used in zone summary in PDF and GeoJSON exports. Add custom roles below if needed."></select>
       <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-        <input type="text" id="custom-role-input" placeholder="Add custom role..." aria-label="Add custom role or zone" title="Type a role name and click Add"
+        <input type="text" id="custom-role-input" placeholder="Add custom role..." aria-label="Add custom role or zone" title="Type a role name and press Enter or click Add. Saved in this browser and travels with plan files."
           style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:11px;outline:none;" />
-        <button type="button" class="ghost scale-btn" id="btn-add-role" title="Add this role to the list" aria-label="Add custom role">Add</button>
+        <button type="button" class="ghost scale-btn" id="btn-add-role" title="Add the typed role to the list. Duplicates and blank entries are ignored." aria-label="Add custom role">Add</button>
       </div>
-      <button type="button" class="ghost scale-btn" id="btn-manage-roles" style="width:100%;margin-top:6px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="manage-roles-panel">Manage roles ▾</button>
+      <button type="button" class="ghost scale-btn" id="btn-manage-roles" style="width:100%;margin-top:6px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="manage-roles-panel" title="View and remove custom roles. Default roles cannot be removed. Removing a role does not change existing structure assignments.">Manage roles ▾</button>
       <div id="manage-roles-panel" style="display:none;margin-top:6px;padding:8px;border:1px solid #30363d;border-radius:6px;background:#161b22;" role="region" aria-labelledby="btn-manage-roles">
         <div id="manage-roles-list"></div>
         <p class="dim-note" style="margin-top:8px;margin-bottom:0;font-size:10px;">Removed roles stay on existing structures.</p>
@@ -395,25 +440,25 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <label title="Click a swatch to set color for the next placement">Color</label>
       <div class="color-row" id="color-swatches" role="group" aria-label="Color for next placement"></div>
 
-      <button type="button" class="ghost" id="style-options-toggle" style="width:100%;font-size:11px;margin-top:4px;" aria-expanded="false" aria-controls="style-advanced" aria-label="Toggle label and style options" title="Opacity, rotation, clearance buffer">Options ▾</button>
+      <button type="button" class="ghost" id="style-options-toggle" style="width:100%;font-size:11px;margin-top:4px;" aria-expanded="false" aria-controls="style-advanced" aria-label="Toggle label and style options" title="Set opacity, starting rotation, and clearance buffer for the next placement.">Options ▾</button>
       <div id="style-advanced" style="display:none;" role="region" aria-labelledby="style-options-toggle">
         <label>Opacity: <span id="opacity-val">65</span>%</label>
-        <input type="range" id="obj-opacity" min="15" max="90" value="65" aria-label="Object opacity percentage" title="Opacity for next placement (15–90%)"
+        <input type="range" id="obj-opacity" min="15" max="90" value="65" aria-label="Object opacity percentage" title="Footprint transparency, 15–90%. Does not affect overlap detection."
           oninput="document.getElementById('opacity-val').textContent=this.value" />
 
         <label>Rotation: <span id="rotation-val">0</span>°</label>
-        <input type="range" id="obj-rotation" min="0" max="359" value="0" aria-label="Object rotation degrees" title="Rotation for next placement (0–359°)"
+        <input type="range" id="obj-rotation" min="0" max="359" value="0" aria-label="Object rotation degrees" title="Starting rotation in degrees, 0–359°. Use the orange handle on the map to adjust after placing."
           oninput="document.getElementById('rotation-val').textContent=this.value" />
 
         <label>Clearance Buffer: <span id="buffer-val">0</span> ft</label>
-        <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet" title="Clearance buffer in feet around footprint (0–30)"
+        <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet" title="Clearance zone in feet, 0–30. Draws a dashed ring. Triggers amber advisory when two buffer zones touch. Set to 0 to disable."
           oninput="document.getElementById('buffer-val').textContent=this.value" />
         <div class="inline-controls">
-          <button class="scale-btn" onclick="applyBufferPreset(0)" title="No clearance buffer">None</button>
-          <button class="scale-btn" onclick="applyBufferPreset(5)" title="5 ft clearance around footprint">Std 5 ft</button>
-          <button class="scale-btn" onclick="applyBufferPreset(10)" title="10 ft clearance around footprint">High 10 ft</button>
+          <button class="scale-btn" onclick="applyBufferPreset(0)" title="Remove clearance buffer. No amber advisory will be shown for buffer-only proximity.">None</button>
+          <button class="scale-btn" onclick="applyBufferPreset(5)" title="Apply 5 ft clearance buffer — standard spacing for access and airflow.">Std 5 ft</button>
+          <button class="scale-btn" onclick="applyBufferPreset(10)" title="Apply 10 ft clearance buffer — use for generators or high-traffic corridors.">High 10 ft</button>
         </div>
-        <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;" title="Apply current clearance buffer to every placed object">Apply Buffer to All Placed</button>
+        <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;" title="Set current buffer on every placed structure. You will be asked to confirm. Use Undo immediately to reverse — not recoverable after page refresh.">Apply Buffer to All Placed</button>
       </div>
     </div>
 
@@ -424,29 +469,29 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <div style="display:flex;gap:6px;">
         <div style="flex:1">
           <label>Width (ft)</label>
-          <input type="number" id="custom-w" value="20" min="1" aria-label="Custom width in feet" title="Width of custom footprint in feet" />
+          <input type="number" id="custom-w" value="20" min="1" aria-label="Custom width in feet" title="Width of the custom footprint in feet. East-west dimension at 0° rotation." />
         </div>
         <div style="flex:1">
           <label>Length (ft)</label>
-          <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" title="Length of custom footprint in feet" />
+          <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" title="Length of the custom footprint in feet. North-south dimension at 0° rotation." />
         </div>
       </div>
-      <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" title="Optional label for this custom object" />
-      <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;" title="Enter width/length above, then click map to place">Place Custom</button>
+      <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" title="Label for this custom structure. Appears on the map tooltip and placed list." />
+      <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;" title="Place a rectangle with the dimensions above. Click this button then click the map to position it.">Place Custom</button>
     </div>
 
     <!-- Plan -->
     <div class="sb-section">
       <h3>Plan</h3>
-      <button class="blue" onclick="saveScenario()" style="width:100%;" title="Save map view, placed objects, and key settings to a JSON plan file (backup/handoff)">Save Plan</button>
-      <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Open a previously saved plan file">Open Plan</button>
-      <button type="button" class="ghost" id="export-toggle" style="width:100%;margin-top:4px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="export-panel" aria-label="Toggle export options (GeoJSON, PDF)" title="Expand for GeoJSON and PDF export">Export ▾</button>
+      <button class="blue" onclick="saveScenario()" style="width:100%;" title="Download layout as a JSON file to reopen, share, or archive. Use regularly — autosave is browser-only and can be lost if storage is cleared.">Save Plan</button>
+      <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Load a saved plan file. If structures are placed, you will be asked to confirm before your layout is replaced.">Open Plan</button>
+      <button type="button" class="ghost" id="export-toggle" style="width:100%;margin-top:4px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="export-panel" aria-label="Toggle export options (GeoJSON, PDF)" title="Export layout as GeoJSON for GIS tools or a PDF briefing document with map image and zone summary.">Export ▾</button>
       <div id="export-panel" style="display:none;" role="region" aria-labelledby="export-toggle">
-        <button class="ghost" onclick="exportGeoJSON()" style="width:100%;margin-top:4px;" title="Export layout as GeoJSON for GIS coordination">Export GeoJSON</button>
-        <button class="ghost" onclick="exportPDF()" style="width:100%;margin-top:4px;" title="Download PDF with map snapshot and summary (operation name, scale, zones, object list)">Export PDF</button>
+        <button class="ghost" onclick="exportGeoJSON()" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
+        <button class="ghost" onclick="exportPDF()" style="width:100%;margin-top:4px;" title="Download a PDF with map snapshot and structure summary. Requires network to load export libraries. Falls back to text-only PDF if map capture fails.">Export PDF</button>
         <p class="dim-note" style="margin-top:6px;">Requires network connection to load PDF and html2canvas libraries.</p>
       </div>
-      <button class="ghost" onclick="printFitToPage()" style="width:100%;margin-top:4px;" aria-label="Print fit to page" title="Frame placed objects for print, then open print dialog">Print Fit</button>
+      <button class="ghost" onclick="printFitToPage()" style="width:100%;margin-top:4px;" aria-label="Print fit to page" title="Frame all placed structures and open the print dialog. View restores after printing. Enable print background graphics in browser settings for the satellite image to appear.">Print Fit</button>
     </div>
 
     </div><!-- /sidebar-scroll -->
@@ -456,7 +501,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <div style="padding:10px 12px 6px;flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
-          <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;" title="Remove all placed objects (Undo restores)">Clear All</button>
+          <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. You will be asked to confirm. Use Undo immediately to reverse — not recoverable after page refresh.">Clear All</button>
         </div>
         <div id="overlap-warning" class="warn-text" style="display:none;"></div>
       </div>
@@ -465,14 +510,14 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
   </div>
 
-  <div id="map"><div id="cursor-pos" class="map-coords-overlay">Hover map for coords</div></div>
+  <div id="map"><div id="cursor-pos" class="map-coords-overlay">Hover map for coords</div><div id="overlap-pill" role="button" tabindex="0" aria-live="polite" title="Red: footprints physically overlap — must be resolved. Amber: buffer zones overlap — check spacing or mark as intentional. Click to scroll to first flagged structure." aria-label="Red: footprints physically overlap — must be resolved. Amber: buffer zones overlap — check spacing or mark as intentional. Click to scroll to first flagged structure."></div></div>
 </div>
 
 <div id="statusbar">
   <div>Zoom: <span id="zoom-level">14</span></div>
   <div>Scale: <span id="scale-ratio">1:0</span></div>
   <div>Tents: <span id="tent-count">0</span></div>
-  <div>Overlaps: <span id="overlap-count">0</span></div>
+  <div>Overlaps: <span id="overlap-count">0</span> footprint<span id="buffer-overlap-suffix" style="display:none;">, <span id="buffer-overlap-count">0</span> buffer</span></div>
 </div>
 <div id="version-display" class="version-badge">v—</div>
 <div id="print-meta">
@@ -492,9 +537,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
  */
 const APP_META = {
   name: 'VPC Mapping Tool',
-  version: '0.8.6',
-  lastUpdated: '2026-03-27',
+  version: '0.8.7',
+  lastUpdated: '2026-04-01',
   changelog: [
+    { version: '0.8.7', date: '2026-04-01', note: 'Two-tier overlap (footprint vs clearance buffer), intentionalBufferOverlap in plans, overlap pill + split status; layer-space geometry; list/map styling + Intentional; buffer/footprint intersection; tooltips (title/aria/bindTooltip), tent tooltip sticky off + close on drag; handle spacing; header nowrap; README.' },
     { version: '0.8.6', date: '2026-03-27', note: 'Export PDF: map snapshot via html2canvas + jsPDF; crossOrigin on tile layers; waitForTilesIdle (idle or tileload debounce, 4s max); setExportChromeVisible; text-only fallback if capture fails.' },
     { version: '0.8.5', date: '2026-02-26', note: 'ZUMRO Interconnect added to TENT_DB: 7.17\'×6.92\' rect (86"×83"); connects Zumro to Western Shelter; dimensions from ZUMRO_Interconnect_Dimensions.md.' },
     { version: '0.8.4', date: '2026-03-10', note: 'Snap face selection: click near any of target\'s 4 faces (2 length ends, 2 width ends); offset uses correct half-dimension per axis. ROLES constant; snap hint text; postMode order; auto-uncheck after snap.' },
@@ -505,6 +551,12 @@ const APP_META = {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DRAG_SUPPRESS_MS = 250;       // Ignore click shortly after drag (avoid accidental delete)
+/** Extra meters beyond half footprint size for rotate/delete handles (keep controls off the tent body). */
+const HANDLE_OUTSIDE_PADDING_M = 14;
+/** Pixel offset for tent info tooltip (direction 'top' → shift further above the shape). */
+const MAP_OBJ_TOOLTIP_OFFSET = [0, -72];
+const MAP_HANDLE_TOOLTIP_OFFSET_TOP = [0, -18];
+const MAP_HANDLE_TOOLTIP_OFFSET_BOTTOM = [0, 14];
 const SESSION_DEBOUNCE_MS = 500;    // Delay before writing session to localStorage
 const UNDO_MAX = 50;
 const FT_TO_M = 0.3048;
@@ -615,6 +667,8 @@ let sessionSaveTimer = 0;
 // Search & overlap
 let pendingSearchResults = [];
 let overlapRaf = 0;
+/** Footprint vs buffer-only overlap sets; updated by updateOverlapSummary(). */
+let overlapState = { footprintIds: new Set(), bufferIds: new Set() };
 
 // ─── Map ────────────────────────────────────────────────────────────────────────
 const map = L.map('map').setView([40.7128,-74.0060], 16);
@@ -643,6 +697,40 @@ L.control.layers(
   { position: 'topright', collapsed: true }
 ).addTo(map);
 L.control.scale({ imperial: true, metric: true, maxWidth: 120 }).addTo(map);
+
+(function initOverlapPill() {
+  const pill = document.getElementById('overlap-pill');
+  if (!pill) return;
+  function scrollFirstFlagged() {
+    const fp = overlapState.footprintIds;
+    const buf = overlapState.bufferIds;
+    const listRoot = document.getElementById('obj-list-items');
+    if (!listRoot) return;
+    for (let k = 0; k < objects.length; k += 1) {
+      const o = objects[k];
+      if (fp.has(o.id)) {
+        const el = listRoot.querySelector('[data-obj-id="' + o.id + '"]');
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+    }
+    for (let k = 0; k < objects.length; k += 1) {
+      const o = objects[k];
+      if (buf.has(o.id)) {
+        const el = listRoot.querySelector('[data-obj-id="' + o.id + '"]');
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+    }
+  }
+  pill.addEventListener('click', scrollFirstFlagged);
+  pill.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      scrollFirstFlagged();
+    }
+  });
+})();
 
 // ─── Build Vendor Tabs ──────────────────────────────────────────────────────────
 let currentVendor = Object.keys(TENT_DB)[0];
@@ -757,8 +845,8 @@ COLORS.forEach(c => {
   s.className = 'color-swatch' + (c === selectedColor ? ' active' : '');
   s.style.background = c;
   s.setAttribute('role', 'button');
-  s.setAttribute('aria-label', 'Set color for next placement');
-  s.title = 'Set color for next placement';
+  s.setAttribute('aria-label', 'Set footprint color for next placement. Vendor color applied automatically when selecting from the catalog.');
+  s.title = 'Set footprint color for next placement. Vendor color applied automatically when selecting from the catalog.';
   s.onclick = () => {
     selectedColor = c;
     syncColorSwatches();
@@ -802,6 +890,7 @@ function setMode(txt) {
   const el = document.getElementById('mode-display');
   const displayTxt = (txt === 'View Mode') ? getDefaultModeMessage() : txt;
   el.textContent = displayTxt;
+  el.title = displayTxt;
   if (mapEl) {
     if (txt !== 'View Mode') {
       if (txt.startsWith('Click to place')) mapEl.classList.add('map-mode-place');
@@ -987,6 +1076,8 @@ function clearMeasure() {
 
 function startObjectDrag(obj, startLatlng) {
   if (placingMode || measureMode || areaMeasureMode || activeRotateDrag) return;
+  if (obj.layer && typeof obj.layer.closeTooltip === 'function') obj.layer.closeTooltip();
+  if (obj.layerBuffer && typeof obj.layerBuffer.closeTooltip === 'function') obj.layerBuffer.closeTooltip();
   pushStateToUndo();
   activeObjectDrag = {
     obj,
@@ -1065,7 +1156,8 @@ function getObjectsSnapshot() {
     cornerCutW: o.cornerCutW,
     cornerCutL: o.cornerCutL,
     endCapFt: o.endCapFt,
-    armWidthFt: o.armWidthFt
+    armWidthFt: o.armWidthFt,
+    intentionalBuffer: !!o.intentionalBuffer
   }));
 }
 
@@ -1123,14 +1215,14 @@ function updateUndoRedoButtons() {
 }
 
 function getRotateHandleLatLng(obj) {
-  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + 6;
+  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + HANDLE_OUTSIDE_PADDING_M;
   const [dx, dy] = rotateOffsets([[0, handleOffsetM]], obj.angleDeg || 0)[0];
   const [lat, lng] = metersToDeg(obj.latlng, dx, dy);
   return L.latLng(lat, lng);
 }
 
 function getDeleteHandleLatLng(obj) {
-  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + 6;
+  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + HANDLE_OUTSIDE_PADDING_M;
   const [dx, dy] = rotateOffsets([[0, -handleOffsetM]], obj.angleDeg || 0)[0];
   const [lat, lng] = metersToDeg(obj.latlng, dx, dy);
   return L.latLng(lat, lng);
@@ -1148,7 +1240,12 @@ function syncRotateHandle() {
     fillOpacity: 1,
     weight: 2
   }).addTo(map);
-  rotateHandleLayer.bindTooltip('Rotate handle', { permanent: false, direction: 'top' });
+  rotateHandleLayer.bindTooltip('Drag to rotate. Hold Shift to snap to 5° increments.', {
+    permanent: false,
+    direction: 'top',
+    className: 'map-tooltip',
+    offset: MAP_HANDLE_TOOLTIP_OFFSET_TOP
+  });
   rotateHandleLayer.on('mousedown', ev => {
     L.DomEvent.stop(ev);
     startRotateDrag(obj);
@@ -1162,7 +1259,12 @@ function syncRotateHandle() {
     iconAnchor: [14, 14]
   });
   deleteHandleLayer = L.marker(deleteLatLng, { icon: deleteIcon }).addTo(map);
-  deleteHandleLayer.bindTooltip('Delete', { permanent: false, direction: 'top' });
+  deleteHandleLayer.bindTooltip('Delete this structure. Shift+click the footprint also deletes. Not recoverable after page refresh.', {
+    permanent: false,
+    direction: 'bottom',
+    className: 'map-tooltip',
+    offset: MAP_HANDLE_TOOLTIP_OFFSET_BOTTOM
+  });
   deleteHandleLayer.on('click', ev => {
     L.DomEvent.stop(ev);
     if (confirm(`Delete "${obj.label}"?`)) deleteObj(obj.id);
@@ -1385,7 +1487,8 @@ function buildScenarioData() {
       cornerCutW: o.cornerCutW,
       cornerCutL: o.cornerCutL,
       endCapFt: o.endCapFt,
-      armWidthFt: o.armWidthFt
+      armWidthFt: o.armWidthFt,
+      intentionalBufferOverlap: !!o.intentionalBuffer
     })),
     customRoles: getEffectiveRoles().filter(r => !ROLES.includes(r))
   };
@@ -1668,16 +1771,19 @@ function updateLastSavedIndicator(date) {
   if (!el) return;
   if (date === null) {
     el.textContent = 'Autosave failed — use Save Plan';
+    el.title = el.textContent;
     el.style.color = '#f85149';
     return;
   }
   if (date === undefined || !(date instanceof Date) || isNaN(date.getTime())) {
     el.style.removeProperty('color');
     el.textContent = 'Not yet saved';
+    el.title = el.textContent;
     return;
   }
   el.style.removeProperty('color');
   el.textContent = formatLastSaved(date);
+  el.title = el.textContent;
 }
 
 function saveSession() {
@@ -1819,6 +1925,7 @@ function buildObjectFromRaw(raw, idx) {
     cornerCutL: toNumber(raw.cornerCutL, undefined),
     endCapFt: toNumber(raw.endCapFt, undefined),
     armWidthFt: toNumber(raw.armWidthFt, undefined),
+    intentionalBuffer: !!(raw.intentionalBufferOverlap ?? raw.intentionalBuffer),
     layer: null,
     layerBuffer: null
   };
@@ -1925,11 +2032,16 @@ map.on('mousemove', e => {
   }
 });
 
-map.on('moveend', () => { updateScaleRatio(); scheduleSaveSession(); });
+map.on('moveend', () => {
+  updateScaleRatio();
+  scheduleSaveSession();
+  scheduleOverlapSummary();
+});
 map.on('zoomend', () => {
   document.getElementById('zoom-level').textContent = map.getZoom();
   updateScaleRatio();
   scheduleSaveSession();
+  scheduleOverlapSummary();
 });
 map.on('mouseup', () => {
   endObjectDrag();
@@ -1957,6 +2069,7 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
     role,
     layer: null,
     layerBuffer: null,
+    intentionalBuffer: false,
     ...extraWithoutRole
   };
   objects.push(obj);
@@ -2011,8 +2124,15 @@ function drawObject(obj) {
   const angleInfo = obj.shape === 'circle' ? '' : `<br>Rotation: ${Math.round(obj.angleDeg || 0)}°`;
   const bufferInfo = (obj.bufferFt || 0) > 0 ? `<br>Clearance buffer: +${obj.bufferFt} ft` : '';
   const roleInfo = (obj.role && obj.role !== '—') ? `<br>Role: ${escapeHtml(obj.role)}` : '';
+  const deleteHint = `<br>Shift+click to delete`;
 
-  obj.layer.bindTooltip(`${tip}${roleInfo}${angleInfo}${bufferInfo}`, { permanent: false, direction: 'top', className: 'map-tooltip' });
+  obj.layer.bindTooltip(`${tip}${roleInfo}${angleInfo}${bufferInfo}${deleteHint}`, {
+    permanent: false,
+    sticky: false,
+    direction: 'top',
+    className: 'map-tooltip',
+    offset: MAP_OBJ_TOOLTIP_OFFSET
+  });
   obj.layer.addTo(map);
   const bindDragStart = layer => {
     layer.on('mousedown', ev => {
@@ -2318,8 +2438,20 @@ function createObjectListItem(o) {
   const angleText = o.shape === 'circle' ? '' : ` @${Math.round(o.angleDeg || 0)}°`;
   const bufferText = (o.bufferFt || 0) > 0 ? ` +${o.bufferFt}ft clr` : '';
 
+  const fpIds = overlapState.footprintIds;
+  const bufIds = overlapState.bufferIds;
+  const inFootprintOverlap = fpIds.has(o.id);
+  const inBufferOnly = !inFootprintOverlap && bufIds.has(o.id);
+
   const row = document.createElement('div');
   row.className = 'obj-item' + (o.id === selectedObjectId ? ' active' : '');
+  if (inFootprintOverlap) {
+    row.style.borderLeft = '3px solid #f85149';
+    row.style.paddingLeft = '5px';
+  } else if (inBufferOnly) {
+    row.style.borderLeft = '3px solid #ffa657';
+    row.style.paddingLeft = '5px';
+  }
   row.onclick = () => {
     setSelectedObject(o.id);
     map.panTo(o.latlng);
@@ -2385,7 +2517,45 @@ function createObjectListItem(o) {
   row.appendChild(meta);
   row.appendChild(roleSelect);
   row.appendChild(del);
-  return row;
+
+  const wrap = document.createElement('div');
+  wrap.dataset.objId = String(o.id);
+  wrap.style.marginBottom = '4px';
+  wrap.appendChild(row);
+
+  if (inBufferOnly) {
+    const intentRow = document.createElement('div');
+    intentRow.style.padding = '4px 8px 6px 14px';
+    intentRow.style.fontSize = '10px';
+    intentRow.onclick = ev => ev.stopPropagation();
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'intent-buffer-' + o.id;
+    cb.checked = !!o.intentionalBuffer;
+    cb.setAttribute('aria-label', 'Buffer advisory for this structure — check to mark tight placement as intentional. Does not affect footprint overlap detection.');
+    cb.onchange = () => {
+      pushStateToUndo();
+      o.intentionalBuffer = cb.checked;
+      scheduleOverlapSummary();
+      scheduleSaveSession();
+      updateList();
+    };
+    const lab = document.createElement('label');
+    lab.htmlFor = cb.id;
+    lab.style.display = 'inline-flex';
+    lab.style.alignItems = 'center';
+    lab.style.gap = '6px';
+    lab.style.cursor = 'pointer';
+    lab.style.color = '#8b949e';
+    lab.appendChild(cb);
+    const intentLabel = document.createElement('span');
+    intentLabel.textContent = 'Intentional';
+    lab.appendChild(intentLabel);
+    intentRow.appendChild(lab);
+    wrap.appendChild(intentRow);
+  }
+
+  return wrap;
 }
 
 function clearMeasureStartMarker() {
@@ -2501,23 +2671,25 @@ function scheduleOverlapSummary() {
 // Get polygon vertices in latlng from a layer (buffer or main footprint)
 function getLayerVertices(layer) {
   if (!layer) return null;
+  // Circle first: some Path subclasses expose getLatLngs; buffer/footprint circles must use radius.
+  if (layer instanceof L.Circle) {
+    const center = layer.getLatLng();
+    const r = layer.getRadius();
+    const mPerDegLat = 111320;
+    const cosLat = Math.cos(center.lat * Math.PI / 180);
+    const points = [];
+    for (let i = 0; i < 36; i += 1) {
+      const t = (i / 36) * 2 * Math.PI;
+      const latOffset = (r / mPerDegLat) * Math.cos(t);
+      const lngOffset = (r / (mPerDegLat * cosLat)) * Math.sin(t);
+      points.push(L.latLng(center.lat + latOffset, center.lng + lngOffset));
+    }
+    return points;
+  }
   if (layer.getLatLngs) {
     const rings = layer.getLatLngs();
     const first = Array.isArray(rings[0]) ? rings[0] : rings;
     return first.length >= 3 ? first : null;
-  }
-  if (layer.getLatLng && layer.getRadius) {
-    const center = layer.getLatLng();
-    const r = layer.getRadius();
-    const mPerDegLat = 111320;
-    const points = [];
-    for (let i = 0; i < 36; i++) {
-      const t = (i / 36) * 2 * Math.PI;
-      const latOffset = (r / mPerDegLat) * Math.cos(t);
-      const lngOffset = (r / (mPerDegLat * Math.cos(center.lat * Math.PI / 180))) * Math.sin(t);
-      points.push(L.latLng(center.lat + latOffset, center.lng + lngOffset));
-    }
-    return points;
   }
   return null;
 }
@@ -2533,78 +2705,188 @@ function latlngToMeters(lat, lng, originLat, originLng) {
   return [x, y];
 }
 
-// SAT: do two convex polygons (arrays of [x,y]) overlap?
-function polygonsOverlapSat(vertsA, vertsB) {
-  const project = (verts, axis) => {
-    let min = Infinity, max = -Infinity;
-    for (let i = 0; i < verts.length; i++) {
-      const p = verts[i];
-      const proj = p[0] * axis[0] + p[1] * axis[1];
-      if (proj < min) min = proj;
-      if (proj > max) max = proj;
-    }
-    return [min, max];
-  };
-  const getEdges = (verts) => {
-    const edges = [];
-    for (let i = 0; i < verts.length; i++) {
-      const a = verts[i];
-      const b = verts[(i + 1) % verts.length];
-      edges.push([b[0] - a[0], b[1] - a[1]]);
-    }
-    return edges;
-  };
-  const getNormals = (edges) => edges.map(([x, y]) => [-y, x]);
-  const allEdges = [...getEdges(vertsA), ...getEdges(vertsB)];
-  const axes = getNormals(allEdges);
-  for (let k = 0; k < axes.length; k++) {
-    const axis = axes[k];
-    const len = Math.sqrt(axis[0] * axis[0] + axis[1] * axis[1]);
-    if (len < 1e-10) continue;
-    axis[0] /= len;
-    axis[1] /= len;
-    const [minA, maxA] = project(vertsA, axis);
-    const [minB, maxB] = project(vertsB, axis);
-    if (maxA < minB || maxB < minA) return false;
+// Polygon overlap in map layer (pixel) coordinates — matches Leaflet rendering; avoids meter-plane drift from map center.
+const OVERLAP_EPS = 1e-4;
+function polygonBounds(ring) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < ring.length; i += 1) {
+    const x = ring[i][0];
+    const y = ring[i][1];
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
   }
-  return true;
+  return { minX, maxX, minY, maxY };
+}
+function bboxOverlap2D(a, b) {
+  return !(a.maxX < b.minX - OVERLAP_EPS || b.maxX < a.minX - OVERLAP_EPS ||
+    a.maxY < b.minY - OVERLAP_EPS || b.maxY < a.minY - OVERLAP_EPS);
+}
+function pointInPolygonXY(pt, ring) {
+  const x = pt[0];
+  const y = pt[1];
+  let inside = false;
+  const n = ring.length;
+  for (let i = 0, j = n - 1; i < n; j = i, i += 1) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+    const den = yj - yi;
+    if (Math.abs(den) < OVERLAP_EPS) continue;
+    if ((yi > y) === (yj > y)) continue;
+    const xInt = xi + ((xj - xi) * (y - yi)) / den;
+    if (xInt > x - OVERLAP_EPS) inside = !inside;
+  }
+  return inside;
+}
+function segmentIntersectsOpen(p1, p2, p3, p4) {
+  const x1 = p1[0];
+  const y1 = p1[1];
+  const x2 = p2[0];
+  const y2 = p2[1];
+  const x3 = p3[0];
+  const y3 = p3[1];
+  const x4 = p4[0];
+  const y4 = p4[1];
+  const d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(d) < OVERLAP_EPS) return false;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / d;
+  const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / d;
+  return t >= -OVERLAP_EPS && t <= 1 + OVERLAP_EPS && u >= -OVERLAP_EPS && u <= 1 + OVERLAP_EPS;
+}
+function polygonsOverlap2D(vertsA, vertsB) {
+  if (!vertsA || !vertsB || vertsA.length < 3 || vertsB.length < 3) return false;
+  const ba = polygonBounds(vertsA);
+  const bb = polygonBounds(vertsB);
+  if (!bboxOverlap2D(ba, bb)) return false;
+  for (let i = 0; i < vertsA.length; i += 1) {
+    const p1 = vertsA[i];
+    const p2 = vertsA[(i + 1) % vertsA.length];
+    for (let j = 0; j < vertsB.length; j += 1) {
+      const p3 = vertsB[j];
+      const p4 = vertsB[(j + 1) % vertsB.length];
+      if (segmentIntersectsOpen(p1, p2, p3, p4)) return true;
+    }
+  }
+  if (pointInPolygonXY(vertsA[0], vertsB)) return true;
+  if (pointInPolygonXY(vertsB[0], vertsA)) return true;
+  return false;
+}
+
+function getLayerPointRing(layer) {
+  const latlngs = getLayerVertices(layer);
+  if (!latlngs || latlngs.length < 3) return null;
+  return latlngs.map(p => {
+    const ll = p.lat != null ? p : L.latLng(p[0], p[1]);
+    const pt = map.latLngToLayerPoint(ll);
+    return [pt.x, pt.y];
+  });
 }
 
 function updateOverlapSummary() {
-  const polygons = [];
-  const center = map.getCenter();
-  let originLat = center.lat, originLng = center.lng;
-  let originSet = false;
-  objects.forEach((o) => {
-    const layer = o.layerBuffer || o.layer;
-    const latlngs = getLayerVertices(layer);
-    if (!latlngs || latlngs.length < 3) return;
-    if (!originSet) {
-      originLat = o.latlng.lat;
-      originLng = o.latlng.lng;
-      originSet = true;
-    }
-    const verts = latlngs.map(p => {
-      const ll = p.lat != null ? p : L.latLng(p[0], p[1]);
-      return latlngToMeters(ll.lat, ll.lng, originLat, originLng);
-    });
-    polygons.push(verts);
-  });
+  const footprintIds = new Set();
+  const bufferIds = new Set();
 
-  let overlapCount = 0;
-  for (let i = 0; i < polygons.length; i++) {
-    for (let j = i + 1; j < polygons.length; j++) {
-      if (polygonsOverlapSat(polygons[i], polygons[j])) overlapCount += 1;
+  for (let i = 0; i < objects.length; i += 1) {
+    const oi = objects[i];
+    const vi = oi.layer ? getLayerPointRing(oi.layer) : null;
+    if (!vi) continue;
+    for (let j = i + 1; j < objects.length; j += 1) {
+      const oj = objects[j];
+      const vj = oj.layer ? getLayerPointRing(oj.layer) : null;
+      if (!vj) continue;
+      if (polygonsOverlap2D(vi, vj)) {
+        footprintIds.add(oi.id);
+        footprintIds.add(oj.id);
+        continue;
+      }
+      // Buffer advisory: any clearance zone vs other footprint, or buffer vs buffer (not only when both have buffers).
+      const bi = oi.layerBuffer ? getLayerPointRing(oi.layerBuffer) : null;
+      const bj = oj.layerBuffer ? getLayerPointRing(oj.layerBuffer) : null;
+      const bufferConflict =
+        (bi && polygonsOverlap2D(bi, vj)) ||
+        (bj && polygonsOverlap2D(bj, vi)) ||
+        (bi && bj && polygonsOverlap2D(bi, bj));
+      if (bufferConflict) {
+        if (!oi.intentionalBuffer) bufferIds.add(oi.id);
+        if (!oj.intentionalBuffer) bufferIds.add(oj.id);
+      }
     }
   }
-  document.getElementById('overlap-count').textContent = String(overlapCount);
+
+  overlapState = { footprintIds, bufferIds };
+
+  const fpN = footprintIds.size;
+  const bufN = bufferIds.size;
+  const oc = document.getElementById('overlap-count');
+  const bc = document.getElementById('buffer-overlap-count');
+  const sfx = document.getElementById('buffer-overlap-suffix');
+  if (oc) oc.textContent = String(fpN);
+  if (bc) bc.textContent = String(bufN);
+  if (sfx) sfx.style.display = bufN > 0 ? 'inline' : 'none';
+
   const warn = document.getElementById('overlap-warning');
-  if (overlapCount > 0) {
-    warn.style.display = 'block';
-    warn.textContent = `${overlapCount} buffered overlap(s) detected.`;
-  } else {
-    warn.style.display = 'none';
-    warn.textContent = '';
+  if (warn) {
+    if (fpN === 0 && bufN === 0) {
+      warn.style.display = 'none';
+      warn.textContent = '';
+    } else {
+      warn.style.display = 'block';
+      const parts = [];
+      if (fpN > 0) parts.push(`${fpN} object(s) with footprint overlap`);
+      if (bufN > 0) parts.push(`${bufN} object(s) with buffer advisory`);
+      warn.textContent = parts.join('; ') + '.';
+    }
+  }
+
+  const DEFAULT_BUFFER_STROKE = { color: '#f78166', weight: 1.2, opacity: 0.9, dashArray: '4 4' };
+
+  objects.forEach(o => {
+    if (!o.layer || typeof o.layer.setStyle !== 'function') return;
+    const inF = footprintIds.has(o.id);
+    const inB = bufferIds.has(o.id);
+    if (inF) {
+      o.layer.setStyle({ color: '#f85149', weight: 3, opacity: 1 });
+      if (o.layerBuffer && o.layerBuffer.setStyle) {
+        o.layerBuffer.setStyle(DEFAULT_BUFFER_STROKE);
+      }
+    } else if (inB) {
+      o.layer.setStyle({ color: '#ffa657', weight: 2.5, opacity: 0.95 });
+      if (o.layerBuffer && o.layerBuffer.setStyle) {
+        o.layerBuffer.setStyle({ color: '#ffa657', weight: 2.5, opacity: 0.95, dashArray: '4 4' });
+      }
+    } else {
+      o.layer.setStyle({ color: o.color, weight: 1.5, opacity: 0.95 });
+      if (o.layerBuffer && o.layerBuffer.setStyle) {
+        o.layerBuffer.setStyle(DEFAULT_BUFFER_STROKE);
+      }
+    }
+  });
+
+  const pill = document.getElementById('overlap-pill');
+  if (pill) {
+    if (fpN === 0 && bufN === 0) {
+      pill.style.display = 'none';
+      pill.textContent = '';
+    } else {
+      pill.style.display = 'block';
+      if (fpN > 0) {
+        pill.style.background = 'rgba(218,54,51,0.92)';
+        pill.style.color = '#fff';
+        pill.textContent = bufN > 0
+          ? `${fpN} footprint, ${bufN} buffer advisory`
+          : `${fpN} footprint overlap${fpN === 1 ? '' : 's'}`;
+      } else {
+        pill.style.background = 'rgba(255,166,87,0.92)';
+        pill.style.color = '#0d1117';
+        pill.textContent = `${bufN} buffer advisory`;
+      }
+    }
   }
 }
 
@@ -2955,6 +3237,11 @@ document.getElementById('zoom-level').textContent = map.getZoom();
 updateScaleRatio();
 updatePrintMeta();
 scheduleOverlapSummary();
+(function initHeaderTruncateTitles() {
+  const md = document.getElementById('mode-display');
+  if (md && md.textContent.trim()) md.title = md.textContent.trim();
+})();
+updateLastSavedIndicator(undefined);
 </script>
 </body>
 </html>
