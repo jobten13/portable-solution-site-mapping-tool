@@ -26,7 +26,7 @@
     - 0.7.1: Tier 2 #5: Zone/role tagging — Role dropdown (Triage, Ward, ICU, Pharmacy, Support, Morgue); stored on object and in scenario/GeoJSON; shown in list (inline change) and map tooltips; zone summary in print footer and GeoJSON metadata.
     - 0.7.0: Tier 2 #4: Autosave / local backup — "Last saved at" indicator in status bar; auto-save to localStorage on debounce (unchanged); indicator updates on save and when restoring/loading.
     - 0.6.9: Tier 1 #2: Offline banner, Go to coordinates without search (lat,lng in search bar works offline).
-    - 0.6.8: Session restore (Tier 1 #1): persist map view + objects to localStorage; restore on load instead of NYC default.
+    - 0.6.8: Session restore (Tier 1 #1): persist map view + objects to localStorage. Session restore on load (original behavior; superseded in v0.8.7 — tool now always opens fresh, restore is explicit via Restore Autosave button).
     - 0.6.7: Page title and header renamed to "VPC Mapping Tool."
     - 0.6.6: GK20 dimensions updated from SW-20 spec: 18'7"×18'7" (was 20'×20').
     - 0.6.5: Non-rectangular shapes from spec docs: ellipse for 8D36 dome footprint; GK1935 elongated-octagon confirmed per SW-1935.
@@ -540,7 +540,7 @@ const APP_META = {
   version: '0.8.7',
   lastUpdated: '2026-04-01',
   changelog: [
-    { version: '0.8.7', date: '2026-04-01', note: 'Two-tier overlap (footprint vs clearance buffer), intentionalBufferOverlap in plans, overlap pill + split status; layer-space geometry; list/map styling + Intentional; buffer/footprint intersection; tooltips (title/aria/bindTooltip), tent tooltip sticky off + close on drag; handle spacing; header nowrap; README.' },
+    { version: '0.8.7', date: '2026-04-01', note: 'Two-tier overlap (footprint vs clearance buffer), intentionalBufferOverlap in plans, overlap pill + split status; layer-space geometry; list/map styling + Intentional; buffer/footprint intersection; tooltips (title/aria/bindTooltip), tent tooltip sticky off + close on drag; handle spacing; header nowrap; README. restoreSession() removed (dead code); fresh-open on load is now intentional, replacing automatic session restore introduced in v0.6.8.' },
     { version: '0.8.6', date: '2026-03-27', note: 'Export PDF: map snapshot via html2canvas + jsPDF; crossOrigin on tile layers; waitForTilesIdle (idle or tileload debounce, 4s max); setExportChromeVisible; text-only fallback if capture fails.' },
     { version: '0.8.5', date: '2026-02-26', note: 'ZUMRO Interconnect added to TENT_DB: 7.17\'×6.92\' rect (86"×83"); connects Zumro to Western Shelter; dimensions from ZUMRO_Interconnect_Dimensions.md.' },
     { version: '0.8.4', date: '2026-03-10', note: 'Snap face selection: click near any of target\'s 4 faces (2 length ends, 2 width ends); offset uses correct half-dimension per axis. ROLES constant; snap hint text; postMode order; auto-uncheck after snap.' },
@@ -959,11 +959,7 @@ makeCollapsible('setup-panel', 'setup-toggle', STORAGE_KEY_SETUP, { closed: 'Set
 makeCollapsible('export-panel', 'export-toggle', STORAGE_KEY_EXPORT, { closed: 'Export ▾', open: 'Export ▴' });
 
 function updateMeasureUI() {
-  const finishBtn = document.getElementById('btn-finish-area');
-  const clearBtn = document.getElementById('btn-clear-measure');
-  if (finishBtn) finishBtn.style.display = areaMeasureMode ? 'block' : 'none';
   const hasMeasurement = !!measureTempLayer || !!areaMeasureLayer || (measureMode && measureStart !== null) || (areaMeasureMode && areaMeasurePoints.length > 0);
-  if (clearBtn) clearBtn.style.display = hasMeasurement ? 'block' : 'none';
 
   const measureMenuBtn = document.getElementById('btn-measure-menu');
   if (measureMenuBtn) {
@@ -1521,7 +1517,8 @@ function exportGeoJSON() {
       rotation_deg: o.angleDeg || 0,
       buffer_ft: o.bufferFt || 0,
       color: o.color,
-      opacity: o.opacity
+      opacity: o.opacity,
+      intentional_buffer_overlap: !!o.intentionalBuffer
     };
     return feature;
   }).filter(Boolean);
@@ -1880,25 +1877,6 @@ function restoreAutosave() {
   } catch (e) {
     setMode('No autosave found.');
     updateRestoreButtonState();
-  }
-}
-
-function restoreSession() {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (!data || !Array.isArray(data.objects)) return;
-    if (!data.map || !Array.isArray(data.map.center) || data.map.center.length !== 2) return;
-    const lat = toNumber(data.map.center[0], null);
-    const lng = toNumber(data.map.center[1], null);
-    const zoom = toNumber(data.map.zoom, null);
-    if (lat == null || lng == null || zoom == null) return;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180 || zoom < 0 || zoom > 22) return;
-    loadScenarioFromData(data, { fromRestore: true });
-    updateScaleRatio();
-  } catch (e) {
-    // Corrupt or invalid; use default NYC view
   }
 }
 
@@ -2317,9 +2295,6 @@ function createGeoEllipse(center, widthM, lengthM, angleDeg, style) {
   return L.polygon(points, style);
 }
 
-// Elongated hexagon (HDT Base-X Dome shape):
-// widthM = flat-to-flat width (E-W), lengthM = total length (N-S)
-// endCapM = depth of the pointed triangular end cap at N and S ends
 // Plus / Cross shape (DLX X-HUB, Zumro Quad Interface):
 // totalWM   = full E-W tip-to-tip span
 // totalLM   = full N-S tip-to-tip span
@@ -3232,6 +3207,20 @@ updateMeasureUI();
 window.addEventListener('online', updateOfflineBanner);
 window.addEventListener('offline', updateOfflineBanner);
 updateRestoreButtonState();
+let lastSavedHydratedFromStorage = false;
+try {
+  const raw = localStorage.getItem(SESSION_KEY);
+  if (raw) {
+    const data = JSON.parse(raw);
+    if (data && typeof data.savedAt === 'string') {
+      const d = new Date(data.savedAt);
+      if (!isNaN(d.getTime())) {
+        updateLastSavedIndicator(d);
+        lastSavedHydratedFromStorage = true;
+      }
+    }
+  }
+} catch (e) {}
 document.getElementById('btn-restore-autosave').addEventListener('click', () => { restoreAutosave(); });
 document.getElementById('zoom-level').textContent = map.getZoom();
 updateScaleRatio();
@@ -3241,7 +3230,9 @@ scheduleOverlapSummary();
   const md = document.getElementById('mode-display');
   if (md && md.textContent.trim()) md.title = md.textContent.trim();
 })();
-updateLastSavedIndicator(undefined);
+if (!lastSavedHydratedFromStorage) {
+  updateLastSavedIndicator(undefined);
+}
 </script>
 </body>
 </html>
