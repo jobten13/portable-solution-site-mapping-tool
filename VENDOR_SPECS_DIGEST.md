@@ -30,7 +30,7 @@ Tech sheets: “Dimensions (L x W)” in spec table. Spec Sheets: X-Series X-24,
 |-------|-------------|---------------------------|------|--------|-------|--------------|
 | **X-24** | X-Series X-24 Shelter Tech Sheet Updated 11_18_24.pdf | **24 × 21.5 ft** (7.3 × 6.6 m) | 516 ft² | 10.25 ft | rect | 24 × 21.5 ✓ |
 | **X-32** | X-Series X-32 Shelter Tech Sheet Updated 11_18_24.pdf | **32 × 21.5 ft** (9.8 × 6.6 m) | 688 ft² | 10.25 ft | rect | 32 × 21.5 ✓ |
-| **X-HUB (Quad)** | X-Hub Shelter Tech Sheet Updated 11_19_24.pdf | **22 × 22 ft** (6.7 × 6.7 m) | 484 ft² (spec prints “48 ft²” – typo; 22×22=484) | 12.5 ft | plus | 22 × 22, armWidthFt 16 ✓ |
+| **X-HUB (Quad)** | X-Hub Shelter Tech Sheet Updated 11_19_24.pdf | **22 × 22 ft** (6.7 × 6.7 m) | 484 ft² (spec prints “48 ft²” – typo; 22×22=484) | 12.5 ft | plus | 22 × 22 ✓; **armWidthFt 16** — unverified from a primary dimension spec (overall 22'×22' bounding box confirmed; arm width not confirmed from manufacturer spec sheet — verify with DLX). |
 
 ---
 
@@ -38,7 +38,7 @@ Tech sheets: “Dimensions (L x W)” in spec table. Spec Sheets: X-Series X-24,
 
 | Model | Spec source | Spec dimensions | Area | Shape | Tool current |
 |-------|-------------|-----------------|------|-------|--------------|
-| **Base-X 305** | HDT_305shelter_13-13.pdf (Spec Sheets) | Interior **18' × 25'** (5.49 × 7.62 m) | 450 ft² | rect | 18 × 25 ✓ |
+| **Base-X 305** | HDT_305shelter_13-13.pdf (Spec Sheets) | Outer footprint **20'6" × 25'** (18' interior clear span). Width corrected from interior clear span (18') to outer cover dimension (20'6") per **HDT_305shelter** spec diagram. | 450 ft² | rect | **20.5 × 25** ✓ |
 | **Base-X 8D36** | HDT_8D36Shelter_11.pdf (Spec Sheets) | Interior **31' × 37'** (9.45 × 11.28 m) | 935 ft² | ellipse (dome) | 31 × 37 ✓ |
 
 Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) – optional for future. Anchor kits: 69KHSA305 and 69KHSA8D36.pdf in Spec Sheets.
@@ -49,9 +49,9 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 
 | Model | Spec source | Spec dimensions | Area | Shape | Tool current |
 |-------|-------------|-----------------|------|-------|--------------|
-| **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** (5.7 × 10.4 m usable); diagram corner cuts 7'6", 9'4" | 570 ft² | elongated-octagon | 18.583 × 33.917, cornerCutW 7.5, cornerCutL 9.333 ✓ |
+| **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** (5.7 × 10.4 m usable); diagram labels **7'6"** and **9'4"** corner cuts (length of cut lines on diagram; tool uses inward axis projections) | 570 ft² | elongated-octagon | 18.583 × 33.917, **cornerCutW 5.303**, cornerCutL 9.333 ✓ (W: 7'6" / √2 along width axis) |
 | **GK20** | Instructions - WS_GK20 Set Up.pdf; Western-Shelter-_-Product-Catalog.pdf (no dedicated SW-20 spec sheet) | **18' 7" × 18' 7"** octagon (tool per SW-20/setup) | 286 ft² | octagon | 18.583 × 18.583 ✓ |
-| **Vestibule** | Instructions - GK+Vestibule Manual, Vestibule+Entryway+manual | 8 ft along tent end × 6 ft depth for GK1935 alignment | — | rect | 8 × 6 ✓ |
+| **Vestibule (SO-VC8H)** | Western Shelter SO-VC8H spec (see Vendor Specs and Manuals); replaces prior misread (6' was sidewall height, not depth) | Footprint **7'8" × 7'4"**; **6'** sidewall height | 56 ft² | rect | **7.667 × 7.333** ✓ |
 | **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ |
 
 ---
@@ -78,7 +78,9 @@ All of the following are implemented in the tool.
 5. **ZUMRO Model 600**: 20.4×31 exterior.
 6. **HDT**: Base-X 8D36 as ellipse 31×37; 6D31 removed (product lineup: 305 and 8D36 only).
 7. **Western Shelter GK20**: 18'7"×18'7" octagon (SW-20/setup); Generator 70 kVA on trailer 14.12'×6.04'.
-8. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
+8. **Western Shelter GK1935**: Diagram corner **7'6"** on width axis is the **diagonal cut** length on the drawing; `cornerCutW` in the tool is the **inward projection along the width axis** = 7.5 / √2 ≈ **5.303 ft** (with `cornerCutL` unchanged at 9.333 ft for 9'4" on length axis).
+9. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
+10. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
 
 ---
 
@@ -87,7 +89,7 @@ All of the following are implemented in the tool.
 - **BLU-MED**: Instructions & Manuals — TM_20x32.5 BLU-MED XPH Shelter, TM_2039 XPH Shelter, TM_7x8 Vestibule w BTD. Spec Sheets: BLU-MED Weather Load Shelter Specs.pdf (and others).
 - **DLX**: Spec Sheets — Approved for Release X-Series X-24, X-32, X-Hub Shelter Tech Sheet Updated 11_18_24 / 11_19_24.pdf.
 - **HDT Global**: Spec Sheets — HDT_305shelter_13-13.pdf, HDT_8D36Shelter_11.pdf, Anchor Kits 69KHSA305 and 69KHSA8D36.pdf.
-- **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. Product catalog: Western-Shelter-_-Product-Catalog.pdf.
+- **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. **SO-VC8H** vestibule footprint (7'8"×7'4") and sidewall height per Western Shelter SO-VC8H spec. Product catalog: Western-Shelter-_-Product-Catalog.pdf.
 - **ZUMRO**: Spec Sheets — Zumro 400 Specs.pdf, Zumro 600 Specs.pdf, Zumro Quad Interface.pdf, UC DAVIS SPEC SHEET PACKAGE 011325.pdf. Interconnect: ZUMRO_Interconnect_Dimensions.md (root), engineering drawing Photo - Zumro Interconnect to Western Shelter.png / ZUMRO Interconnect to WS (1).jpg; footprint 7.17'×6.92' (86"×83"), rect.
 
 ---
@@ -115,3 +117,18 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **Source Files Used** | Section rewritten to list actual paths and filenames under Vendor Specs and Manuals. |
 
 **Spec sheet verification note:** Dimensions in this digest were previously verified against manufacturer docs; PDF content was not re-extracted in this pass. Folder contents were cross-checked to ensure every tent in `TENT_DB` has a corresponding spec or manual in **Vendor Specs and Manuals**.
+
+---
+
+**Date:** 2026-03-31  
+**Action:** Digest aligned with `TENT_DB` updates for **Western Shelter GK1935** and **Vestibule (SO-VC8H)**.
+
+| Change | Details |
+|--------|--------|
+| **GK1935** | `cornerCutW` in tool is **5.303 ft** (inward projection along width axis); spec diagram **7'6"** treated as diagonal cut length → divide by √2. Table and summary updated; `cornerCutL` **9.333** unchanged. |
+| **Vestibule SO-VC8H** | Footprint **7.667 × 7.333 ft** (7'8" × 7'4"), 56 sq ft; **6'** documented as sidewall height. Replaces incorrect 8×6 (6' had been misread as depth). |
+
+---
+
+**Date:** 2026-04-02  
+**Action:** **HDT Base-X 305** width corrected from interior **18'** to outer cover **20.5'** (20'6") per **HDT_305shelter** spec sheet diagram (digest §3 table updated).

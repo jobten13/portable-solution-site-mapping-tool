@@ -583,13 +583,13 @@ const TENT_DB = {
   "Western Shelter": [
     { name:"GK1935", widthFt:18.583, lengthFt:33.917, shape:"elongated-octagon",
       // SW-1935: 18'7" × 33'11" overall; diagram corner cuts 7'6" (width), 9'4" (length)
-      cornerCutW: 7.5,   // 7'6" along width axis
+      cornerCutW: 5.303,   // 7'6" along width axis
       cornerCutL: 9.333,  // 9'4" along length axis
       note:"GK1935 – 18'7\"×33'11\" elongated octagon (SW-1935), 570 sq ft" },
     { name:"GK20", widthFt:18.583, lengthFt:18.583, shape:"octagon",
       note:"GK20 – 18'7\"×18'7\" octagon (SW-20 spec), 286 sq ft" },
-    { name:"Vestibule", widthFt:8, lengthFt:6, shape:"rect",
-      note:"Vestibule – 8' along tent end × 6' depth; orient 0° to align 8' edge with GK1935 end" },
+    { name:"Vestibule", widthFt:7.667, lengthFt:7.333, shape:"rect",
+      note:"Vestibule SO-VC8H – 7'8\"×7'4\" footprint (56 sq ft); connects to GK1935 end face; 6' sidewall height" },
     { name:"Generator 70 kVA (on trailer)", widthFt:6.04, lengthFt:14.12, shape:"rect",
       note:"70 kVA / 56 kW on TRLR70US trailer – 14.12'×6.04' (trailer L×W per MQ Power data sheets); Isuzu Tier 4, 103 gal" },
   ],
@@ -599,6 +599,7 @@ const TENT_DB = {
     { name:"Quad (X-HUB)", widthFt:22, lengthFt:22, shape:"plus",
       // X-Hub Tech Sheet Nov 2024: Dimensions 22×22 ft (6.7×6.7 m). Arm width 16' from X-Series connector.
       // Spec area printed as 48 ft² (typo); 22×22 = 484 ft².
+      // armWidthFt: 16 — unverified from manufacturer spec sheet: overall 22'×22' bounding box is confirmed, but arm width not confirmed from a primary source; verify with DLX before next version.
       armWidthFt: 16,
       note:"X-HUB – 22'×22' (X-Hub tech sheet), 484 sq ft, 4 doors; arm 16' for X-Series" },
     { name:"X-32", widthFt:21.5, lengthFt:32, shape:"rect",
@@ -617,8 +618,8 @@ const TENT_DB = {
       note:"Interconnect – 7.17'×6.92' (86\"×83\") rect; connects Zumro to WS; ZUMRO_Interconnect_Dimensions.md / engineering drawing" },
   ],
   "HDT": [
-    { name:"Base-X 305", widthFt:18, lengthFt:25, shape:"rect",
-      note:"Base-X Model 305 – 18'×25' interior, 450 sq ft" },
+    { name:"Base-X 305", widthFt:20.5, lengthFt:25, shape:"rect",
+      note:"Base-X Model 305 – 20'6\"×25' outer footprint (18' interior clear span), 450 sq ft" },
     { name:"Base-X Dome (8D36)", widthFt:31, lengthFt:37, shape:"ellipse",
       note:"Base-X Dome 8D36 – 31'×37' dome footprint (HDT_8D36Shelter), 935 sq ft, 8 doors" },
   ]
