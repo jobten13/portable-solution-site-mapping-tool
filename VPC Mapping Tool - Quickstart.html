@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VPC Mapping Tool — Quickstart</title>
+<style>
+/* ─── Screen ─── */
+:root {
+  --text: #1a1a1a;
+  --muted: #444;
+  --accent: #0969da;
+  --border: #d0d7de;
+  --bg: #f6f8fa;
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+}
+.doc {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  background: #fff;
+  min-height: 100vh;
+  box-shadow: 0 0 0 1px var(--border);
+}
+header.doc-head {
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 1rem;
+  margin-bottom: 1.75rem;
+}
+.doc-head h1 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+  line-height: 1.25;
+}
+.doc-meta {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0;
+}
+h2 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.65rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  page-break-after: avoid;
+}
+h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+h3 {
+  font-size: 1rem;
+  margin: 1.1rem 0 0.45rem;
+  page-break-after: avoid;
+}
+p, li { margin: 0.45rem 0; }
+ul, ol { margin: 0.4rem 0 0.6rem; padding-left: 1.35rem; }
+li { margin: 0.3rem 0; }
+kbd {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.88em;
+  padding: 0.12em 0.45em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #f3f4f6;
+}
+.callout {
+  border-left: 4px solid var(--accent);
+  padding: 0.65rem 0.85rem;
+  margin: 1rem 0;
+  background: #f6f8fa;
+  font-size: 0.95rem;
+  page-break-inside: avoid;
+}
+.callout strong { color: var(--text); }
+footer.doc-foot {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ─── Print: single column, compact (matches on-screen flow; no multi-column) ─── */
+@page {
+  size: letter portrait;
+  margin: 0.38in 0.5in;
+}
+@media print {
+  body { background: #fff; }
+  .doc {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    min-height: auto;
+    font-size: 8pt;
+    line-height: 1.28;
+  }
+  .doc-head {
+    border-bottom: 1px solid #000;
+    padding-bottom: 0.35rem;
+    margin-bottom: 0.45rem;
+  }
+  .doc-head h1 {
+    font-size: 12pt;
+    margin: 0 0 0.12rem;
+  }
+  .doc-meta { font-size: 8pt; color: #333; }
+  h2 {
+    font-size: 9pt;
+    margin: 0.4rem 0 0.15rem;
+    padding: 0;
+    border: none;
+    border-bottom: 1px solid #bbb;
+    page-break-after: avoid;
+  }
+  h2:first-of-type { margin-top: 0; }
+  p, li { margin: 0.12rem 0; }
+  ul, ol { margin: 0.15rem 0 0.25rem; padding-left: 1.1rem; }
+  li { margin: 0.1rem 0; }
+  .callout {
+    padding: 0.3rem 0.45rem;
+    margin: 0.3rem 0;
+    font-size: 8pt;
+    border-left-width: 3px;
+    page-break-inside: avoid;
+  }
+  kbd {
+    font-size: 7.5pt;
+    padding: 0 0.15em;
+    border-color: #999;
+  }
+  footer.doc-foot {
+    margin-top: 0.5rem;
+    padding-top: 0.3rem;
+    font-size: 7.75pt;
+    border-top: 1px solid #999;
+  }
+  footer.doc-foot p { margin: 0.15rem 0; }
+  a { color: #000; text-decoration: none; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; word-break: break-all; }
+  .no-print-url::after { content: none !important; }
+}
+</style>
+</head>
+<body>
+<article class="doc">
+  <header class="doc-head">
+    <h1>VPC Mapping Tool — Quickstart</h1>
+    <p class="doc-meta">Open the app, place structures, save — one sheet for field use.</p>
+  </header>
+
+  <section aria-labelledby="s-open">
+    <h2 id="s-open">1. Open</h2>
+    <p>Open <strong>VPC Mapping Tool.html</strong> in Chrome, Edge, or Firefox (no install). Network needed first for imagery, search, and PDF libraries; then many features work offline.</p>
+    <div class="callout">
+      <strong>Offline:</strong> No tiles? Enter <kbd>lat, lng</kbd> in search (e.g. <kbd>34.05, -118.25</kbd>) and <strong>Search</strong>.
+    </div>
+  </section>
+
+  <section aria-labelledby="s-first">
+    <h2 id="s-first">2. First layout</h2>
+    <ol>
+      <li><strong>Site:</strong> Header search (address or coords). <strong>Setup ▾</strong> — operation name for print/PDF.</li>
+      <li><strong>Pick:</strong> Sidebar <strong>Vendor</strong> tab → model. Status line shows placement mode.</li>
+      <li><strong>Place:</strong> Click map. Repeat.</li>
+      <li><strong>Edit:</strong> Click object — drag move; <strong>orange handle</strong> — rotate; delete on shape/list or <kbd>Shift</kbd>+click.</li>
+      <li><strong>Done:</strong> <kbd>Esc</kbd> to view mode.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s-header">
+    <h2 id="s-header">3. Header</h2>
+    <ul>
+      <li><strong>Search</strong> — Geocode or coords.</li>
+      <li><strong>Undo / Redo</strong> — 50 steps; lost on refresh or tab close — use <strong>Save Plan</strong>.</li>
+      <li><strong>Measure ▾</strong> — Distance or area; clear when done.</li>
+      <li><strong>Autosave</strong> / <strong>Restore Autosave</strong> — Browser-only last session.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-sidebar">
+    <h2 id="s-sidebar">4. Sidebar</h2>
+    <ul>
+      <li><strong>Label &amp; Style</strong> — Next label, role, color; <strong>Snap to selected</strong> for add-ons (select target first).</li>
+      <li><strong>Options ▾</strong> — Opacity, rotation, <strong>buffer</strong> (dashed ring). Mark tight buffer as intentional in list when shown.</li>
+      <li><strong>Custom Size</strong> — <strong>Place Custom</strong>, then map click.</li>
+      <li><strong>Plan</strong> — <strong>Save Plan</strong> / <strong>Open Plan</strong>; <strong>Export ▾</strong> GeoJSON or PDF; <strong>Print Fit</strong>. Enable &apos;Print background graphics&apos; in your browser&apos;s print dialog for the satellite image to appear.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-overlap">
+    <h2 id="s-overlap">5. Status bar, overlaps &amp; save</h2>
+    <p>Status bar shows zoom, scale, count, and overlap summary. <strong>Red</strong> — footprint overlap. <strong>Amber</strong> — buffer advisory; adjust or mark intentional.</p>
+    <ul>
+      <li><strong>Autosave</strong> — This browser only; not a backup.</li>
+      <li><strong>Save Plan</strong> — JSON file to archive, email, reopen anywhere.</li>
+      <li>Fresh open by default — <strong>Restore Autosave</strong> for last browser session.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="s-keys">
+    <h2 id="s-keys">6. Keys</h2>
+    <ul>
+      <li><kbd>/</kbd> search · <kbd>Esc</kbd> view mode · <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> undo/redo · <kbd>P</kbd> place (when tent selected)</li>
+    </ul>
+  </section>
+
+  <footer class="doc-foot">
+    <p class="no-print-url">Same folder: <strong>VPC Mapping Tool.html</strong>. Details: <strong>README.md</strong>.</p>
+  </footer>
+</article>
+</body>
+</html>
