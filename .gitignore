@@ -1,2 +1,5 @@
 # Local backup snapshot; not part of active development
 VPC Mapping Tool - restore 2026-02-26.html
+
+# Vendor PDFs/specs — large reference bundle; keep local only unless using Git LFS
+Vendor Specs and Manuals/
