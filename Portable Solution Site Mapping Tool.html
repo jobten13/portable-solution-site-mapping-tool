@@ -350,11 +350,11 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
   <div class="header-tool-slot">
     <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distances or areas on the map. Use before or during placement to check site dimensions.">Measure ▾</button>
-    <div id="measure-menu-panel" role="menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
+    <div id="measure-menu-panel" role="menu" style="display:none;position:fixed;top:0;left:0;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
       <button type="button" class="ghost" role="menuitem" style="width:100%;font-size:11px;margin:0;padding:6px 10px;" onclick="measureMenuPickDistance(event)">Measure Distance</button>
       <button type="button" class="ghost" role="menuitem" style="width:100%;font-size:11px;margin-top:4px;padding:6px 10px;" onclick="measureMenuPickArea(event)">Measure Area</button>
     </div>
-    <div id="measure-strip" style="display:none;position:absolute;top:100%;right:0;left:auto;margin-top:4px;z-index:1001;min-width:220px;max-width:calc(100vw - 16px);align-items:center;gap:12px;flex-wrap:wrap;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:4px 16px;font-size:11px;color:#8b949e;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
+    <div id="measure-strip" style="display:none;position:fixed;top:0;left:auto;right:auto;z-index:1001;min-width:220px;max-width:calc(100vw - 16px);align-items:center;gap:12px;flex-wrap:wrap;background:#161b22;border:1px solid #30363d;border-radius:6px;padding:4px 16px;font-size:11px;color:#8b949e;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
       <span id="measure-readout-header" style="flex:1;min-width:0;"></span>
       <button type="button" class="ghost header-btn" id="btn-finish-area-header" onclick="finishAreaMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Close the polygon and calculate the enclosed area." aria-label="Finish area measurement">Finish Area</button>
       <button type="button" class="ghost header-btn" id="btn-clear-measure-header" onclick="clearMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Remove the current measurement from the map and exit measure mode." aria-label="Clear measurement">Clear</button>
@@ -973,8 +973,15 @@ function updateMeasureUI() {
 
   const strip = document.getElementById('measure-strip');
   if (strip) {
-    if (measureMode || areaMeasureMode) strip.style.display = 'flex';
-    else {
+    if (measureMode || areaMeasureMode) {
+      strip.style.display = 'flex';
+      const btn = document.getElementById('btn-measure-menu');
+      if (btn) {
+        const rect = btn.getBoundingClientRect();
+        strip.style.top = (rect.bottom + 4) + 'px';
+        strip.style.left = rect.left + 'px';
+      }
+    } else {
       strip.style.display = 'none';
       const rohHide = document.getElementById('measure-readout-header');
       if (rohHide) rohHide.textContent = '';
@@ -3205,8 +3212,16 @@ updateMeasureUI();
     menuBtn.addEventListener('click', function (e) {
       e.stopPropagation();
       const isOpen = panel.style.display === 'block';
-      panel.style.display = isOpen ? 'none' : 'block';
-      menuBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+      if (isOpen) {
+        panel.style.display = 'none';
+        menuBtn.setAttribute('aria-expanded', 'false');
+      } else {
+        panel.style.display = 'block';
+        const rect = menuBtn.getBoundingClientRect();
+        panel.style.top = (rect.bottom + 4) + 'px';
+        panel.style.left = rect.left + 'px';
+        menuBtn.setAttribute('aria-expanded', 'true');
+      }
     });
   }
   document.addEventListener('click', closeMeasureMenu);
