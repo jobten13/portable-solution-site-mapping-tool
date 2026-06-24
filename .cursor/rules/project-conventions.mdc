@@ -1,9 +1,9 @@
 ---
-description: VPC Mapping Tool project conventions — architecture facts and invariants that must be preserved when editing.
+description: Portable Solution Site Mapping Tool project conventions — architecture facts and invariants that must be preserved when editing.
 alwaysApply: true
 ---
 
-# VPC Mapping Tool — project conventions
+# Portable Solution Site Mapping Tool — project conventions
 
 Single-file HTML app for emergency field-hospital site layout. Leaflet map at true scale; vendor tent catalog; place / drag / rotate / snap; two-tier overlap; save/load; GeoJSON + PDF export. No build step, no framework, no Turf — geometry is hand-rolled.
 
@@ -35,13 +35,13 @@ Placed objects live on the Leaflet `map` as vector overlays, stored in the `obje
 
 The "intentional buffer" concept is deliberately spelled differently on each surface:
 - runtime + undo snapshot: `intentionalBuffer`
-- plan JSON (`vpc-scenario-v1`): `intentionalBufferOverlap`
+- plan JSON (`psmt-scenario-v1`): `intentionalBufferOverlap`
 - GeoJSON export: `intentional_buffer_overlap`
 
 Do **not** "unify" these — each matches its serialization contract. Changing a spelling breaks save/load or export compatibility.
 
 ## Schema
-- Plan schema is `vpc-scenario-v1`; GeoJSON is a `FeatureCollection` with per-feature properties and collection metadata.
+- Plan schema is `psmt-scenario-v1`; GeoJSON is a `FeatureCollection` with per-feature properties and collection metadata.
 - Schema is not frozen pre-v1 and may change — but change it deliberately, and keep `buildScenarioData()` (plan) and the GeoJSON export in sync with any field changes.
 
 ## UI text must match behavior
@@ -51,4 +51,4 @@ Do **not** "unify" these — each matches its serialization contract. Changing a
 - `Old/` is archived prior versions. It is not active source. Do not edit it, cite it as current, or treat its patterns as authoritative.
 
 ## Versioning / docs
-- Version lives in `APP_META` (and the bottom-right badge reads from it). When `APP_META.version` changes, update `README.md`, `VPC_Project_Notes.md`, the Quickstart, and in-app changelog together.
+- Version lives in `APP_META` (and the bottom-right badge reads from it). When `APP_META.version` changes, update `README.md`, `PSMT_Project_Notes.md`, the Quickstart, and in-app changelog together.

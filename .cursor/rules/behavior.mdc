@@ -1,5 +1,5 @@
 ---
-description: Core working agreement for the VPC Mapping Tool — how to diagnose, change, and report. Always applies.
+description: Core working agreement for the Portable Solution Site Mapping Tool — how to diagnose, change, and report. Always applies.
 alwaysApply: true
 ---
 
@@ -23,7 +23,7 @@ This is a field-facing tool for mobile/field hospitals. Lives may depend on its 
 - Do not "tidy," refactor, rename, or reformat code outside the scope of the request, even if it looks improvable.
 
 ## Scope discipline
-- This is a single-file application (`VPC Mapping Tool.html`). Do not split it into multiple files, introduce a build step, add a framework, or add dependencies unless explicitly asked.
+- This is a single-file application (`Portable Solution Site Mapping Tool.html`). Do not split it into multiple files, introduce a build step, add a framework, or add dependencies unless explicitly asked.
 - Prefer the simplest change that correctly does the job. This tool serves stressed users in high-pressure environments; complexity is a cost.
 
 ## Design decisions belong to the developer

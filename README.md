@@ -1,8 +1,8 @@
-# VPC Mapping Tool
+# Portable Solution Site Mapping Tool
 
 Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**0.8.8**, `lastUpdated` **2026-05-19** in `APP_META`).
 
-**Primary file:** `VPC Mapping Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
+**Primary file:** `Portable Solution Site Mapping Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
 
 ## Current release (0.8.8)
 
@@ -43,16 +43,16 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 
 | File | Purpose |
 |------|---------|
-| `VPC Mapping Tool.html` | Main application |
-| `VPC Mapping Tool - Quickstart.html` | Field quickstart (sole operator quick reference; open in browser) |
+| `Portable Solution Site Mapping Tool.html` | Main application |
+| `Portable Solution Site Mapping Tool - Quickstart.html` | Field quickstart (sole operator quick reference; open in browser) |
 | `VENDOR_SPECS_DIGEST.md` | Spec alignment notes for `TENT_DB` |
-| `VPC_Project_Notes.md` | Roadmap and backlog notes |
+| `PSMT_Project_Notes.md` | Roadmap and backlog notes |
 | `Initial prompt.txt` | Original build prompt |
 | `Old/` | Archived earlier versions |
 
 ## Session and autosave
 
-- **Autosave:** After each change, layout + map view are written to `localStorage` (`vpc-mapping-session`) after a 500 ms debounce.
+- **Autosave:** After each change, layout + map view are written to `localStorage` (`psmt-session`) after a 500 ms debounce.
 - **On open:** Default view only; if autosave data exists, the header shows when it was last saved and enables **Restore Autosave**.
 - **Restore Autosave:** Replaces the current layout (confirm if structures are already placed). Use after a refresh or accidental close — not a substitute for **Save Plan** when sharing or archiving.
 - **Save Plan / Open Plan:** Portable JSON including objects, map view, operation name, custom roles, and `intentionalBufferOverlap` per object.
@@ -102,7 +102,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 ## Versioning
 
-- Version and date live in `APP_META` inside `VPC Mapping Tool.html`.
+- Version and date live in `APP_META` inside `Portable Solution Site Mapping Tool.html`.
 - Same version appears in the bottom-right badge (`vX.Y.Z`).
 - Update this README when bumping `APP_META.version`.
 
@@ -110,7 +110,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 | Version | Date       | Notes |
 |---------|------------|-------|
-| 0.8.8   | 2026-05-19 | Tooltip/title/aria aligned with current behavior; list delete confirm; README, VPC_Project_Notes, and Quickstart synced. |
+| 0.8.8   | 2026-05-19 | Tooltip/title/aria aligned with current behavior; list delete confirm; README, PSMT_Project_Notes, and Quickstart synced. |
 | 0.8.7   | 2026-04-01 | Two-tier overlap (footprint red / clearance buffer amber), `intentionalBufferOverlap` in plans, overlap pill + split status bar, layer-space overlap tests, map/list styling + Intentional checkbox, buffer vs footprint intersection logic, tooltip pass, tent tooltip sticky off / close on drag. **Fresh open on load** — use **Restore Autosave** or **Open Plan**. |
 | 0.8.6   | 2026-03-27 | Export PDF: map snapshot via html2canvas + jsPDF; tile `crossOrigin`; `waitForTilesIdle`; text-only fallback if capture fails. |
 | 0.8.5   | 2026-02-26 | ZUMRO Interconnect added to TENT_DB: 7.17'×6.92' rect (86"×83"). |
@@ -157,7 +157,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 ### 1) Start and locate site
 
-- Open `VPC Mapping Tool.html` in Chrome, Edge, or Safari (network needed for search and PDF export libraries).
+- Open `Portable Solution Site Mapping Tool.html` in Chrome, Edge, or Safari (network needed for search and PDF export libraries).
 - Search by address/place or paste `lat, lng`.
 - Keep **Prefer current map area** checked (Setup ▾) for local precision; uncheck for global search.
 - After a browser refresh, use **Restore Autosave** if you had work in progress — the map does not reload your layout automatically.
@@ -204,7 +204,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 ## Backlog (not yet implemented)
 
-Prioritized items for future releases. See `VPC_Project_Notes.md` for product roadmap (PWA, calculator suite integration).
+Prioritized items for future releases. See `PSMT_Project_Notes.md` for product roadmap (PWA, calculator suite integration).
 
 | Priority | Item | Notes |
 |----------|------|-------|
@@ -230,4 +230,4 @@ Prioritized items for future releases. See `VPC_Project_Notes.md` for product ro
 
 - Update this file when `APP_META.version` changes.
 - A local restore snapshot HTML may exist on disk for emergencies; it is in `.gitignore` and is not part of the repo.
-- Companion **Calculator Suite** tools (load, water, consumables, medicines) are planned for integration per `VPC_Project_Notes.md`; they are not in this folder.
+- Companion **Calculator Suite** tools (load, water, consumables, medicines) are planned for integration per `PSMT_Project_Notes.md`; they are not in this folder.

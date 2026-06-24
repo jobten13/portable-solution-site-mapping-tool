@@ -1,12 +1,12 @@
 # Vendor Tent Specs Digest (PoP 3)
 
-**Status: Implemented.** The recommendations below have been applied in the VPC Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT) are used for placement and when loading plans. HDT 6D31 was removed per product lineup; only Base-X 305 and Base-X Dome (8D36) remain for HDT.
+**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT) are used for placement and when loading plans. HDT 6D31 was removed per product lineup; only Base-X 305 and Base-X Dome (8D36) remain for HDT.
 
 ---
 
 **Source:** `C:\Users\jason\Desktop\IMPACTS Project\PoP 3\VPC Mapping\Vendor Specs and Manuals`  
 **Folders:** **BLU-MED**, **DLX**, **HDT Global**, **Western Shelter & Third Party**, **ZUMRO**  
-**Purpose:** Align VPC Mapping Tool `TENT_DB` with manufacturer spec sheets for accurate length, width, height, and shapes.
+**Purpose:** Align Portable Solution Site Mapping Tool `TENT_DB` with manufacturer spec sheets for accurate length, width, height, and shapes.
 
 ---
 
@@ -67,7 +67,7 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) â
 
 ---
 
-## Summary: Changes Applied in VPC Mapping Tool
+## Summary: Changes Applied in Portable Solution Site Mapping Tool
 
 All of the following are implemented in the tool.
 

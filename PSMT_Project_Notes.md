@@ -1,14 +1,14 @@
-# VPC Mapping Tool — Project Notes
+# Portable Solution Site Mapping Tool — Project Notes
 
 *Last updated: 2026-05-19 (aligned with app v0.8.8); 2026-06-24 — PSMT overhaul scope added*
 
-Operator-facing documentation: **`README.md`**. Field quickstart: **`VPC Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
+Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable Solution Site Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
 
 ---
 
 ## Project overview
 
-**VPC Mapping Tool** (v**0.8.8**) — Single-file HTML app for emergency field hospital site layout. Leaflet.js map at true scale, vendor `TENT_DB` (five vendors), click-then-place workflow, drag/rotate handles, snap-to-face attachment, two-tier overlap (footprint red / clearance buffer amber), undo/redo (50 steps), role tagging with custom roles, debounced browser autosave with manual **Restore Autosave**, portable **Save Plan** / **Open Plan**, GeoJSON export, PDF export with map snapshot, and print fit.
+**Portable Solution Site Mapping Tool** (v**0.8.8**) — Single-file HTML app for emergency field hospital site layout. Leaflet.js map at true scale, vendor `TENT_DB` (five vendors), click-then-place workflow, drag/rotate handles, snap-to-face attachment, two-tier overlap (footprint red / clearance buffer amber), undo/redo (50 steps), role tagging with custom roles, debounced browser autosave with manual **Restore Autosave**, portable **Save Plan** / **Open Plan**, GeoJSON export, PDF export with map snapshot, and print fit.
 
 **Use case:** Field hospital planning and setup — domestic emergency response first; international expansion planned. Primary users: incident commanders and field coordinators.
 
@@ -89,7 +89,7 @@ This section defines the scope of work on the **psmt-overhaul** branch (forked f
 
 ---
 
-## Immediate feature backlog (VPC tool)
+## Immediate feature backlog (PSMT)
 
 Open work only. Shipped items removed from this list.
 
@@ -121,7 +121,7 @@ Open work only. Shipped items removed from this list.
 
 ## Product roadmap
 
-### v1 — VPC standalone PWA
+### v1 — PSMT standalone PWA
 
 Map tool with backlog above implemented; offline-capable; installable on tablet/desktop. Single-file app is nearly PWA-ready — **manifest + service worker** (especially tile caching) are the main additions.
 
@@ -131,7 +131,7 @@ Map tool with backlog above implemented; offline-capable; installable on tablet/
 
 Five calculators in a tabbed shell. Shared deployment header (days/beds/buffer once → all tabs). No map. Standalone logistics tool for teams that do not need spatial layout.
 
-### v2.5 — VPC + calcs combined (non-PWA)
+### v2.5 — PSMT + calcs combined (non-PWA)
 
 Map and calculators in one shell. Beds/roles (and eventually capacity) on the map propagate to calc tabs. Multi-file architecture; no install requirement. **Key integration milestone.**
 
@@ -156,13 +156,13 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 
 | Mechanism | Scope | Shareable |
 |-----------|--------|-----------|
-| Autosave (`vpc-mapping-session`) | Same browser | No |
+| Autosave (`psmt-session`) | Same browser | No |
 | Save Plan JSON | File / email | Yes |
 | Undo stack | Session memory | No — lost on refresh |
 
 **Medicines/consumables data:** UCD lists today. International use needs a decision: WHO/MSF-standard rates (shareable) vs hospital-specific (user-configurable).
 
-**Single-file vs multi-file:** VPC stays single-file for distribution until v2.5+. Combined app should be multi-file PWA with service worker.
+**Single-file vs multi-file:** PSMT stays single-file for distribution until v2.5+. Combined app should be multi-file PWA with service worker.
 
 **Schema:** Not released yet — plan/GeoJSON schema may change freely until v1.
 
@@ -177,12 +177,12 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 
 ## Decisions
 
-- **2026-06-10 — Quickstart PDF retired permanently.** `VPC Mapping Tool - Quickstart.pdf` has been removed from the project. **`VPC Mapping Tool - Quickstart.html`** is the sole quickstart source going forward; no PDF will be regenerated.
+- **2026-06-10 — Quickstart PDF retired permanently.** `VPC Mapping Tool - Quickstart.pdf` has been removed from the project. **`Portable Solution Site Mapping Tool - Quickstart.html`** is the sole quickstart source going forward; no PDF will be regenerated.
 
 ---
 
 ## Doc maintenance
 
-- Bump *Last updated* and version when `APP_META.version` changes in `VPC Mapping Tool.html`.
-- Keep **README.md**, **VPC_Project_Notes.md**, **Quickstart.html**, and in-app tooltips in sync on each release.
+- Bump *Last updated* and version when `APP_META.version` changes in `Portable Solution Site Mapping Tool.html`.
+- Keep **README.md**, **PSMT_Project_Notes.md**, **Portable Solution Site Mapping Tool - Quickstart.html**, and in-app tooltips in sync on each release.
 - Shipped features: document in README changelog; remove from backlog here.

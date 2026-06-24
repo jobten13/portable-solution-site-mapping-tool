@@ -1,10 +1,10 @@
-# VPC Mapping Tool — Project Map
+# Portable Solution Site Mapping Tool — Project Map
 
 Orientation document for developers and collaborators. Describes **what this project is** and **how it is organized**.
 
 For **how to work on it** (read-only vs. authorized changes, scope discipline, catalog provenance, data-handling rules), see `.cursor/rules/` — especially `behavior.mdc`, `project-conventions.mdc`, and `data-handling.mdc`. This file does not duplicate those rules.
 
-**Current version:** `0.8.8` (`APP_META.version`, `lastUpdated` `2026-05-19` in `VPC Mapping Tool.html`).
+**Current version:** `0.8.8` (`APP_META.version`, `lastUpdated` `2026-05-19` in `Portable Solution Site Mapping Tool.html`).
 
 ---
 
@@ -12,7 +12,7 @@ For **how to work on it** (read-only vs. authorized changes, scope discipline, c
 
 ### What the tool is
 
-**VPC Mapping Tool** is a browser-based site layout planner for emergency field hospitals and soft-sided shelter deployments. Users place vendor-accurate tent footprints on a real-world map at true scale, check spacing and overlaps, tag structures by functional role, and save or share layouts.
+**Portable Solution Site Mapping Tool** is a browser-based site layout planner for emergency field hospitals and soft-sided shelter deployments. Users place vendor-accurate tent footprints on a real-world map at true scale, check spacing and overlaps, tag structures by functional role, and save or share layouts.
 
 It is a **single HTML file** opened directly in a modern browser. No install, no build step, no backend.
 
@@ -40,11 +40,11 @@ Intended for **hospital use** and **government (USU/DHA-adjacent) hosting**. Lay
 
 | Path | Purpose |
 |------|---------|
-| **`VPC Mapping Tool.html`** | The application (~3,246 lines): HTML, CSS, JavaScript |
+| **`Portable Solution Site Mapping Tool.html`** | The application (~3,246 lines): HTML, CSS, JavaScript |
 | **`README.md`** | Operator + developer reference: features, quick start, overlap behavior, autosave, changelog, backlog |
-| **`VPC_Project_Notes.md`** | Product roadmap, immediate backlog, architecture notes, doc maintenance |
+| **`PSMT_Project_Notes.md`** | Product roadmap, immediate backlog, architecture notes, doc maintenance |
 | **`VENDOR_SPECS_DIGEST.md`** | Spec alignment audit: manufacturer source for each `TENT_DB` entry |
-| **`VPC Mapping Tool - Quickstart.html`** | Condensed field quickstart (sole quickstart source) |
+| **`Portable Solution Site Mapping Tool - Quickstart.html`** | Condensed field quickstart (sole quickstart source) |
 | **`Initial prompt.txt`** | Original product idea / build prompt |
 | **`PROJECT_MAP.md`** | This document |
 | **`.gitignore`** | Ignores local restore snapshot and vendor PDF bundle (see below) |
@@ -73,11 +73,11 @@ Do not edit `Old/` or treat it as authoritative. See `.cursor/rules/project-conv
 
 ### Not in this repo
 
-Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; integration planned at v2.5+ per `VPC_Project_Notes.md`.
+Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; integration planned at v2.5+ per `PSMT_Project_Notes.md`.
 
 ---
 
-## 3. Architecture of `VPC Mapping Tool.html`
+## 3. Architecture of `Portable Solution Site Mapping Tool.html`
 
 ### Whole-file layout
 
@@ -424,7 +424,7 @@ Updated by `updateOverlapSummary` (2773). UI-only pair details are not exported.
 | Surface | Field name |
 |---------|------------|
 | Runtime / undo | `intentionalBuffer` |
-| Plan JSON (`vpc-scenario-v1`) | `intentionalBufferOverlap` |
+| Plan JSON (`psmt-scenario-v1`) | `intentionalBufferOverlap` |
 | GeoJSON export | `intentional_buffer_overlap` |
 
 See `.cursor/rules/project-conventions.mdc`.
@@ -492,9 +492,9 @@ Header Measure menu (965+ UI; 2550+ on-map handlers). Distance or area. Not pers
 
 | Action | Key functions | Notes |
 |--------|---------------|-------|
-| Autosave write | `scheduleSaveSession` → `saveSession` (1802, 1790) | `localStorage` key `vpc-mapping-session`; 500 ms debounce |
+| Autosave write | `scheduleSaveSession` → `saveSession` (1802, 1790) | `localStorage` key `psmt-session`; 500 ms debounce |
 | Autosave restore | **`restoreAutosave`** (1835) → `loadScenarioFromData` | Manual; confirms if layout exists |
-| Save Plan | `saveScenario` (1448) | Downloads `vpc-scenario-v1` JSON |
+| Save Plan | `saveScenario` (1448) | Downloads `psmt-scenario-v1` JSON |
 | Open Plan | `loadScenarioPrompt` (1696) + file input handler (3102) | Replaces layout |
 
 **Fresh open:** default map (NYC area), empty layout — autosave does **not** auto-restore (init 3216–3241 only hydrates indicator).
@@ -511,7 +511,7 @@ Header Measure menu (965+ UI; 2550+ on-map handlers). Distance or area. Not pers
 
 ## 9. Serialization (high level)
 
-### Plan JSON — `vpc-scenario-v1` (`buildScenarioData`, 1458)
+### Plan JSON — `psmt-scenario-v1` (`buildScenarioData`, 1458)
 
 `schema`, `appVersion`, `savedAt`, `map` (center, zoom), `ui` (operationName, preferCurrentMapArea, bufferFt), `objects[]`, `customRoles[]`.
 
@@ -547,9 +547,9 @@ Schema not frozen pre-v1 — change deliberately; keep plan and GeoJSON in sync.
 |----------|--------|
 | **`PROJECT_MAP.md`** | This orientation map |
 | **`README.md`** | Release features, operator quick start, overlap, autosave, changelog |
-| **`VPC_Project_Notes.md`** | Roadmap, backlog, calculator integration plan |
+| **`PSMT_Project_Notes.md`** | Roadmap, backlog, calculator integration plan |
 | **`VENDOR_SPECS_DIGEST.md`** | Spec provenance per model |
-| **`VPC Mapping Tool - Quickstart.html`** | Field quickstart |
+| **`Portable Solution Site Mapping Tool - Quickstart.html`** | Field quickstart |
 | **`.cursor/rules/`** | Agent working agreement and invariants |
 
 When `APP_META.version` changes: update README, Project Notes, Quickstart, in-app changelog (see project-conventions rule).
