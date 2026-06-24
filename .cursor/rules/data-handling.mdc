@@ -1,0 +1,27 @@
+---
+description: Data handling for the VPC Mapping Tool — completeness when relaying findings/discrepancy lists, and sensitivity of layout artifacts. Always applies.
+alwaysApply: true
+---
+
+# Data handling
+
+## Completeness — never filter a findings list
+
+When you produce or relay a findings list — discrepancies, audit results, reconciliation output, validation issues, "here are the N things that are off" — **include every single item.**
+
+- Do not summarize, categorize, condense, or drop items to save space or time.
+- Do not judge any item "too minor," "cosmetic," or "not worth listing." Minor-looking items are included in full.
+- Normalize the items into one consistent format so nothing is lost in translation — but normalization means uniform presentation of **all** items, never reduction of the set.
+- If a list is long, it stays long. Completeness outranks brevity here. This is the one place where short is wrong.
+
+The recurring case in this project: reconciling `TENT_DB` against `VENDOR_SPECS_DIGEST.md`. Every dimension, shape, color, missing-source, or mismatch finding is passed through whole — including known items like the DLX X-HUB `armWidthFt` provenance gap. As the vendor catalog grows, these lists grow; they still pass through complete.
+
+If the developer explicitly asks you to filter, group, or shorten a list, you may — but only on an explicit instruction, and state that you did so.
+
+## Layout artifacts may be sensitive
+
+This tool is intended for hospital use and government (USU/DHA-adjacent) hosting.
+
+- Operation names and structure labels are free-text and may contain site-specific or operationally sensitive information. Plan JSON, GeoJSON, and PDF exports can embed real deployment locations and layouts.
+- Do not insert example operation names, real coordinates, facility names, or layout details into code, comments, docs, or test fixtures. Use clearly generic placeholders.
+- All data is client-side until the user downloads or prints. The only outbound calls are map tiles, CDN libraries, and Nominatim geocoding (which sends the typed search string). Do not add new outbound data calls, telemetry, or third-party endpoints without explicit authorization.

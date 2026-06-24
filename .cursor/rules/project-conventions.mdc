@@ -1,0 +1,54 @@
+---
+description: VPC Mapping Tool project conventions — architecture facts and invariants that must be preserved when editing.
+alwaysApply: true
+---
+
+# VPC Mapping Tool — project conventions
+
+Single-file HTML app for emergency field-hospital site layout. Leaflet map at true scale; vendor tent catalog; place / drag / rotate / snap; two-tier overlap; save/load; GeoJSON + PDF export. No build step, no framework, no Turf — geometry is hand-rolled.
+
+Program context: this tool supports the IMPACTS project (NDMS Modular/Convertible Capability Pilot, DHA-sponsored, UC Davis–implemented) — planning rapid hospital expansion with soft-sided shelter systems. Vendor dimensions feed real emergency planning, so catalog accuracy is not negotiable.
+
+## Vendor catalog — extensible, provenance-gated
+
+The catalog is **designed to grow** as additional vendors/teams are added. Rules below are written to hold as the set expands; never hardcode the current vendor list as if it were fixed.
+
+- The catalog lives in `TENT_DB`. Vendor tabs and tent cards render automatically from `TENT_DB` keys — no UI edit is needed to add a vendor.
+- Three things move together as a set when a vendor or model is added or changed: the `TENT_DB` entry, a matching `VENDOR_COLORS` entry for the vendor, and a section in `VENDOR_SPECS_DIGEST.md` with spec provenance. A vendor missing from `VENDOR_COLORS` silently falls back to a generic color — do not leave that gap.
+- **Provenance gate:** every vendor/model in `TENT_DB` must trace to a spec source documented in `VENDOR_SPECS_DIGEST.md`. Add a vendor digest-first (spec entry with source), then `TENT_DB` + `VENDOR_COLORS`. Never add a catalog model with no documented source.
+- Do not change `TENT_DB` dimensions, shapes, or shape-extra fields (`cornerCutW`, `cornerCutL`, `armWidthFt`, `endCapFt`) without a corresponding documented spec source and a digest update.
+- Known open provenance gap: DLX X-HUB `armWidthFt: 16` is unverified (bounding box confirmed, arm width not confirmed from a primary spec). Preserve the code comment marking it unverified until DLX confirms.
+
+## Non-catalog vendor values — never treat as catalog entries
+
+The `vendor` field on a placed object can hold values that are **not** catalog vendors and must be exempt from the provenance gate:
+- `'Custom'` — user-created via Custom Size (`customMode`). Always `shape: 'rect'`, dimensions from user input. Intentionally freeform. Do not validate against the digest, do not "correct," do not reconcile.
+- `'Loaded'` — assigned by `buildObjectFromRaw` to objects restored from a plan that lacked a vendor. Not a catalog entry.
+
+Custom objects are a first-class feature, not a data inconsistency.
+
+## Map objects are independent of the base layer
+
+Placed objects live on the Leaflet `map` as vector overlays, stored in the `objects[]` array — never attached to a tile layer. Switching base imagery (satellite/street, or any future imagery toggle) must not clear, move, or reset placed objects. Keep this independence intact in any imagery change.
+
+## Serialization keys — three spellings, all load-bearing
+
+The "intentional buffer" concept is deliberately spelled differently on each surface:
+- runtime + undo snapshot: `intentionalBuffer`
+- plan JSON (`vpc-scenario-v1`): `intentionalBufferOverlap`
+- GeoJSON export: `intentional_buffer_overlap`
+
+Do **not** "unify" these — each matches its serialization contract. Changing a spelling breaks save/load or export compatibility.
+
+## Schema
+- Plan schema is `vpc-scenario-v1`; GeoJSON is a `FeatureCollection` with per-feature properties and collection metadata.
+- Schema is not frozen pre-v1 and may change — but change it deliberately, and keep `buildScenarioData()` (plan) and the GeoJSON export in sync with any field changes.
+
+## UI text must match behavior
+- Control `title`/`aria-label` text and map tooltips are kept aligned with actual behavior (the v0.8.8 standard). If you change behavior, update the corresponding hint text in the same pass; if you change hint text, make sure it states what the code actually does.
+
+## Archive
+- `Old/` is archived prior versions. It is not active source. Do not edit it, cite it as current, or treat its patterns as authoritative.
+
+## Versioning / docs
+- Version lives in `APP_META` (and the bottom-right badge reads from it). When `APP_META.version` changes, update `README.md`, `VPC_Project_Notes.md`, the Quickstart, and in-app changelog together.
