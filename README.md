@@ -1,235 +1,233 @@
 # VPC Mapping Tool
 
-Web-based site planning tool for placing field hospital/tent footprints on real-world maps at true scale.
+Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**0.8.8**, `lastUpdated` **2026-05-19** in `APP_META`).
+
+**Primary file:** `VPC Mapping Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
+
+## Current release (0.8.8)
+
+| Area | What you get |
+|------|----------------|
+| **Map** | Esri satellite (default), street basemap toggle, hybrid place labels, live zoom/scale (`1:n`), cursor coordinates overlay |
+| **Catalog** | Five vendors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT) with spec-based footprints — see [Vendor catalog](#vendor-catalog) |
+| **Shapes** | Rectangle, octagon, elongated octagon, plus (hub), ellipse — plus **Custom Size** rectangles |
+| **Placement** | Click model → click map; drag to move; orange handle rotate (Shift = 5°); red ✕ or Shift+click delete |
+| **Snap** | **Snap to selected object** — edge-to-edge on nearest of four faces; matches target rotation (best rect-to-rect) |
+| **Spacing** | Per-object clearance buffer (0–30 ft, presets); dashed ring; **footprint** (red) vs **buffer** (amber) advisories; **Intentional** for accepted buffer-only conflicts |
+| **Overlap UI** | Status bar counts, sidebar warning, map **pill** (click scrolls to first flagged row) |
+| **Roles** | Triage, Ward, ICU, Pharmacy, Support, Morgue + custom roles (browser + plan file) |
+| **Measure** | Distance and area (header **Measure ▾**) |
+| **Persistence** | Debounced **autosave** to `localStorage`; **Restore Autosave** (manual); **Save Plan** / **Open Plan** (portable JSON) |
+| **Export** | GeoJSON; **Export PDF** with map snapshot (html2canvas + jsPDF; text-only fallback if capture fails); **Print Fit** |
+| **Undo** | Up to 50 steps (place, move, rotate, delete, role, buffer-to-all, clear all) — Ctrl+Z / Ctrl+Y |
+| **Offline** | Banner when offline; `lat, lng` search works without geocoding; layout editing works; tiles may not load |
+| **A11y** | Keyboard shortcuts, focus styles, `aria-label` / `title` on controls, overlap pill keyboard support |
+
+**Load behavior:** Each open starts at the default map view (NYC area) with an empty layout. Previous work is **not** applied automatically — use **Restore Autosave** or **Open Plan**. Autosave still runs in the background and updates the **Autosaved …** timestamp when valid data exists in this browser.
+
+**Hover hints (v0.8.8):** Control `title` text and map tooltips match current behavior — including fresh-open/autosave, footprint vs buffer overlap, snap auto-uncheck, and delete confirm on map and placed list.
 
 ## Quick Start Card
 
 - Search site (address/place or `lat, lng`). *Most controls show a short **`title`** on hover; the overlap **pill** also has a full explanation via `title` / `aria-label`.*
-- Select vendor/model; set label, role, and under **Options ▾** set rotation + **clearance buffer** (feet) as needed. Buffer **&gt; 0** draws the dashed clearance ring and enables **amber (buffer) advisories** when that ring conflicts with another structure.
+- Select vendor/model; set label, role, and under **Options ▾** set rotation + **clearance buffer** (feet) as needed. Buffer **> 0** draws the dashed clearance ring and enables **amber (buffer) advisories** when that ring conflicts with another structure.
 - Click tent model (auto-enters place mode), then click map location.
 - Click a placed object to select it; drag body to move, drag orange handle to rotate, red ✕ to delete (Shift+click also).
 - Watch **Overlaps** in the status bar (**footprint** count, and **buffer** count when non-zero); a **pill** on the map (when there are advisories) summarizes counts and scrolls the placed list to the first flagged row when clicked.
-- Run **Measure Distance** / **Measure Area** (Finish Area and Clear appear when relevant).
+- Run **Measure ▾** → Distance or Area (Finish Area and Clear appear when relevant).
 - **Undo** / **Redo** in the header (or Ctrl+Z / Ctrl+Y) to step back layout changes.
-- **Autosaved …** and **Restore Autosave** in the header for local backup; `Save Plan` for a portable JSON handoff; `Export GeoJSON` / **Export PDF** under Export ▾; `Print Fit` for print with metadata.
+- **Autosaved …** and **Restore Autosave** in the header for local backup; **Save Plan** for portable JSON; **Export GeoJSON** / **Export PDF** under Export ▾; **Print Fit** for print with metadata.
 - Click the mode badge (or press Esc) to return to View mode from place/measure.
 
-## Working File
+## Project files
 
-- `VPC Mapping Tool.html` (single-file app; version badge bottom-right reads from `APP_META.version`).
+| File | Purpose |
+|------|---------|
+| `VPC Mapping Tool.html` | Main application |
+| `VPC Mapping Tool - Quickstart.html` | Field quickstart (sole operator quick reference; open in browser) |
+| `VENDOR_SPECS_DIGEST.md` | Spec alignment notes for `TENT_DB` |
+| `VPC_Project_Notes.md` | Roadmap and backlog notes |
+| `Initial prompt.txt` | Original build prompt |
+| `Old/` | Archived earlier versions |
+
+## Session and autosave
+
+- **Autosave:** After each change, layout + map view are written to `localStorage` (`vpc-mapping-session`) after a 500 ms debounce.
+- **On open:** Default view only; if autosave data exists, the header shows when it was last saved and enables **Restore Autosave**.
+- **Restore Autosave:** Replaces the current layout (confirm if structures are already placed). Use after a refresh or accidental close — not a substitute for **Save Plan** when sharing or archiving.
+- **Save Plan / Open Plan:** Portable JSON including objects, map view, operation name, custom roles, and `intentionalBufferOverlap` per object.
+- **Undo history** is in-memory only; cleared on **Open Plan** and page refresh.
+
+## Vendor catalog
+
+Dimensions follow `VENDOR_SPECS_DIGEST.md`. Default vendor colors apply on placement and when loading plans (overridable via color swatches).
+
+| Vendor | Models in tool |
+|--------|----------------|
+| **BLU-MED** | 2032.5, 2039, Vestibule |
+| **Western Shelter** | GK1935, GK20, Vestibule, Generator 70 kVA (on trailer) |
+| **DLX** | X-24, Quad (X-HUB), X-32 |
+| **ZUMRO** | Quad Interface, Model 400, Model 600, Interconnect |
+| **HDT** | Base-X 305, Base-X Dome (8D36) |
+
+**Footprint shapes:** `rect`, `octagon`, `elongated-octagon`, `plus` (hubs), `ellipse` (dome).
 
 ## Tooltips and map hints
 
-- **Sidebar / header / buttons:** `title` attributes describe what each control does, typical shortcuts (e.g. Undo/Redo), and caveats (autosave is browser-only; Save Plan for portable files). Length is kept practical for hover; critical actions (Clear All, Apply Buffer to All) mention confirm + Undo + refresh limits where relevant.
-- **Placed footprint (Leaflet):** Hover tooltip uses **`sticky: false`** so it does not follow the cursor along the polygon edge; it closes when you **start dragging** the footprint or buffer ring (both layers). Content includes dimensions, role, rotation, clearance, and a **Shift+click to delete** line.
-- **Rotate / delete handles:** Small Leaflet tooltips on the orange rotate dot (above) and red ✕ (below) explain drag-to-rotate (Shift = 5°) and delete behavior.
-- **Overlap pill:** When visible, hover (or screen reader) explains red vs amber meaning and that **click** scrolls the placed list to the first flagged structure.
-- **Color swatches:** Describe choosing footprint color for the **next** placement and that picking from the vendor catalog still applies vendor color by default until changed.
+Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. Aligned with behavior as of **v0.8.8**.
+
+| Area | What the hint explains |
+|------|-------------------------|
+| **Autosave / Restore** | Fresh open each time; autosave is browser-only; restore is manual |
+| **Undo / Redo** | Up to 50 steps in-session; cleared on refresh — use Restore Autosave or Save Plan |
+| **Clearance buffer** | Amber when clearance conflicts with another **footprint or** clearance ring (not only buffer-to-buffer) |
+| **Overlap pill** | Red = footprint intersect; amber = clearance conflict; **Intentional** in list for amber-only; click pill scrolls to first flagged row |
+| **Snap to selected** | Select target first; four-face attach; **unchecks after successful snap** |
+| **Delete** | Map ✕, list ✕, and Shift+click all **confirm**; Undo restores before refresh |
+| **Search results** | First match auto-centered; dropdown picks alternates |
+| **Tent catalog** | Vendor tab and tent card `title` show spec notes where available |
+| **Placed footprint** | `sticky: false`; closes on drag; dimensions, role, rotation, buffer; Shift+click delete (confirm) |
+| **Rotate / delete handles** | Drag to rotate (Shift = 5°); delete confirms; Undo before refresh |
 
 ## Overlap and clearance (how it works)
 
 - **Footprint overlap (red):** Solid footprints intersect. Affected objects get a **red** outline on the map, a **red** left border in the placed list, and count toward **footprint** in the status bar. This is independent of clearance buffer.
-- **Buffer / clearance advisory (amber):** When **clearance buffer &gt; 0** on at least one object, the **dashed** ring is tested against the other object’s footprint (and buffer–buffer where both have buffers). If footprints do **not** overlap but clearance still conflicts, those objects get an **amber** outline on the map and an **amber** left border in the list. Counts appear as **buffer** in the status bar (suffix `, N buffer`) and in the sidebar warning line.
+- **Buffer / clearance advisory (amber):** When **clearance buffer > 0** on at least one object, the **dashed** ring is tested against the other object’s footprint (and buffer–buffer where both have buffers). If footprints do **not** overlap but clearance still conflicts, those objects get an **amber** outline on the map and an **amber** left border in the list. Counts appear as **buffer** in the status bar (suffix `, N buffer`) and in the sidebar warning line.
 - **Intentional (buffer only):** Rows that are **amber-only** show an **Intentional** checkbox. Checking it marks that structure so it is omitted from buffer advisories (does **not** change footprint overlap). Stored in plans as `intentionalBufferOverlap` and in undo snapshots as `intentionalBuffer`.
-- **Geometry:** Overlap uses the same map projection as Leaflet (layer coordinates), including after pan/zoom, and supports non-rectangular footprints (e.g. plus, elongated octagon).
+- **Geometry:** Overlap uses layer coordinates in the map projection (same space as Leaflet draws), including after pan/zoom, and supports non-rectangular footprints (plus, elongated octagon, ellipse, etc.).
 
-## Reference Docs
+## Reference docs
 
-- **`VENDOR_SPECS_DIGEST.md`** — Vendor tent specs digest (PoP 2 Vendors 1–5). **Implemented:** Tool `TENT_DB` dimensions and shapes follow this digest; vendor pre-assigned colors are applied on placement and when loading plans. HDT lineup in tool: Base-X 305 and Base-X Dome (8D36) only.
+- **`VENDOR_SPECS_DIGEST.md`** — Vendor tent specs digest. **Implemented:** `TENT_DB` dimensions and shapes follow this digest; vendor pre-assigned colors on placement and plan load. HDT lineup: Base-X 305 and Base-X Dome (8D36) only.
 
-## Versioning Approach
+## Versioning
 
-- This project uses lightweight in-file versioning while we iterate.
-- Current app version is defined in `APP_META` inside `VPC Mapping Tool.html`.
-- The same version is shown in a subtle bottom-right badge as `vX.Y.Z`.
+- Version and date live in `APP_META` inside `VPC Mapping Tool.html`.
+- Same version appears in the bottom-right badge (`vX.Y.Z`).
+- Update this README when bumping `APP_META.version`.
 
-## Current Version
-
-- **`0.8.7`** (see `APP_META` in `VPC Mapping Tool.html`; `lastUpdated` there is the in-file stamp). README behavior and UX copy match this release.
-
-## Change Log
+## Change log
 
 | Version | Date       | Notes |
 |---------|------------|-------|
-| 0.8.7   | 2026-04-01 | Two-tier overlap (footprint red / clearance buffer amber), `intentionalBufferOverlap` in plans, overlap pill + split status bar, layer-space overlap tests, map/list styling + Intentional checkbox, buffer vs footprint intersection logic, full tooltip/title/aria pass, tent tooltip behavior (sticky off, close on drag), handle spacing, header nowrap, README. |
+| 0.8.8   | 2026-05-19 | Tooltip/title/aria aligned with current behavior; list delete confirm; README, VPC_Project_Notes, and Quickstart synced. |
+| 0.8.7   | 2026-04-01 | Two-tier overlap (footprint red / clearance buffer amber), `intentionalBufferOverlap` in plans, overlap pill + split status bar, layer-space overlap tests, map/list styling + Intentional checkbox, buffer vs footprint intersection logic, tooltip pass, tent tooltip sticky off / close on drag. **Fresh open on load** — use **Restore Autosave** or **Open Plan**. |
 | 0.8.6   | 2026-03-27 | Export PDF: map snapshot via html2canvas + jsPDF; tile `crossOrigin`; `waitForTilesIdle`; text-only fallback if capture fails. |
-| 0.8.5   | 2026-02-26 | ZUMRO Interconnect added to TENT_DB: 7.17'×6.92' rect (86"×83"); dimensions from Vendor Specs and Manuals/ZUMRO/ZUMRO_Interconnect_Dimensions.md. |
-| 0.8.4   | 2026-03-10 | Snap face selection: click near any of target's 4 faces (2 length ends, 2 width ends); offset uses correct half-dimension per axis. ROLES constant; snap hint and auto-uncheck; postMode order. Snap is most accurate for rect-to-rect; non-rectangular targets use bounding-box face midpoints. |
-| 0.8.3   | 2026-03-10 | Snap to selected object: checkbox in Label & Style; next placement matches target rotation and attaches to end nearest click (e.g. Vestibule to GK1935). |
-| 0.8.2   | 2026-03-10 | v0.8.1 cleanup: mode badge click fix (B1), map border clear (B2), SAT origin fallback (B3); PDF caveat, Export ▾, color out of Options, How to use step 3, coords on map (U1–U5); changelog trim, #obj-list-items CSS (C1–C2). |
-| 0.8.1   | 2026-02-26 | Tier 4 refactor: named constants; state grouped with comments; architecture note. Deferred by design: single-file; state as separate variables. |
-| 0.8.0   | 2026-02-26 | UX quick wins: contextual status line; How to use ▾ panel; tooltips and aria-labels; Undo hint after Clear/Delete. |
-| 0.7.9   | 2026-02-26 | Tier 3: remove .place-btn and elongated-hexagon; version single source; dragEndedAt + single mouseup; makeCollapsible for Options/Setup. |
-| 0.7.8   | 2026-02-26 | Export PDF: operation name, scale, zones, object list (no map image). |
-| 0.7.7   | 2026-02-26 | Search results dropdown positioned under search (no header layout shift); Placed list pinned at bottom of sidebar with internal scroll. |
-| 0.7.6   | 2026-02-26 | Tier 2: Custom label scope hint ("Applied to next placement"); map mode indicator (green/orange border); Clear All confirm text; scale ratio after session restore. |
-| 0.7.5   | 2026-02-26 | Tier 1: polygon-level overlap detection; editable label in Placed list; distance measure start-point marker; role set once in placeObject. (Later releases refined overlap to footprint vs buffer tiers and non–SAT geometry tests.) |
-| 0.7.4   | 2026-02-26 | Sidebar UX refactor: removed Place on Map / Cancel and Back to View; Undo/Redo moved to header; Label & Style **Options ▾** (color, opacity, rotation, buffer); contextual Measure buttons (Finish Area / Clear when relevant); **Setup ▾** (scale presets + Operation Name, collapsed by default); section reorder; Apply Buffer to All confirm dialog; tooltips on key controls (Quick Start–aligned); Custom Size section and copy. |
-| 0.7.3   | 2026-02-26 | Undo/redo for object placement, moves, rotation, delete, role change, buffer-to-all, and clear all (Ctrl+Z / Ctrl+Y; up to 50 steps). |
-| 0.7.2   | 2026-02-26 | Tier 2 #10: Rotate handle direction fixed (clockwise drag = clockwise rotation). Optional: Save Plan / Open Plan UI. |
-| 0.7.1   | 2026-02-26 | Tier 2 #5: Zone/role tagging (Triage, Ward, ICU, Pharmacy, Support, Morgue); list + tooltips + zone summary in print and GeoJSON. |
-| 0.7.0   | 2026-02-26 | Tier 2 #4: Autosave/local backup — "Last saved at" indicator in status bar; updates on save and when restoring/loading. |
-| 0.6.9   | 2026-02-26 | Tier 1 #2: Offline banner; Go to coordinates (lat,lng in search) without network. |
-| 0.6.8   | 2026-02-26 | Session restore (Tier 1 #1): persist map view + objects to localStorage; restore on load. |
-| 0.6.7   | 2026-02-26 | Page title and header renamed to "VPC Mapping Tool." |
-| 0.6.6   | 2026-02-26 | GK20 dimensions updated from SW-20 spec: 18'7"×18'7", 286 sq ft. |
-| 0.6.5   | 2026-02-26 | Non-rectangular shapes from spec docs: ellipse for 8D36 dome footprint; GK1935 elongated-octagon confirmed per SW-1935. |
-| 0.6.4   | 2026-02-26 | TENT_DB updated from vendor spec docs: Blu-Med 7×8 vestibule; DLX X-24/X-32 21.5' width; Zumro 400/600 exterior dims; HDT 8D36 added. |
-| 0.6.3   | 2026-02-26 | Added on-map rotate handle for placed objects; click to select, drag object body to move, drag handle to rotate (Shift for 5° snap). |
-| 0.6.2   | 2026-02-26 | Switched to click-then-place workflow and added true drag-to-move for placed objects on the map. |
-| 0.6.1   | 2026-02-26 | Added drag-and-drop tent placement from sidebar to map for faster field workflow. |
-| 0.6.0   | 2026-02-26 | Completed Tier 3 with performance and modular refactor pass (fragment-based rendering, scheduled overlap updates, and refactored scenario/object builders). |
-| 0.5.2   | 2026-02-26 | Tier 3 accessibility pass: keyboard-operable vendor/tent selection, stronger focus visibility, status live region, and global shortcuts (`Esc`, `/`, `P`). |
-| 0.5.1   | 2026-02-26 | Tier 3 security hardening pass: sanitized user labels and normalized loaded/rendered colors to reduce HTML injection risk. |
-| 0.5.0   | 2026-02-26 | Completed Tier 2 tooling: added area measurement workflow and GeoJSON export for coordination/GIS handoff. |
-| 0.4.0   | 2026-02-26 | Added scenario save/load JSON workflow, including map view restore, object restoration, and key settings persistence. |
-| 0.3.2   | 2026-02-26 | Added clearance presets (`None`, `Std 5 ft`, `High 10 ft`) and `Apply Buffer to All Placed` for bulk setback updates. |
-| 0.3.1   | 2026-02-26 | Added configurable per-object clearance buffers, buffered footprint rendering, and overlap checks based on buffered extents. |
-| 0.3.0   | 2026-02-26 | Tier 2 start: added map distance measurement tool and overlap count warning in status bar. |
-| 0.2.7   | 2026-02-26 | QA hardening pass: improved search request resilience, antimeridian-safe local bias behavior, and print restore fallback safety. |
-| 0.2.6   | 2026-02-26 | Added `Prefer current map area` search mode with automatic fallback to global results when local extent has no match. |
-| 0.2.5   | 2026-02-26 | Added `Operation Name` print metadata field and optional hybrid place-label overlay on satellite basemap for better site orientation. |
-| 0.2.4   | 2026-02-26 | Added print footer metadata (printed timestamp, scale, and map center coordinates). |
-| 0.2.3   | 2026-02-26 | Added `Back to View` action and `Print Fit` button to frame placed objects before printing, then restore original view after print. |
-| 0.2.2   | 2026-02-26 | Added fixed-scale preset buttons (`1:100`, `1:150`, `1:200`, `1:500`) that set scale once and keep normal manual zoom enabled. |
-| 0.2.1   | 2026-02-26 | Added search match picker UI for multi-result geocode lookups so exact locations can be selected. |
-| 0.2.0   | 2026-02-26 | Tier 1 first pass: satellite default basemap, basemap toggle, rotation control for placements, and live `1:n` scale readout. |
-| 0.1.0   | 2026-02-26 | Initial versioned baseline cloned from `emergency-tent-placer.html`. |
+| 0.8.5   | 2026-02-26 | ZUMRO Interconnect added to TENT_DB: 7.17'×6.92' rect (86"×83"). |
+| 0.8.4   | 2026-03-10 | Snap face selection (4 faces); ROLES constant; snap hint and auto-uncheck. |
+| 0.8.3   | 2026-03-10 | Snap to selected object checkbox in Label & Style. |
+| 0.8.2   | 2026-03-10 | v0.8.1 cleanup (mode badge, map border, SAT origin, Export ▾, color placement, coords overlay). |
+| 0.8.1   | 2026-02-26 | Tier 4 refactor: named constants; state grouped with comments. |
+| 0.8.0   | 2026-02-26 | UX quick wins: contextual status line; How to use ▾; tooltips and aria-labels. |
+| 0.7.x   | 2026-02-26 | Undo/redo, sidebar UX refactor, autosave indicator, zone/role tagging, Save Plan / Open Plan, polygon overlap (later refined in 0.8.7). |
+| 0.6.x   | 2026-02-26 | Click-then-place, drag-move, rotate handle, session autosave to localStorage (auto-restore on load until removed in 0.8.7), offline banner, VPC naming. |
+| 0.5.x–0.1.0 | 2026-02-26 | Measurement, buffers, save/load, accessibility, security, basemap and search upgrades. See HTML header comment for full history. |
 
-## Priority Roadmap (Tiered)
+## Completed roadmap (shipped)
 
-### Tier 1 - Critical Must-Haves
+### Tier 1 — Critical
 
-- Global satellite basemap suitable for parking lot/lawn siting.
-- Keep object/map scale synchronized at all zoom levels and locations.
-- Rotation support for tent footprints.
-- Robust global place search (address/place name and lat/lng).
-- Visible scale validation (`1:n` readout and scale bar).
+- Global satellite basemap ✅
+- Object/map scale synchronization ✅
+- Rotation support ✅
+- Search (address/place and lat/lng) ✅
+- Scale validation (`1:n` + scale bar) ✅
 
-### Tier 2 - High-Value Operational
+### Tier 2 — Operational
 
-- Measurement tools (distance/area).
-- Clearance/setback buffers.
-- Overlap/collision detection.
-- Save/load layouts.
-- Export for coordination (GeoJSON/JSON).
+- Distance and area measurement ✅
+- Clearance/setback buffers ✅
+- Two-tier overlap detection (footprint + buffer) ✅
+- Save/load layouts (plan JSON + autosave) ✅
+- GeoJSON and PDF export ✅
+- Zone/role tagging and custom roles ✅
+- Snap-to-face placement ✅
+- Map overlap pill ✅
+- PDF with map snapshot (v0.8.6+) ✅
 
-### Tier 3 - Quality and Maintainability
+### Tier 3 — Quality
 
-- Accessibility and keyboard improvements. ✅
-- Performance improvements for large object counts. ✅
-- Security hardening for user-entered labels. ✅
-- Modular code structure refactor. ✅
+- Accessibility and keyboard shortcuts ✅
+- Performance pass (scheduled overlap updates, fragment rendering) ✅
+- Label sanitization / color normalization ✅
+- In-file constants and structured sections ✅
+- Tooltip and aria copy pass (v0.8.7–0.8.8) ✅
 
-## Optional Upgrades (Post-Tier)
-
-- ~~Simplify scenario workflow for field use: rename `Save Scenario`/`Load Scenario` to `Save Plan`/`Open Plan`.~~ **Done.**
-- ~~Add lightweight autosave/local backup~~ **Done:** debounced `localStorage` session; header shows last autosave time and **Restore Autosave**.
-
-## Field Operator Quick Guide
+## Field operator quick guide
 
 ### 1) Start and locate site
 
-- Open `VPC Mapping Tool.html`.
+- Open `VPC Mapping Tool.html` in Chrome, Edge, or Safari (network needed for search and PDF export libraries).
 - Search by address/place or paste `lat, lng`.
-- Keep `Prefer current map area` checked for local precision, uncheck for fully global search.
+- Keep **Prefer current map area** checked (Setup ▾) for local precision; uncheck for global search.
+- After a browser refresh, use **Restore Autosave** if you had work in progress — the map does not reload your layout automatically.
 
 ### 2) Set planning context
 
-- Use satellite + hybrid labels for real-world siting.
-- Open **Setup ▾** for scale presets (`1:100`, `1:150`, etc.) and **Operation Name** (enter before printing/exporting).
+- Use satellite + **Place Labels (Hybrid)** (layer control, top-right) for real-world siting.
+- Open **Setup ▾** for scale presets (`1:100`, `1:150`, etc.) and **Operation Name** (before print/PDF).
 
 ### 3) Place tents/shelters
 
-- Select vendor and model. Use **Label & Style** for custom label and role; open **Options ▾** for color, opacity, rotation, and clearance buffer.
-- Click a tent model (green highlight), then click map location.
-- Drag placed objects directly on the map to fine-tune position.
-- Use **Custom Size** (enter dimensions, then click map) when exact tent model is not listed.
+- Select vendor and model. Use **Label & Style** for custom label, role, color, and **Snap to selected object** when connecting structures.
+- Open **Options ▾** for opacity, rotation, and clearance buffer.
+- Click a tent model (green highlight), then click the map.
+- Drag placed objects on the map; use **Custom Size** when the exact model is not listed.
 
 ### 4) Validate fit and spacing
 
-- Watch **Overlaps** in the status bar: **footprint** (solid shapes intersecting) and, when shown, **buffer** (clearance rings conflicting while footprints may still be separate). Use **Options ▾** clearance buffer and **Apply Buffer to All Placed** if your SOP uses setbacks.
-- Read the **sidebar warning** under Placed and the **map pill** (top-right) when anything is flagged; click the pill to jump to the first affected row in the list.
-- For **amber-only** rows, use **Intentional** if a tight buffer placement is accepted on purpose (does not clear red footprint overlap).
-- Use **Measure Distance** for lane/setback checks.
-- Use **Measure Area** for lot or lawn capacity checks.
+- Watch **Overlaps** in the status bar and the **map pill** when flagged; click the pill to jump to the first affected row.
+- Use **Intentional** on amber-only rows when tight buffer placement is deliberate (does not clear red footprint overlap).
+- **Measure ▾** for distance or area checks.
 
 ### 5) Save, share, and print
 
-- **Undo** / **Redo** in the header (or Ctrl+Z / Ctrl+Y) to revert placement, moves, rotation, deletes, role or buffer changes.
-- `Save Plan` for full working state backup/reload.
-- `Export GeoJSON` for GIS/coordination workflows.
-- `Print Fit` to frame objects for print output with metadata footer.
+- **Undo** / **Redo** (Ctrl+Z / Ctrl+Y) for in-session mistakes.
+- **Save Plan** for portable backup; **Restore Autosave** for same-browser recovery.
+- **Export ▾** → GeoJSON or PDF.
+- **Print Fit** — enable print background graphics so satellite imagery appears.
 
-### Tooltips
+### Keyboard shortcuts
 
-- Hover nearly any **button**, **slider**, **search field**, or **sidebar control** for a context-specific hint (browser `title`).
-- **Map:** Structure tooltip stays anchored (does not track the edge while you move the mouse); **Shift+click** on the footprint also deletes. **Pill:** Explains red vs amber and click-to-scroll.
-- Full **aria-label**s are present where controls are icon-only or need a longer description for assistive tech; visible buttons keep short labels plus `title` for extra detail.
+- `Esc` — return to View mode (or click the mode badge when active).
+- `/` — focus search.
+- `P` — start placing selected tent.
+- `Ctrl+Z` / `Cmd+Z` — Undo; `Ctrl+Y` or `Ctrl+Shift+Z` — Redo.
 
-### Keyboard Shortcuts
+### Field tips
 
-- `Esc`: return to View mode (or click the mode badge when it is clickable).
-- `/`: focus search input.
-- `P`: start placing selected tent.
-- `Ctrl+Z` (or Cmd+Z): Undo. `Ctrl+Y` or `Ctrl+Shift+Z`: Redo.
-
-### Field Tips
-
-- Use Undo/Redo to try layout changes without losing work (history clears when you Open Plan or on new session).
-- Save plan snapshots frequently during fast-moving operations.
-- Use a consistent clearance preset across teams before final layout handoff.
-- Confirm final print/export after applying any scale preset or map move.
+- Save Plan files frequently; autosave does not sync across devices or browsers.
+- Undo history is lost on refresh — rely on autosave + Restore, or Save Plan.
+- Export PDF needs network the first time (CDN libraries); map capture may fall back to text-only if tiles fail to load.
 
 ---
 
-## Suggested Next Steps (Field Hospital Planning)
+## Backlog (not yet implemented)
 
-Deep-dive recommendations to evolve the tool into a full **field hospital planning** workflow. Ordered by tier: critical → high-value → quality → optional.
+Prioritized items for future releases. See `VPC_Project_Notes.md` for product roadmap (PWA, calculator suite integration).
 
-**Note:** The tool has not been released yet. **Backward compatibility with older scenario/GeoJSON files is not required** for now; schema and format can change freely.
+| Priority | Item | Notes |
+|----------|------|-------|
+| High | **Tablet mode / collapsible sidebar** | Toggle in header; auto-detect narrow viewport or touch; persist preference |
+| High | **Click placed row → fly-to + highlight** | Pulse map object; brief confirmation |
+| High | **Capacity tracking** | Beds/patients per structure; running totals; tie-in to calculator suite |
+| Medium | **Layout templates** | Load standard MSF-style starting layouts |
+| Medium | **Access corridors** | Pathways between structures |
+| Medium | **Utilities overlay** | Power, water, waste lines |
+| Medium | **Named zones/sectors** | Grouping beyond role tags |
+| Medium | **Coordinate export** | Per-object lat/lng for logistics/aviation |
+| Medium | **Metric/imperial toggle** | International deployments |
+| Medium | **Deployment phases** | Phase 1/2 markers on structures |
+| Long | **Offline tile caching** | MBTiles/PMTiles or “cache this area” workflow |
+| Long | **Layer visibility by role** | Filter map/list for review and print |
+| Long | **Validation rules** | Minimum clearance gaps, simple access-path checks |
 
-### Tier 1 – Critical for field use
+**Not required now:** Backward compatibility with older plan/GeoJSON schemas can change freely until first release.
 
-| # | Item | Rationale |
-|---|------|-----------|
-| 1 | **Session restore (no NYC reset)** | ~~Map reset to NYC on reload.~~ **Done (v0.6.8):** Last map center/zoom and placed objects saved to `localStorage`; restored on load. Status shows "Session restored" when applied. |
-| 2 | **Graceful degradation when offline** | **Done in part (v0.6.9):** Offline banner (“Using local data”); lat/lng in search to jump without geocoding; editing and layout work offline. Cached tiles or blank/grid fallback not implemented. |
-| 3 | **Align naming with “field hospital”** | ~~UI said “Emergency Tent Site Planner.”~~ **Done:** Page title and header now “VPC Mapping Tool.” |
-
-### Tier 2 – High-value operational
-
-| # | Item | Rationale |
-|---|------|-----------|
-| 4 | **Autosave / local backup** | **Done (v0.7.0+):** Layout + view auto-save to `localStorage` on debounce (500 ms after changes). Header shows **Autosaved …** / status text and **Restore Autosave**; manual **Save Plan** / **Open Plan** remains for portable JSON. |
-| 5 | **Zone / role tagging** | **Done (v0.7.1):** Role dropdown (—, Triage, Ward, ICU, Pharmacy, Support, Morgue); custom roles; stored on object and in scenario/GeoJSON; list + tooltips + zone summary in print and GeoJSON. |
-| 6 | **Layout templates** | Allow loading a **standard layout template** (e.g. minimal MSF-style: triage + wards + support) as a starting point. Templates define object types, sizes, and relative positions; user places the template’s origin on the map and optionally scales or adjusts. |
-| 7 | **Go-to coordinates (no search)** | **Done (v0.6.9):** Enter lat, lng in search bar and Search (or Enter) to jump; no Nominatim call. Works offline. |
-| 8 | **Vendor pre-assigned colors** | **Done:** Each vendor has a default color (BLU-MED, Western Shelter, DLX, ZUMRO, HDT); placed objects get that color automatically. User can change via color swatches. |
-| 9 | **Clear delete affordance** | **Done:** Red ✕ delete button when an object is selected (on map, next to rotate handle); confirm before delete. Shift+click and list ✕ also available. |
-| 10 | **Fix rotate handle direction** | **Done (v0.7.2):** Rotate handle direction aligned so clockwise drag rotates the footprint clockwise. |
-| 11 | **Overlap: footprint vs clearance** | **Done (in-tree 2026-03):** Separate **footprint** (red) and **buffer/clearance** (amber) advisories; map + list styling; optional **Intentional** on buffer-only rows; plan field `intentionalBufferOverlap`; overlap pill and split status counts. |
-
-### Tier 3 – Quality and maintainability
-
-| # | Item | Rationale |
-|---|------|-----------|
-| 12 | **Structured template data** | Define templates as JSON (or in-app config): list of objects with relative offsets, dimensions, roles, labels. Single code path for “place template” and future template editor. |
-| 13 | **Validation rules** | Beyond two-tier overlap: optional **minimum clearance** rule (warn if any gap &lt; X ft), and/or simple **access path** check (e.g. ensure no fully enclosed footprint). Configurable so different missions can enforce different standards. |
-| 14 | **Export enhancements** | **Done in part:** Zone summary (count by role) in GeoJSON metadata, print footer, and PDF (v0.8.6 snapshot). Optional legend (color/role) and schema version for downstream GIS not yet added. |
-| 15 | **Accessibility for new UI** | Any new controls (zone dropdown, template picker, coordinate input) should stay keyboard-operable and screen-reader friendly, consistent with existing Tier 3 accessibility. |
-| 16 | **Tooltip / hint copy** | **Done (in-tree 2026-04):** Broad pass on `title`, `aria-label`, and Leaflet `bindTooltip` strings; see **Tooltips and map hints** above. |
-
-### Optional (post-tier)
-
-- ~~Rename Save Scenario / Load Scenario to Save Plan / Open Plan~~ **Done (v0.7.2).**
-- **Offline tile package**: preload AOI tiles (e.g. MBTiles/PMTiles) for true offline basemap; larger implementation.
-- ~~**Undo/redo** for object placement and moves~~ **Done (v0.7.3):** Undo/Redo buttons and Ctrl+Z / Ctrl+Y; up to 50 steps; applies to place, move, rotate, delete, role change, Apply Buffer to All, and Clear All.
-- **Layer visibility**: toggle object groups by role (e.g. show only Triage + Ward) for clearer prints or review.
-- ~~**Snap connecting tents to rotation (and position)**~~ **Done (v0.8.3, refined v0.8.4):** Check "Snap to selected object" in Label & Style; select the target, pick the tent, click near the face to attach to (nearest of 4 faces: 2 length ends, 2 width ends). New tent matches rotation and is placed edge-to-edge. Most accurate for rect-to-rect; non-rectangular targets use bounding-box face midpoints. 
 ---
 
 ## Notes
 
-- We will update this file as features are added, priorities change, and versions are bumped.
-- A local **restore snapshot** HTML file may exist on disk for emergencies; it is listed in `.gitignore` and is not part of the repo.
+- Update this file when `APP_META.version` changes.
+- A local restore snapshot HTML may exist on disk for emergencies; it is in `.gitignore` and is not part of the repo.
+- Companion **Calculator Suite** tools (load, water, consumables, medicines) are planned for integration per `VPC_Project_Notes.md`; they are not in this folder.

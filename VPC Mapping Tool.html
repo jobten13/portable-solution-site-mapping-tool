@@ -6,9 +6,10 @@
 <title>VPC Mapping Tool</title>
 <!--
   VPC Mapping Tool
-  Version: 0.8.7
-  Last Updated: 2026-04-01
+  Version: 0.8.8
+  Last Updated: 2026-05-19
   Change Log: See README. APP_META.changelog holds current version only.
+    - 0.8.8: Tooltip/title/aria aligned with current behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, VPC_Project_Notes, Quickstart synced.
     - 0.8.7: Two-tier overlap (footprint red / clearance buffer amber), intentionalBuffer + plan field, overlap pill & split status bar; layer-point overlap tests; map/list highlights + Intentional checkbox; tooltip/title/aria pass; tent tooltip sticky off, close on drag; handle offsets; header nowrap; README aligned.
     - 0.8.6: Export PDF includes map snapshot (html2canvas + jsPDF); tile layers crossOrigin; waitForTilesIdle; fallback to text-only on capture failure.
     - 0.8.5: ZUMRO Interconnect added to TENT_DB (7.17'×6.92' rect per ZUMRO_Interconnect_Dimensions.md).
@@ -342,11 +343,11 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng — press / to focus. Works offline for coordinates only." />
       <button class="blue" onclick="searchLocation()" title="Search by name or coordinates. Requires network unless entering lat, lng directly.">Search</button>
     </div>
-    <select id="search-results" aria-label="Search result matches" title="Pick a search result (or use first match)"></select>
+    <select id="search-results" aria-label="Search result matches" title="When several matches exist, the first is centered automatically — pick another here to refine."></select>
   </div>
-  <div id="mode-display" class="mode-badge" role="status" aria-live="polite">Select a tent below, then click the map to place.</div>
-  <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z). Up to 50 steps. Not preserved after page refresh — use Save Plan.">Undo</button>
-  <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y or Ctrl+Shift+Z).">Redo</button>
+  <div id="mode-display" class="mode-badge" role="status" aria-live="polite" title="Select a tent from the sidebar, then click the map to place. Press P with a tent selected to enter place mode. Click when active (or Esc) to return to view mode.">Select a tent from the sidebar, then click the map to place.</div>
+  <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z or Cmd+Z). Up to 50 steps in this session. Cleared on page refresh — use Restore Autosave or Save Plan.">Undo</button>
+  <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
   <div class="header-tool-slot">
     <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distances or areas on the map. Use before or during placement to check site dimensions.">Measure ▾</button>
     <div id="measure-menu-panel" role="menu" style="display:none;position:absolute;top:100%;left:0;margin-top:4px;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
@@ -359,10 +360,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <button type="button" class="ghost header-btn" id="btn-clear-measure-header" onclick="clearMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Remove the current measurement from the map and exit measure mode." aria-label="Clear measurement">Clear</button>
     </div>
   </div>
-  <span id="autosave-indicator">Not yet saved</span>
-  <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last layout auto-saved in this browser. Browser-only — cannot be shared. If structures are placed you will be asked to confirm.">Restore Autosave</button>
+  <span id="autosave-indicator" title="Autosave status for this browser. Layout is not restored automatically on open — use Restore Autosave when needed.">Not yet saved</span>
+  <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last layout auto-saved in this browser (localStorage). The app opens with a fresh map each time — nothing loads until you click here or Open Plan. Confirm if structures are already placed.">Restore Autosave</button>
 </div>
-<div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;">
+<div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;" title="No network connection. Address search is unavailable; enter lat, lng in the search box to jump. Placed layouts and editing still work; map tiles may not load.">
   Offline — using local data. Map imagery may not load. Enter <strong>lat, lng</strong> in search to go to a location.
 </div>
 
@@ -393,13 +394,13 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <button type="button" class="ghost" id="how-to-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="how-to-panel" title="Step-by-step guide covering placement, snap attachment, saving, undo, and keyboard shortcuts.">How to use ▾</button>
       <div id="how-to-panel" style="display:none;" role="region" aria-labelledby="how-to-toggle">
         <ol style="font-size:11px;color:#8b949e;margin:8px 0 0 0;padding-left:18px;line-height:1.6;">
-          <li>Select a tent from the list (or enter Custom Size and click Place Custom).</li>
-          <li>Click the map to place it. Repeat to add more.</li>
-          <li>Click a placed object to select it; drag to move, drag the orange handle to rotate. Use the red ✕ to delete (or Shift+click).</li>
-          <li>To attach a tent to another (e.g. Vestibule to GK1935): select the target object, check <strong>Snap to selected object</strong>, pick the tent, then click near the end you want to attach to.</li>
-          <li>Use Plan to Save, Open, or Export (GeoJSON/PDF).</li>
-          <li>Use Undo / Redo in the header to reverse actions.</li>
-          <li>Press Esc to return to view mode.</li>
+          <li>Search for a site (address or <code>lat, lng</code>). The app opens with a fresh map — use <strong>Restore Autosave</strong> if you had work in this browser.</li>
+          <li>Select a tent from the list (or enter Custom Size and click Place Custom), then click the map to place.</li>
+          <li>Click a placed object to select it; drag to move, drag the orange handle to rotate. Delete with the red ✕ (confirms), Shift+click the footprint, or ✕ in the placed list.</li>
+          <li>To attach structures: select the target, check <strong>Snap to selected object</strong>, pick the tent, click near the face to attach to (unchecks after a successful snap).</li>
+          <li>Watch overlap counts in the status bar and map pill — red = footprint overlap; amber = clearance conflict (use <strong>Intentional</strong> on amber-only rows if deliberate).</li>
+          <li>Use Plan to Save, Open, or Export (GeoJSON/PDF). Undo / Redo in the header (Ctrl+Z / Ctrl+Y).</li>
+          <li>Press Esc (or click the mode badge) to return to view mode.</li>
         </ol>
       </div>
     </div>
@@ -419,10 +420,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" title="Name for the next structure. Appears on the map tooltip and placed list. Vendor and model name used if blank." />
       <p class="dim-note">Applied to next placement.</p>
 
-      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Attaches next placement to the selected structure's nearest face and matches its rotation. Uncheck after placing to resume normal placement.">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Select a placed object first. Next click on the map attaches to the nearest face (length or width end) and matches its rotation. Unchecks automatically after a successful snap.">
         <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
       </label>
-      <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then click near the face you want to attach to. New tent matches rotation. Click near a length end or width end — nearest face wins. Best for rect-to-rect. Stays active until unchecked.</p>
+      <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then pick a tent and click near the face to attach to. New structure matches target rotation. Nearest of four faces wins (two length ends, two width ends). Best for rect-to-rect; other shapes use bounding-box face midpoints. Unchecks automatically after a successful snap.</p>
 
       <label>Role / Zone</label>
       <select id="obj-role" aria-label="Object role or zone" title="Functional zone for this structure. Used in zone summary in PDF and GeoJSON exports. Add custom roles below if needed."></select>
@@ -437,7 +438,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         <p class="dim-note" style="margin-top:8px;margin-bottom:0;font-size:10px;">Removed roles stay on existing structures.</p>
       </div>
 
-      <label title="Click a swatch to set color for the next placement">Color</label>
+      <label title="Click a swatch to set color for the next placement. Choosing a tent from the catalog still applies the vendor default until you pick a swatch.">Color</label>
       <div class="color-row" id="color-swatches" role="group" aria-label="Color for next placement"></div>
 
       <button type="button" class="ghost" id="style-options-toggle" style="width:100%;font-size:11px;margin-top:4px;" aria-expanded="false" aria-controls="style-advanced" aria-label="Toggle label and style options" title="Set opacity, starting rotation, and clearance buffer for the next placement.">Options ▾</button>
@@ -451,14 +452,14 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           oninput="document.getElementById('rotation-val').textContent=this.value" />
 
         <label>Clearance Buffer: <span id="buffer-val">0</span> ft</label>
-        <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet" title="Clearance zone in feet, 0–30. Draws a dashed ring. Triggers amber advisory when two buffer zones touch. Set to 0 to disable."
+        <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet" title="Clearance zone in feet, 0–30. Draws a dashed ring. Triggers amber advisory when a clearance ring conflicts with another footprint or clearance ring (footprint overlap stays red). Set to 0 to disable."
           oninput="document.getElementById('buffer-val').textContent=this.value" />
         <div class="inline-controls">
-          <button class="scale-btn" onclick="applyBufferPreset(0)" title="Remove clearance buffer. No amber advisory will be shown for buffer-only proximity.">None</button>
+          <button class="scale-btn" onclick="applyBufferPreset(0)" title="Set clearance buffer to 0 ft for the next placement (no dashed ring, no buffer advisories for that structure).">None</button>
           <button class="scale-btn" onclick="applyBufferPreset(5)" title="Apply 5 ft clearance buffer — standard spacing for access and airflow.">Std 5 ft</button>
           <button class="scale-btn" onclick="applyBufferPreset(10)" title="Apply 10 ft clearance buffer — use for generators or high-traffic corridors.">High 10 ft</button>
         </div>
-        <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;" title="Set current buffer on every placed structure. You will be asked to confirm. Use Undo immediately to reverse — not recoverable after page refresh.">Apply Buffer to All Placed</button>
+        <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
       </div>
     </div>
 
@@ -501,7 +502,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <div style="padding:10px 12px 6px;flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
-          <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. You will be asked to confirm. Use Undo immediately to reverse — not recoverable after page refresh.">Clear All</button>
+          <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
         </div>
         <div id="overlap-warning" class="warn-text" style="display:none;"></div>
       </div>
@@ -510,7 +511,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
   </div>
 
-  <div id="map"><div id="cursor-pos" class="map-coords-overlay">Hover map for coords</div><div id="overlap-pill" role="button" tabindex="0" aria-live="polite" title="Red: footprints physically overlap — must be resolved. Amber: buffer zones overlap — check spacing or mark as intentional. Click to scroll to first flagged structure." aria-label="Red: footprints physically overlap — must be resolved. Amber: buffer zones overlap — check spacing or mark as intentional. Click to scroll to first flagged structure."></div></div>
+  <div id="map"><div id="cursor-pos" class="map-coords-overlay" title="Latitude and longitude under the cursor (updates as you move the mouse).">Hover map for coords</div><div id="overlap-pill" role="button" tabindex="0" aria-live="polite" title="Red: solid footprints intersect — resolve before final layout. Amber: clearance rings conflict (footprints may still be separate) — adjust spacing or check Intentional in the placed list. Click to scroll to the first flagged structure." aria-label="Red: solid footprints intersect — resolve before final layout. Amber: clearance rings conflict — adjust spacing or check Intentional in the placed list. Click to scroll to the first flagged structure."></div></div>
 </div>
 
 <div id="statusbar">
@@ -537,15 +538,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
  */
 const APP_META = {
   name: 'VPC Mapping Tool',
-  version: '0.8.7',
-  lastUpdated: '2026-04-01',
+  version: '0.8.8',
+  lastUpdated: '2026-05-19',
   changelog: [
-    { version: '0.8.7', date: '2026-04-01', note: 'Two-tier overlap (footprint vs clearance buffer), intentionalBufferOverlap in plans, overlap pill + split status; layer-space geometry; list/map styling + Intentional; buffer/footprint intersection; tooltips (title/aria/bindTooltip), tent tooltip sticky off + close on drag; handle spacing; header nowrap; README. restoreSession() removed (dead code); fresh-open on load is now intentional, replacing automatic session restore introduced in v0.6.8.' },
-    { version: '0.8.6', date: '2026-03-27', note: 'Export PDF: map snapshot via html2canvas + jsPDF; crossOrigin on tile layers; waitForTilesIdle (idle or tileload debounce, 4s max); setExportChromeVisible; text-only fallback if capture fails.' },
-    { version: '0.8.5', date: '2026-02-26', note: 'ZUMRO Interconnect added to TENT_DB: 7.17\'×6.92\' rect (86"×83"); connects Zumro to Western Shelter; dimensions from ZUMRO_Interconnect_Dimensions.md.' },
-    { version: '0.8.4', date: '2026-03-10', note: 'Snap face selection: click near any of target\'s 4 faces (2 length ends, 2 width ends); offset uses correct half-dimension per axis. ROLES constant; snap hint text; postMode order; auto-uncheck after snap.' },
-    { version: '0.8.3', date: '2026-03-10', note: 'Snap to selected object: checkbox in Label & Style; next placement matches target rotation and attaches to end nearest click (e.g. Vestibule to GK1935).' },
-    { version: '0.8.2', date: '2026-03-10', note: 'v0.8.1 cleanup: B1–B3 (mode badge click, map border clear, SAT origin); U1–U5 (PDF caveat, Export ▾, color out of Options, How to use step 3, coords overlay); C1–C2 (changelog trim, #obj-list-items CSS).' }
+    { version: '0.8.8', date: '2026-05-19', note: 'Tooltip/title/aria aligned with v0.8.7 behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, VPC_Project_Notes, Quickstart synced.' },
+    { version: '0.8.7', date: '2026-04-01', note: 'Two-tier overlap (footprint vs clearance buffer), intentionalBufferOverlap in plans, overlap pill + split status; layer-space geometry; list/map styling + Intentional; buffer/footprint intersection; tooltips pass; fresh-open on load (Restore Autosave explicit).' },
+    { version: '0.8.6', date: '2026-03-27', note: 'Export PDF: map snapshot via html2canvas + jsPDF; crossOrigin on tile layers; waitForTilesIdle; text-only fallback if capture fails.' },
+    { version: '0.8.5', date: '2026-02-26', note: 'ZUMRO Interconnect added to TENT_DB: 7.17\'×6.92\' rect (86"×83"); connects Zumro to Western Shelter.' },
+    { version: '0.8.4', date: '2026-03-10', note: 'Snap face selection (4 faces); ROLES constant; snap hint; auto-uncheck after snap.' },
+    { version: '0.8.3', date: '2026-03-10', note: 'Snap to selected object checkbox in Label & Style.' }
   ]
 };
 
@@ -745,6 +746,7 @@ Object.keys(TENT_DB).forEach(v => {
   t.setAttribute('role', 'button');
   t.setAttribute('tabindex', '0');
   t.setAttribute('aria-label', `Select vendor ${v}`);
+  t.title = `Show ${v} tent models. Selecting a model applies the vendor default color.`;
   t.onclick = () => setVendor(v);
   t.onkeydown = ev => {
     if (ev.key === 'Enter' || ev.key === ' ') {
@@ -790,6 +792,7 @@ function createTentCard(tent, idx) {
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
   card.setAttribute('aria-label', `Select tent ${tent.name}, ${dimStr(tent)}`);
+  if (tent.note) card.title = tent.note;
 
   const name = document.createElement('div');
   name.className = 'tent-name';
@@ -1250,13 +1253,13 @@ function syncRotateHandle() {
 
   const deleteLatLng = getDeleteHandleLatLng(obj);
   const deleteIcon = L.divIcon({
-    html: '<button type="button" class="delete-handle-btn" aria-label="Delete object" title="Delete">\u2715</button>',
+    html: '<button type="button" class="delete-handle-btn" aria-label="Delete object" title="Delete structure (confirm)">\u2715</button>',
     className: 'delete-handle-wrap',
     iconSize: [28, 28],
     iconAnchor: [14, 14]
   });
   deleteHandleLayer = L.marker(deleteLatLng, { icon: deleteIcon }).addTo(map);
-  deleteHandleLayer.bindTooltip('Delete this structure. Shift+click the footprint also deletes. Not recoverable after page refresh.', {
+  deleteHandleLayer.bindTooltip('Delete this structure (confirm). Shift+click the footprint also deletes. Use Undo (Ctrl+Z) to restore before refreshing.', {
     permanent: false,
     direction: 'bottom',
     className: 'map-tooltip',
@@ -1410,7 +1413,7 @@ function rebuildManageRolesPanel() {
     rm.style.flexShrink = '0';
     rm.textContent = '×';
     rm.setAttribute('aria-label', 'Remove role ' + roleName);
-    rm.title = 'Remove from list';
+    rm.title = 'Remove this custom role from the picker. Existing structures keep their assigned role.';
     rm.onclick = function () {
       removeCustomRole(roleName);
     };
@@ -1769,19 +1772,19 @@ function updateLastSavedIndicator(date) {
   if (!el) return;
   if (date === null) {
     el.textContent = 'Autosave failed — use Save Plan';
-    el.title = el.textContent;
+    el.title = 'Autosave to this browser failed. Download a Save Plan file so you do not lose your layout.';
     el.style.color = '#f85149';
     return;
   }
   if (date === undefined || !(date instanceof Date) || isNaN(date.getTime())) {
     el.style.removeProperty('color');
     el.textContent = 'Not yet saved';
-    el.title = el.textContent;
+    el.title = 'No autosave in this browser yet. Layout is saved automatically after you place or change structures.';
     return;
   }
   el.style.removeProperty('color');
   el.textContent = formatLastSaved(date);
-  el.title = el.textContent;
+  el.title = el.textContent + ' — stored in this browser only. Use Restore Autosave to reload (not automatic on open).';
 }
 
 function saveSession() {
@@ -2103,7 +2106,7 @@ function drawObject(obj) {
   const angleInfo = obj.shape === 'circle' ? '' : `<br>Rotation: ${Math.round(obj.angleDeg || 0)}°`;
   const bufferInfo = (obj.bufferFt || 0) > 0 ? `<br>Clearance buffer: +${obj.bufferFt} ft` : '';
   const roleInfo = (obj.role && obj.role !== '—') ? `<br>Role: ${escapeHtml(obj.role)}` : '';
-  const deleteHint = `<br>Shift+click to delete`;
+  const deleteHint = `<br>Shift+click to delete (confirm)`;
 
   obj.layer.bindTooltip(`${tip}${roleInfo}${angleInfo}${bufferInfo}${deleteHint}`, {
     permanent: false,
@@ -2483,9 +2486,10 @@ function createObjectListItem(o) {
   del.className = 'obj-del';
   del.textContent = '✕';
   del.setAttribute('aria-label', `Delete ${sanitizeLabel(o.label)}`);
+  del.title = 'Delete this structure (confirm). Use Undo to restore before refreshing.';
   del.onclick = ev => {
     ev.stopPropagation();
-    deleteObj(o.id);
+    if (confirm(`Delete "${sanitizeLabel(o.label)}"?`)) deleteObj(o.id);
   };
 
   row.appendChild(dot);
@@ -2526,6 +2530,8 @@ function createObjectListItem(o) {
     lab.appendChild(cb);
     const intentLabel = document.createElement('span');
     intentLabel.textContent = 'Intentional';
+    intentLabel.title = 'Mark this buffer advisory as intentional. Does not clear red footprint overlap.';
+    lab.title = intentLabel.title;
     lab.appendChild(intentLabel);
     intentRow.appendChild(lab);
     wrap.appendChild(intentRow);

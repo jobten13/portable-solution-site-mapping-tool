@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VPC Mapping Tool — Quickstart</title>
+<title>VPC Mapping Tool — Quickstart (v0.8.8)</title>
 <style>
 /* ─── Screen ─── */
 :root {
@@ -47,6 +47,12 @@ header.doc-head {
   color: var(--muted);
   margin: 0;
 }
+.doc-meta .ver {
+  display: inline-block;
+  font-weight: 600;
+  color: var(--accent);
+  margin-right: 0.35rem;
+}
 h2 {
   font-size: 1.15rem;
   margin: 1.75rem 0 0.65rem;
@@ -80,6 +86,23 @@ kbd {
   page-break-inside: avoid;
 }
 .callout strong { color: var(--text); }
+.callout-warn {
+  border-left-color: #cf222e;
+  background: #fff8f8;
+}
+table.quick {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  margin: 0.6rem 0 1rem;
+}
+table.quick th, table.quick td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+table.quick th { background: #f6f8fa; font-weight: 600; }
 footer.doc-foot {
   margin-top: 2.5rem;
   padding-top: 1rem;
@@ -88,7 +111,7 @@ footer.doc-foot {
   color: var(--muted);
 }
 
-/* ─── Print: single column, compact (matches on-screen flow; no multi-column) ─── */
+/* ─── Print ─── */
 @page {
   size: letter portrait;
   margin: 0.38in 0.5in;
@@ -109,10 +132,7 @@ footer.doc-foot {
     padding-bottom: 0.35rem;
     margin-bottom: 0.45rem;
   }
-  .doc-head h1 {
-    font-size: 12pt;
-    margin: 0 0 0.12rem;
-  }
+  .doc-head h1 { font-size: 12pt; margin: 0 0 0.12rem; }
   .doc-meta { font-size: 8pt; color: #333; }
   h2 {
     font-size: 9pt;
@@ -133,11 +153,9 @@ footer.doc-foot {
     border-left-width: 3px;
     page-break-inside: avoid;
   }
-  kbd {
-    font-size: 7.5pt;
-    padding: 0 0.15em;
-    border-color: #999;
-  }
+  table.quick { font-size: 7.5pt; }
+  table.quick th, table.quick td { padding: 0.2rem 0.35rem; }
+  kbd { font-size: 7.5pt; padding: 0 0.15em; border-color: #999; }
   footer.doc-foot {
     margin-top: 0.5rem;
     padding-top: 0.3rem;
@@ -155,67 +173,94 @@ footer.doc-foot {
 <article class="doc">
   <header class="doc-head">
     <h1>VPC Mapping Tool — Quickstart</h1>
-    <p class="doc-meta">Open the app, place structures, save — one sheet for field use.</p>
+    <p class="doc-meta"><span class="ver">v0.8.8</span> · May 2026 · One sheet for field operators. Open <strong>VPC Mapping Tool.html</strong> in Chrome, Edge, or Safari.</p>
   </header>
 
   <section aria-labelledby="s-open">
-    <h2 id="s-open">1. Open</h2>
-    <p>Open <strong>VPC Mapping Tool.html</strong> in Chrome, Edge, or Firefox (no install). Network needed first for imagery, search, and PDF libraries; then many features work offline.</p>
+    <h2 id="s-open">1. Open &amp; find your site</h2>
+    <p>No install. Network helps for map tiles, address search, and PDF export libraries.</p>
     <div class="callout">
-      <strong>Offline:</strong> No tiles? Enter <kbd>lat, lng</kbd> in search (e.g. <kbd>34.05, -118.25</kbd>) and <strong>Search</strong>.
+      <strong>Fresh start every open:</strong> The map opens empty at the default view. Your last layout is <em>not</em> loaded automatically. After a refresh or new tab, click       <strong>Restore Autosave</strong> (same browser) or <strong>Open Plan</strong> (JSON file).
     </div>
-  </section>
-
-  <section aria-labelledby="s-first">
-    <h2 id="s-first">2. First layout</h2>
+    <div class="callout">
+      <strong>Offline:</strong> Enter <kbd>lat, lng</kbd> in search (e.g. <kbd>34.05, -118.25</kbd>) and press <strong>Search</strong>. Layout editing works; tiles may not load.
+    </div>
     <ol>
-      <li><strong>Site:</strong> Header search (address or coords). <strong>Setup ▾</strong> — operation name for print/PDF.</li>
-      <li><strong>Pick:</strong> Sidebar <strong>Vendor</strong> tab → model. Status line shows placement mode.</li>
-      <li><strong>Place:</strong> Click map. Repeat.</li>
-      <li><strong>Edit:</strong> Click object — drag move; <strong>orange handle</strong> — rotate; delete on shape/list or <kbd>Shift</kbd>+click.</li>
-      <li><strong>Done:</strong> <kbd>Esc</kbd> to view mode.</li>
+      <li>Search by address/place, or paste coordinates.</li>
+      <li><strong>Setup ▾</strong> — set <strong>Operation Name</strong> (print/PDF) and scale presets if needed.</li>
+      <li>Layer control (top-right): satellite + <strong>Place Labels (Hybrid)</strong> for orientation.</li>
     </ol>
   </section>
 
-  <section aria-labelledby="s-header">
-    <h2 id="s-header">3. Header</h2>
-    <ul>
-      <li><strong>Search</strong> — Geocode or coords.</li>
-      <li><strong>Undo / Redo</strong> — 50 steps; lost on refresh or tab close — use <strong>Save Plan</strong>.</li>
-      <li><strong>Measure ▾</strong> — Distance or area; clear when done.</li>
-      <li><strong>Autosave</strong> / <strong>Restore Autosave</strong> — Browser-only last session.</li>
-    </ul>
-  </section>
-
-  <section aria-labelledby="s-sidebar">
-    <h2 id="s-sidebar">4. Sidebar</h2>
-    <ul>
-      <li><strong>Label &amp; Style</strong> — Next label, role, color; <strong>Snap to selected</strong> for add-ons (select target first).</li>
-      <li><strong>Options ▾</strong> — Opacity, rotation, <strong>buffer</strong> (dashed ring). Mark tight buffer as intentional in list when shown.</li>
-      <li><strong>Custom Size</strong> — <strong>Place Custom</strong>, then map click.</li>
-      <li><strong>Plan</strong> — <strong>Save Plan</strong> / <strong>Open Plan</strong>; <strong>Export ▾</strong> GeoJSON or PDF; <strong>Print Fit</strong>. Enable &apos;Print background graphics&apos; in your browser&apos;s print dialog for the satellite image to appear.</li>
-    </ul>
+  <section aria-labelledby="s-place">
+    <h2 id="s-place">2. Place &amp; edit structures</h2>
+    <ol>
+      <li><strong>Vendor</strong> tab → click a model (enters place mode).</li>
+      <li>Click the map to place. Repeat for more structures.</li>
+      <li>Click a placed object — drag body to move; <strong>orange handle</strong> to rotate (<kbd>Shift</kbd> = 5° steps).</li>
+      <li>Delete: red <strong>✕</strong> on map, <strong>✕</strong> in placed list, or <kbd>Shift</kbd>+click footprint — all ask to confirm.</li>
+      <li><strong>Custom Size</strong> — enter dimensions → <strong>Place Custom</strong> → click map.</li>
+    </ol>
+    <h3>Attach structures (snap)</h3>
+    <ol>
+      <li>Select the target structure on the map.</li>
+      <li>Check <strong>Snap to selected object</strong> in Label &amp; Style.</li>
+      <li>Pick the add-on model, click near the face to attach (nearest of four faces wins).</li>
+      <li>Snap <strong>unchecks automatically</strong> after a successful attach. Best for rect-to-rect.</li>
+    </ol>
   </section>
 
   <section aria-labelledby="s-overlap">
-    <h2 id="s-overlap">5. Status bar, overlaps &amp; save</h2>
-    <p>Status bar shows zoom, scale, count, and overlap summary. <strong>Red</strong> — footprint overlap. <strong>Amber</strong> — buffer advisory; adjust or mark intentional.</p>
+    <h2 id="s-overlap">3. Spacing &amp; overlaps</h2>
+    <p><strong>Options ▾</strong> — set <strong>clearance buffer</strong> (feet) for dashed setback rings on the <em>next</em> placement, or use presets / Apply Buffer to All.</p>
+    <table class="quick" aria-label="Overlap colors">
+      <thead>
+        <tr><th>Signal</th><th>Meaning</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Red</strong></td><td>Footprints physically overlap</td><td>Move or rotate — must fix</td></tr>
+        <tr><td><strong>Amber</strong></td><td>Clearance rings conflict (footprints may still be separate)</td><td>Adjust spacing, or check <strong>Intentional</strong> in placed list (amber-only rows)</td></tr>
+      </tbody>
+    </table>
+    <p>Watch the status bar, sidebar warning under <strong>Placed</strong>, and the map <strong>pill</strong> (top-right). Click the pill to jump to the first flagged structure.</p>
+  </section>
+
+  <section aria-labelledby="s-header">
+    <h2 id="s-header">4. Header tools</h2>
     <ul>
-      <li><strong>Autosave</strong> — This browser only; not a backup.</li>
-      <li><strong>Save Plan</strong> — JSON file to archive, email, reopen anywhere.</li>
-      <li>Fresh open by default — <strong>Restore Autosave</strong> for last browser session.</li>
+      <li><strong>Undo / Redo</strong> — up to 50 steps (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd>; Mac: <kbd>Cmd</kbd>+<kbd>Z</kbd>). Cleared on refresh — use Save Plan or Restore Autosave.</li>
+      <li><strong>Measure ▾</strong> — distance or area on the map.</li>
+      <li><strong>Autosaved …</strong> — timestamp for browser backup; <strong>Restore Autosave</strong> loads it (confirms if layout already has structures).</li>
     </ul>
+  </section>
+
+  <section aria-labelledby="s-save">
+    <h2 id="s-save">5. Save, export &amp; print</h2>
+    <ul>
+      <li><strong>Save Plan</strong> — portable JSON (archive, email, reopen on any machine).</li>
+      <li><strong>Open Plan</strong> — replaces current layout (confirms).</li>
+      <li><strong>Export ▾</strong> — GeoJSON (GIS) or PDF (map snapshot + summary; needs network for libraries).</li>
+      <li><strong>Print Fit</strong> — frames all structures; enable <em>Print background graphics</em> for satellite imagery.</li>
+    </ul>
+    <div class="callout callout-warn">
+      <strong>Autosave ≠ backup:</strong> Autosave stays in this browser only. Save Plan files for operations handoff.
+    </div>
   </section>
 
   <section aria-labelledby="s-keys">
-    <h2 id="s-keys">6. Keys</h2>
+    <h2 id="s-keys">6. Keyboard shortcuts</h2>
     <ul>
-      <li><kbd>/</kbd> search · <kbd>Esc</kbd> view mode · <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> undo/redo · <kbd>P</kbd> place (when tent selected)</li>
+      <li><kbd>/</kbd> — focus search</li>
+      <li><kbd>P</kbd> — place selected tent</li>
+      <li><kbd>Esc</kbd> — return to view mode (or click mode badge)</li>
+      <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> — undo / redo</li>
     </ul>
+    <p>Hover controls in the app for more hints (<code>title</code> tooltips on buttons, sliders, and map objects).</p>
   </section>
 
   <footer class="doc-foot">
-    <p class="no-print-url">Same folder: <strong>VPC Mapping Tool.html</strong>. Details: <strong>README.md</strong>.</p>
+    <p class="no-print-url"><strong>App:</strong> VPC Mapping Tool.html · <strong>Docs:</strong> README.md, VPC_Project_Notes.md · <strong>Version:</strong> 0.8.8 (2026-05-19)</p>
+    <p class="no-print-url">To print this sheet: use File → Print in your browser.</p>
   </footer>
 </article>
 </body>
