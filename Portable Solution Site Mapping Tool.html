@@ -919,6 +919,8 @@ function resetViewMode() {
   endObjectDrag();
   endRotateDrag();
   setMode('View Mode');
+  clearMeasureStartMarker();
+  updateMeasureUI();
 }
 
 (function initModeBadgeClick() {
@@ -2587,6 +2589,16 @@ function handleMeasureClick(latlng) {
 
 function handleAreaMeasureClick(latlng) {
   areaMeasurePoints.push(latlng);
+  if (areaMeasurePoints.length === 1) {
+    clearMeasureStartMarker();
+    measureStartMarker = L.circleMarker(latlng, {
+      radius: 4,
+      color: '#58a6ff',
+      fillColor: '#58a6ff',
+      fillOpacity: 0.8,
+      weight: 1
+    }).addTo(map);
+  }
   drawAreaMeasureLayer();
   if (areaMeasurePoints.length < 3) {
     document.getElementById('measure-readout').textContent = `Area points: ${areaMeasurePoints.length}. Add at least 3.`;
@@ -2630,6 +2642,21 @@ function finishAreaMeasure() {
   areaMeasurePoints = [];
   setMode('View Mode');
   updateMeasureUI();
+  if (areaMeasureLayer) {
+    const strip = document.getElementById('measure-strip');
+    const menuBtn = document.getElementById('btn-measure-menu');
+    if (strip) {
+      strip.style.display = 'flex';
+      if (menuBtn) {
+        const rect = menuBtn.getBoundingClientRect();
+        strip.style.top = (rect.bottom + 4) + 'px';
+        strip.style.left = rect.left + 'px';
+      }
+    }
+    const ro = document.getElementById('measure-readout');
+    const roh = document.getElementById('measure-readout-header');
+    if (ro && roh) roh.textContent = ro.textContent;
+  }
 }
 
 function polygonAreaMeters(latlngs) {
