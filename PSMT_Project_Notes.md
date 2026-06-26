@@ -1,6 +1,6 @@
 # Portable Solution Site Mapping Tool — Project Notes
 
-*Last updated: 2026-05-19 (aligned with app v0.8.8); 2026-06-24 — PSMT overhaul scope added*
+*Last updated: 2026-06-26 — psmt-overhaul: 1.0 reframed as released/field-tested; working toward 1.1; items R, #1, #1b, #3b shipped; #20 closed.*
 
 Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable Solution Site Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
 
@@ -8,7 +8,9 @@ Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable So
 
 ## Project overview
 
-**Portable Solution Site Mapping Tool** (v**0.8.8**) — Single-file HTML app for emergency field hospital site layout. Leaflet.js map at true scale, vendor `TENT_DB` (five vendors), click-then-place workflow, drag/rotate handles, snap-to-face attachment, two-tier overlap (footprint red / clearance buffer amber), undo/redo (50 steps), role tagging with custom roles, debounced browser autosave with manual **Restore Autosave**, portable **Save Plan** / **Open Plan**, GeoJSON export, PDF export with map snapshot, and print fit.
+**Portable Solution Site Mapping Tool** (released/field-tested **v1.0**; current working build **v1.1.0-dev** on `psmt-overhaul`) — Single-file HTML app for emergency field hospital site layout. Leaflet.js map at true scale, vendor `TENT_DB` (five vendors), click-then-place workflow, drag/rotate handles, snap-to-face attachment, two-tier overlap (footprint red / clearance buffer amber), undo/redo (50 steps), role tagging with custom roles, debounced browser autosave with manual **Restore Autosave**, portable **Save Plan** / **Open Plan**, GeoJSON export, PDF export with map snapshot, and print fit.
+
+**Version note:** The 1.0 / 1.1.0-dev framing above is documented here first. `APP_META`, README, Quickstart, and PROJECT_MAP still read **0.8.8** — bumping `APP_META.version` to 1.1.0-dev and syncing README/Quickstart changelog is a **separate pending task**. The doc-vs-code gap is intentional and recorded, not an oversight.
 
 **Use case:** Field hospital planning and setup — domestic emergency response first; international expansion planned. Primary users: incident commanders and field coordinators.
 
@@ -37,14 +39,15 @@ This section defines the scope of work on the **psmt-overhaul** branch (forked f
 
 **"PSMT"** is an **informal working shorthand** for this branch only. It is deliberately **not a literal acronym** — the full name contains "Site," which the shorthand does not represent (a literal acronym would be PSSMT). This mismatch is a conscious, recorded choice, not an error to be "corrected" later. The branch name `psmt-overhaul` uses this shorthand.
 
-**Status:** **DECIDED but NOT YET EXECUTED.** The code, `APP_META`, and docs still say "VPC Mapping Tool" until the rename item is implemented. The rename is itself a work item (item **R** below), not yet applied.
+**Status:** **EXECUTED** in commit 9dfa7dc — APP_META, page title, filenames, schema string (`psmt-scenario-v1`), localStorage keys (`psmt-*`), and all docs renamed to "Portable Solution Site Mapping Tool."
 
 ### Confirmed in scope
 
-- **R.** Rename to **Portable Solution Site Mapping Tool** — all user- and engineer-facing surfaces. Decided, not yet executed.
-- **1.** Measurement dropdown renders behind / clipped by the map (bug).
+- **R.** Rename to **Portable Solution Site Mapping Tool** — all user- and engineer-facing surfaces. **DONE** (commit 9dfa7dc).
+- **1.** Measurement dropdown renders behind / clipped by the map (bug). **DONE** (commit 27855d8).
+- **1b.** Measure area-clear button reachable after Finish Area; area-measure start-point dot; measure-strip sync on Esc/mode-exit. **DONE** (commit 2d76ff1).
 - **2.** Top buttons need to be more visible.
-- **3.** Snap-to — two distinct problems: **(3a)** click-to-snap interaction is not intuitive; **(3b)** a completed snap triggers a footprint-overlap warning. Needs read-only Cursor investigation before fix.
+- **3.** Snap-to — two distinct problems: **(3a)** click-to-snap interaction is not intuitive — **OPEN**. **(3b)** footprint overlap false-positive on touch — **DONE** (commits f14e8e3, 87f294f): footprint overlap now requires positive intersection area; touching no longer false-flags on the primary path. Triangulation fallback (87f294f): when triangulation fails, reverts to the conservative touch-or-overlap test — which over-warns (can flag touching as overlap on that failure path) rather than computing a wrong area; this failure path has not been observed to trigger in testing of current catalog shapes (tested-to-date observation, not a guarantee in the code).
 - **4.** Tooltips. Note: v0.8.8 reported adding title/aria tooltips, but field observation reports none visible — verify actual state before work.
 - **5.** General UX/UI refinement (umbrella item).
 - **6.** Select-all / group move (move a whole built-out setup together).
@@ -59,11 +62,13 @@ This section defines the scope of work on the **psmt-overhaul** branch (forked f
 - **16.** Rotate handle and delete button sit too far from the object they control. Needs investigation.
 - **17.** Rotation manual-entry fallback — a numeric entry as backup to the drag handle. Framed as a **FRICTION-REDUCER** (lets a stuck user type a value and proceed), NOT a precision feature.
 - **18.** Selecting a placed-list row should fly-to **AND** highlight the object on the map (currently only pans). Equals existing backlog item **#2**.
-- **20.** Base-map imagery: add **USGS NAIPPlus** as a **SECOND, TOGGLEABLE** base layer alongside the existing Esri World Imagery (not a replacement), for fidelity + currentness + live A/B comparison. **DECIDED** and implementation-ready. Caveats to test at build time: CORS may break the html2canvas PDF export; maxZoom (currently 21) likely needs lowering. Must preserve the invariant that placed objects are independent of the base layer.
+- **Object/shape fidelity review** — audit `TENT_DB` shapes and dimensions against real-world structures. Example (WS GK1935): **Spec** (`VENDOR_SPECS_DIGEST.md`) — elongated octagon, 18'7"×33'11" (18.583×33.917 ft), with corner cuts; digest confirms this as spec-aligned. **Field observation (to verify, not established fact)** — the real structure's footprint may read as closer to a cut-corner rectangle than the rendered elongated octagon. Review task: reconcile rendered shape against **both** the spec and physical reality where they differ — not to assume the spec is wrong. Touches the provenance-gated vendor catalog. Scope (full audit vs targeted fixes) and ordering TBD.
+- **Per-object square footage + running facility-area total** — tool currently shows no area for placed objects and no facility total. Derive area from original `TENT_DB` square-footage/feet values (NOT reconstructed from stored meters — avoids conversion drift); requires storing the catalog feet/sq-ft value on the placed object at placement (currently discarded). Catalog note strings already carry true sq ft for irregular shapes, avoiding polygon-area math for display. Group with items **8** and **9** (capacity family).
+- **20.** Base-map imagery: add **USGS NAIPPlus** as a **SECOND, TOGGLEABLE** base layer alongside the existing Esri World Imagery (not a replacement), for fidelity + currentness + live A/B comparison. **CLOSED** (evaluated and rejected) — see **2026-06-26 Decisions** entry for authoritative record. Consequence: item **19** (zoom presets) is **NO LONGER blocked by 20** — its imagery-depth dependency is gone; **19** is now standalone whenever scheduled.
 
 ### Deferred / sequenced within this branch
 
-- **19.** Zoom/scale presets are buggy. **BLOCKED BY item 20** — do this only **AFTER** the imagery work lands, because the useful preset values depend on what zoom depth/fidelity the new imagery provides.
+- **19.** Zoom/scale presets are buggy. **Standalone** — no longer blocked by item 20 (imagery-depth dependency removed when item 20 closed). Schedule whenever prioritized.
 - **9.** Bed counts per tent + running ward/ICU facility tally. **Sequenced LAST** — revisited only after all other overhaul work is complete. Needs clinical input for bed numbers (rough planning figure noted: a tent rated ~10 ward beds ≈ 6 ICU max). Item **8** (structure labels) lays groundwork via a per-tent clinical-role attribute. Note this is the leading edge of roadmap backlog item **#3** (capacity tracking) / the v2.5 calculator integration.
 
 ### Working principles for this branch
@@ -86,6 +91,15 @@ This section defines the scope of work on the **psmt-overhaul** branch (forked f
 | Snap to face | 0.8.3–0.8.4 | Four-face attachment; rotation match; auto-uncheck |
 | Undo/redo, roles, autosave, Save Plan | 0.7.x | Core operational workflow |
 | Measure, buffers, GeoJSON, basemap | 0.5.x–0.6.x | Foundation |
+
+## psmt-overhaul — shipped (toward 1.1)
+
+| Area | Commit | Summary |
+|------|--------|---------|
+| Rename | 9dfa7dc | VPC Mapping Tool → Portable Solution Site Mapping Tool across all surfaces |
+| Measure dropdown | 27855d8 | Fixed dropdown clipped by header overflow-y (position:fixed + getBoundingClientRect) |
+| Measure clear/dot/strip | 2d76ff1 | Area-clear reachable after Finish Area; area start dot; strip sync on Esc/mode-exit |
+| Overlap positive-area | f14e8e3, 87f294f | Footprint overlap requires positive intersection area (touching no longer false-flags on primary path); triangulation fallback reverts to touch-or-overlap when triangulation fails — over-warns vs wrong area; failure path not observed to trigger in testing of current catalog shapes (tested to date, not a code guarantee) |
 
 ---
 
@@ -164,7 +178,12 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 
 **Single-file vs multi-file:** PSMT stays single-file for distribution until v2.5+. Combined app should be multi-file PWA with service worker.
 
-**Schema:** Not released yet — plan/GeoJSON schema may change freely until v1.
+**Schema:** Plan/GeoJSON schema is still pre-stable on `psmt-overhaul` and may change freely — independent of the 1.0/1.1 release labeling (field-tested build treated as 1.0; working branch toward 1.1).
+
+### Known minor issues
+
+- **PDF export conversion constant** — PDF export uses conversion constant 3.28084 while tooltip/list use 1/FT_TO_M (0.3048) — same intent, two constants, minor rounding inconsistency. Cosmetic.
+- **Display feet from stored meters** — Display feet are reconstructed from stored meters (`widthM / FT_TO_M`), not read from original catalog feet. Investigated and confirmed a clean ONE-WAY derivation (display dead-end, never re-saved into geometry) — no round-trip drift. Resolved, no action needed.
 
 ---
 
@@ -173,10 +192,14 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 - **Collapsible placed list** — Low priority; list already pinned (~220px) with internal scroll. More valuable once tablet mode exists.
 - **Drag-and-drop from sidebar** — Removed from current workflow; click-then-place is standard (v0.6.2+).
 - **Automatic session restore on load** — Removed v0.8.7; intentional to avoid surprising overwrites; use Restore Autosave.
+- **PWA** — deferred, not abandoned. Gated on field-test device/connectivity data and DHA/MHS service-worker policy. Stale-cache safety hazard: a service-worker cache could silently serve superseded application/calculation logic — dangerous for a medical tool. Caching imagery is low-risk; caching the app/logic is the hazard.
+- **Offline tile caching** — wanted, high-value (field tool needs imagery offline), but **BLOCKED** on the distribution-architecture decision: requires serving over HTTPS on a fixed origin; incompatible with the current `file://` open-anywhere model (service workers can't register under `file://`; IndexedDB needs a stable origin; CDN bootstrap fails cold-offline). Viable path once hosting settled: IndexedDB tile cache, satellite-only, zoom 18–20, ~500m bbox, explicit storage/eviction UX, Esri ToS review. Blocked-by-dependency, not deferred-by-preference. Separately: current offline detection is `navigator.onLine`-only (coarse, often wrong) — a contained issue needing no hosting decision.
+
 ---
 
 ## Decisions
 
+- **2026-06-26 — USGS NAIPPlus base-layer evaluation closed (item 20).** USGS NAIPPlus was evaluated as a toggleable second base layer and A/B tested against Esri World Imagery at two real hospital sites (UC Davis Medical Center; BAMC San Antonio) at working placement zoom. NAIP was visibly lower resolution at the zoom that matters for placement, despite deeper max zoom. The esri-leaflet dependency and dynamic-service performance cost were not justified. The evaluation branch state was reverted; Esri World Imagery retained as the sole base layer. *(No git commit records the eval — reverted — this Decisions entry is the authoritative record.)* Future paths if revisited: premium Esri/Maxar imagery via DHA ArcGIS authentication, or Mapbox/commercial sources if FedRAMP and licensing clear.
 - **2026-06-10 — Quickstart PDF retired permanently.** `VPC Mapping Tool - Quickstart.pdf` has been removed from the project. **`Portable Solution Site Mapping Tool - Quickstart.html`** is the sole quickstart source going forward; no PDF will be regenerated.
 
 ---
@@ -184,5 +207,6 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 ## Doc maintenance
 
 - Bump *Last updated* and version when `APP_META.version` changes in `Portable Solution Site Mapping Tool.html`.
+- The 1.0 / 1.1.0-dev release framing in these notes may precede code/doc bumps — when `APP_META.version` moves to 1.1.0-dev, sync README, Quickstart, and this file together.
 - Keep **README.md**, **PSMT_Project_Notes.md**, **Portable Solution Site Mapping Tool - Quickstart.html**, and in-app tooltips in sync on each release.
 - Shipped features: document in README changelog; remove from backlog here.
