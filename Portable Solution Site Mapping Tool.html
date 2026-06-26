@@ -2723,6 +2723,8 @@ function latlngToMeters(lat, lng, originLat, originLng) {
 
 // Polygon overlap in map layer (pixel) coordinates — matches Leaflet rendering; avoids meter-plane drift from map center.
 const OVERLAP_EPS = 1e-4;
+// Footprint tier: reject touching/sub-pixel slivers; real overlaps at typical placement zoom are much larger.
+const FOOTPRINT_MIN_INTERSECTION_AREA_PX2 = 1.0;
 function polygonBounds(ring) {
   let minX = Infinity;
   let maxX = -Infinity;
@@ -2775,7 +2777,7 @@ function segmentIntersectsOpen(p1, p2, p3, p4) {
   const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / d;
   return t >= -OVERLAP_EPS && t <= 1 + OVERLAP_EPS && u >= -OVERLAP_EPS && u <= 1 + OVERLAP_EPS;
 }
-function polygonsOverlap2D(vertsA, vertsB) {
+function polygonsTouchOrOverlap2D(vertsA, vertsB) {
   if (!vertsA || !vertsB || vertsA.length < 3 || vertsB.length < 3) return false;
   const ba = polygonBounds(vertsA);
   const bb = polygonBounds(vertsB);
@@ -2792,6 +2794,138 @@ function polygonsOverlap2D(vertsA, vertsB) {
   if (pointInPolygonXY(vertsA[0], vertsB)) return true;
   if (pointInPolygonXY(vertsB[0], vertsA)) return true;
   return false;
+}
+
+function cross2DXY(a, b, c) {
+  return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+}
+function polygonSignedArea2D(ring) {
+  let area = 0;
+  const n = ring.length;
+  for (let i = 0; i < n; i += 1) {
+    const j = (i + 1) % n;
+    area += ring[i][0] * ring[j][1] - ring[j][0] * ring[i][1];
+  }
+  return area / 2;
+}
+function pointInTriangle2D(p, a, b, c) {
+  const c1 = cross2DXY(a, b, p);
+  const c2 = cross2DXY(b, c, p);
+  const c3 = cross2DXY(c, a, p);
+  const hasNeg = (c1 < -OVERLAP_EPS) || (c2 < -OVERLAP_EPS) || (c3 < -OVERLAP_EPS);
+  const hasPos = (c1 > OVERLAP_EPS) || (c2 > OVERLAP_EPS) || (c3 > OVERLAP_EPS);
+  return !(hasNeg && hasPos);
+}
+function lineIntersection2D(p1, p2, p3, p4) {
+  const x1 = p1[0];
+  const y1 = p1[1];
+  const x2 = p2[0];
+  const y2 = p2[1];
+  const x3 = p3[0];
+  const y3 = p3[1];
+  const x4 = p4[0];
+  const y4 = p4[1];
+  const den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+  if (Math.abs(den) < OVERLAP_EPS) return null;
+  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+  return [x1 + t * (x2 - x1), y1 + t * (y2 - y1)];
+}
+function isInsideClipEdge2D(p, edgeStart, edgeEnd, ccwClip) {
+  const c = cross2DXY(edgeStart, edgeEnd, p);
+  return ccwClip ? c >= -OVERLAP_EPS : c <= OVERLAP_EPS;
+}
+function clipPolygonByHalfPlane2D(subject, edgeStart, edgeEnd, ccwClip) {
+  const output = [];
+  if (!subject.length) return output;
+  for (let i = 0; i < subject.length; i += 1) {
+    const curr = subject[i];
+    const prev = subject[(i + subject.length - 1) % subject.length];
+    const currIn = isInsideClipEdge2D(curr, edgeStart, edgeEnd, ccwClip);
+    const prevIn = isInsideClipEdge2D(prev, edgeStart, edgeEnd, ccwClip);
+    if (currIn) {
+      if (!prevIn) {
+        const ix = lineIntersection2D(prev, curr, edgeStart, edgeEnd);
+        if (ix) output.push(ix);
+      }
+      output.push(curr);
+    } else if (prevIn) {
+      const ix = lineIntersection2D(prev, curr, edgeStart, edgeEnd);
+      if (ix) output.push(ix);
+    }
+  }
+  return output;
+}
+function clipPolygonByConvexPolygon2D(subject, clipPoly) {
+  const ccwClip = polygonSignedArea2D(clipPoly) > 0;
+  let result = subject;
+  for (let i = 0; i < clipPoly.length; i += 1) {
+    const edgeStart = clipPoly[i];
+    const edgeEnd = clipPoly[(i + 1) % clipPoly.length];
+    result = clipPolygonByHalfPlane2D(result, edgeStart, edgeEnd, ccwClip);
+    if (!result.length) return [];
+  }
+  return result;
+}
+function triangulatePolygon2D(ring) {
+  if (!ring || ring.length < 3) return [];
+  const verts = ring.map(p => [p[0], p[1]]);
+  const ccw = polygonSignedArea2D(verts) > 0;
+  const triangles = [];
+  let guard = 0;
+  while (verts.length > 3 && guard < 10000) {
+    guard += 1;
+    let earFound = false;
+    for (let i = 0; i < verts.length; i += 1) {
+      const n = verts.length;
+      const prev = verts[(i + n - 1) % n];
+      const curr = verts[i];
+      const next = verts[(i + 1) % n];
+      const convex = ccw
+        ? cross2DXY(prev, curr, next) >= -OVERLAP_EPS
+        : cross2DXY(prev, curr, next) <= OVERLAP_EPS;
+      if (!convex) continue;
+      let empty = true;
+      for (let j = 0; j < verts.length; j += 1) {
+        if (j === i || j === (i + n - 1) % n || j === (i + 1) % n) continue;
+        if (pointInTriangle2D(verts[j], prev, curr, next)) {
+          empty = false;
+          break;
+        }
+      }
+      if (!empty) continue;
+      triangles.push([[prev[0], prev[1]], [curr[0], curr[1]], [next[0], next[1]]]);
+      verts.splice(i, 1);
+      earFound = true;
+      break;
+    }
+    if (!earFound) break;
+  }
+  if (verts.length === 3) {
+    triangles.push([[verts[0][0], verts[0][1]], [verts[1][0], verts[1][1]], [verts[2][0], verts[2][1]]]);
+  } else if (verts.length > 3) {
+    for (let i = 1; i < verts.length - 1; i += 1) {
+      triangles.push([verts[0], verts[i], verts[i + 1]]);
+    }
+  }
+  return triangles;
+}
+function polygonIntersectionArea2D(ringA, ringB) {
+  if (!ringA || !ringB || ringA.length < 3 || ringB.length < 3) return 0;
+  if (!bboxOverlap2D(polygonBounds(ringA), polygonBounds(ringB))) return 0;
+  const trisA = triangulatePolygon2D(ringA);
+  const trisB = triangulatePolygon2D(ringB);
+  if (!trisA.length || !trisB.length) return 0;
+  let area = 0;
+  for (let i = 0; i < trisA.length; i += 1) {
+    for (let j = 0; j < trisB.length; j += 1) {
+      const inter = clipPolygonByConvexPolygon2D(trisA[i], trisB[j]);
+      if (inter.length >= 3) area += Math.abs(polygonSignedArea2D(inter));
+    }
+  }
+  return area;
+}
+function polygonsFootprintOverlap2D(vertsA, vertsB) {
+  return polygonIntersectionArea2D(vertsA, vertsB) > FOOTPRINT_MIN_INTERSECTION_AREA_PX2;
 }
 
 function getLayerPointRing(layer) {
@@ -2816,7 +2950,7 @@ function updateOverlapSummary() {
       const oj = objects[j];
       const vj = oj.layer ? getLayerPointRing(oj.layer) : null;
       if (!vj) continue;
-      if (polygonsOverlap2D(vi, vj)) {
+      if (polygonsFootprintOverlap2D(vi, vj)) {
         footprintIds.add(oi.id);
         footprintIds.add(oj.id);
         continue;
@@ -2825,9 +2959,9 @@ function updateOverlapSummary() {
       const bi = oi.layerBuffer ? getLayerPointRing(oi.layerBuffer) : null;
       const bj = oj.layerBuffer ? getLayerPointRing(oj.layerBuffer) : null;
       const bufferConflict =
-        (bi && polygonsOverlap2D(bi, vj)) ||
-        (bj && polygonsOverlap2D(bj, vi)) ||
-        (bi && bj && polygonsOverlap2D(bi, bj));
+        (bi && polygonsTouchOrOverlap2D(bi, vj)) ||
+        (bj && polygonsTouchOrOverlap2D(bj, vi)) ||
+        (bi && bj && polygonsTouchOrOverlap2D(bi, bj));
       if (bufferConflict) {
         if (!oi.intentionalBuffer) bufferIds.add(oi.id);
         if (!oj.intentionalBuffer) bufferIds.add(oj.id);
