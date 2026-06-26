@@ -2902,11 +2902,9 @@ function triangulatePolygon2D(ring) {
   }
   if (verts.length === 3) {
     triangles.push([[verts[0][0], verts[0][1]], [verts[1][0], verts[1][1]], [verts[2][0], verts[2][1]]]);
-  } else if (verts.length > 3) {
-    for (let i = 1; i < verts.length - 1; i += 1) {
-      triangles.push([verts[0], verts[i], verts[i + 1]]);
-    }
+    return triangles;
   }
+  if (verts.length > 3) return null;
   return triangles;
 }
 function polygonIntersectionArea2D(ringA, ringB) {
@@ -2914,6 +2912,7 @@ function polygonIntersectionArea2D(ringA, ringB) {
   if (!bboxOverlap2D(polygonBounds(ringA), polygonBounds(ringB))) return 0;
   const trisA = triangulatePolygon2D(ringA);
   const trisB = triangulatePolygon2D(ringB);
+  if (trisA === null || trisB === null) return null;
   if (!trisA.length || !trisB.length) return 0;
   let area = 0;
   for (let i = 0; i < trisA.length; i += 1) {
@@ -2925,7 +2924,9 @@ function polygonIntersectionArea2D(ringA, ringB) {
   return area;
 }
 function polygonsFootprintOverlap2D(vertsA, vertsB) {
-  return polygonIntersectionArea2D(vertsA, vertsB) > FOOTPRINT_MIN_INTERSECTION_AREA_PX2;
+  const area = polygonIntersectionArea2D(vertsA, vertsB);
+  if (area === null) return polygonsTouchOrOverlap2D(vertsA, vertsB);
+  return area > FOOTPRINT_MIN_INTERSECTION_AREA_PX2;
 }
 
 function getLayerPointRing(layer) {
