@@ -1,6 +1,6 @@
 # Portable Solution Site Mapping Tool — Project Notes
 
-*Last updated: 2026-06-26 — psmt-overhaul: 1.0 reframed as released/field-tested; working toward 1.1; items R, #1, #1b, #3b shipped; #20 closed.*
+*Last updated: 2026-06-26 — snap unified and folded into #11/#15 header rework; item 3a superseded; psmt-overhaul: 1.0 reframed as released/field-tested; working toward 1.1; items R, #1, #1b, #3b shipped; #20 closed.*
 
 Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable Solution Site Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
 
@@ -47,18 +47,18 @@ This section defines the scope of work on the **psmt-overhaul** branch (forked f
 - **1.** Measurement dropdown renders behind / clipped by the map (bug). **DONE** (commit 27855d8).
 - **1b.** Measure area-clear button reachable after Finish Area; area-measure start-point dot; measure-strip sync on Esc/mode-exit. **DONE** (commit 2d76ff1).
 - **2.** Top buttons need to be more visible.
-- **3.** Snap-to — two distinct problems: **(3a)** click-to-snap interaction is not intuitive — **OPEN**. **(3b)** footprint overlap false-positive on touch — **DONE** (commits f14e8e3, 87f294f): footprint overlap now requires positive intersection area; touching no longer false-flags on the primary path. Triangulation fallback (87f294f): when triangulation fails, reverts to the conservative touch-or-overlap test — which over-warns (can flag touching as overlap on that failure path) rather than computing a wrong area; this failure path has not been observed to trigger in testing of current catalog shapes (tested-to-date observation, not a guarantee in the code).
+- **3.** Snap-to — two distinct problems: **(3a)** click-to-snap interaction is not intuitive — **SUPERSEDED** — absorbed into the unified Snap feature design, which is folded into the #11/#15 header rework (see Decisions, 2026-06-26 — Snap unified). Reorganized, not completed. The original checkbox-based snap and its silent-failure bugs (nothing-selected skip, snap-failed silent fallback, armed-state surviving Esc/undo/load) are replaced — not patched — by the new unified design. **(3b)** footprint overlap false-positive on touch — **DONE** (commits f14e8e3, 87f294f): footprint overlap now requires positive intersection area; touching no longer false-flags on the primary path. Triangulation fallback (87f294f): when triangulation fails, reverts to the conservative touch-or-overlap test — which over-warns (can flag touching as overlap on that failure path) rather than computing a wrong area; this failure path has not been observed to trigger in testing of current catalog shapes (tested-to-date observation, not a guarantee in the code).
 - **4.** Tooltips. Note: v0.8.8 reported adding title/aria tooltips, but field observation reports none visible — verify actual state before work.
 - **5.** General UX/UI refinement (umbrella item).
 - **6.** Select-all / group move (move a whole built-out setup together).
 - **7.** Mark doors/exits, optionally attached to tents where position is known. Note: touches plan-JSON schema — new geometry, NOT pure UI. Treat as additive, pre-v1 schema.
 - **8.** Labels on the structures themselves (e.g. ICU, Triage), supplementing/replacing the hover box.
 - **10.** Sidebar overload. Sub-steps: **(10a)** move "How to use" out of the sidebar; **(10b)** reorder sidebar sections to follow workflow — **STATIC** reorder, NOT user-customizable (prior decision: fixed order mirrors data dependencies). Before working this, do a **READ-ONLY** check of `Old/VPC_UX_Refactor.md` and the current built state, because parts of that refactor were already implemented. The old doc informs but does not bind — priorities may have shifted.
-- **11.** Top-bar crowding: search field grows to fill space; status/mode hint occupies prime space; frequent vs. rare controls (Undo/Redo vs. Restore Autosave/Measure) carry equal visual weight. Same read-only check of `VPC_UX_Refactor.md` applies before work.
+- **11.** Top-bar crowding: search field grows to fill space; status/mode hint occupies prime space; frequent vs. rare controls (Undo/Redo vs. Restore Autosave/Measure) carry equal visual weight. Same read-only check of `VPC_UX_Refactor.md` applies before work. Note: the unified Snap feature is folded into this header rework — see Decisions, 2026-06-26 (Snap feature unified).
 - **12.** Address/search bar: shorter at rest, expanding on focus.
 - **13.** MERGED into item **4** (tooltips) — retained here only so the number is not silently dropped.
 - **14.** Convert "How to use" to a button with hover preview + click-to-pin. This **IS** step **10a** (same work).
-- **15.** Status/mode readout placement: move contextual feedback nearer the map work instead of the top bar. This is a specific symptom of item **11**.
+- **15.** Status/mode readout placement: move contextual feedback nearer the map work instead of the top bar. This is a specific symptom of item **11**. Note: the unified Snap feature is folded into this header rework — see Decisions, 2026-06-26 (Snap feature unified).
 - **16.** Rotate handle and delete button sit too far from the object they control. Needs investigation.
 - **17.** Rotation manual-entry fallback — a numeric entry as backup to the drag handle. Framed as a **FRICTION-REDUCER** (lets a stuck user type a value and proceed), NOT a precision feature.
 - **18.** Selecting a placed-list row should fly-to **AND** highlight the object on the map (currently only pans). Equals existing backlog item **#2**.
@@ -198,6 +198,29 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 ---
 
 ## Decisions
+
+- **2026-06-26 — Snap feature unified and folded into header rework (#11/#15).**
+
+  **DECISION 1 — Snap is ONE unified feature.** It covers both:
+  - **(a) place-and-attach** — a NEW structure from the catalog snaps onto an existing one, and
+  - **(b) reposition-and-attach** — an ALREADY-PLACED object moves flush against another.
+
+  These were treated as one feature, not split, because to the user they are a single concept ("snap things together"); splitting them into two UIs/paths would create confusion.
+
+  **Mechanics:** one-time positioning, NO parent/child relationship (after snapping, both objects are fully independent; a wrong snap is fixed by repositioning the mover and snapping again, or by undo). Anchor stays put; mover moves (or is placed). The snap face is chosen by the mover's coarse position relative to the anchor (user drags/aims roughly near the target face; snap aligns flush + matches rotation). Both paths reuse the existing `getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng)` geometry — passing the anchor as target, the mover's dimensions as newLengthM/newWidthM, and a reference point as clickLatlng. For reposition, the reference point is the mover's current center; for place-and-attach, it is the map click/cursor point (the mover does not yet exist). Resolving this reference-point difference cleanly across both entry points is part of the open sub-question below.
+
+  **UI:** a Measure-style header DROPDOWN ("Snap together"), mirroring the `#btn-measure-menu` pattern (fixed-position menu anchored via `getBoundingClientRect`; document-click to close), plus a fixed strip when a snap session is armed (mirroring `#measure-strip`), floating over the map so it costs no header-row width. The `#mode-display` status badge is RETAINED (it carries snap feedback: pick-anchor, snap-failed, attached). Left-click object selection must remain completely untouched when snap is disarmed. No per-row controls in the placed list (rows are already full).
+
+  **OPEN SUB-QUESTION (to resolve when building):** the two entry points differ — place-and-attach begins from the catalog (tent on cursor), reposition begins from an object already on the map. The unified design must handle both entry points gracefully. Also still to design: exact anchor/mover assignment mechanism and commit location.
+
+  **DECISION 2 — Snap is NOT a standalone task.** It is folded into the #11/#15 header rework, because snap needs header space and the header needs decluttering regardless. They are to be designed and built together. This is why former item 3a is superseded rather than scheduled on its own.
+
+  **DECISION 3 — DEFERRED, open question for the header work: save-state indicator honesty.** When the header save-state chrome (currently "Restore Autosave" button + "Autosaved <timestamp>" text) is regrouped/collapsed during #11/#15, the labeling must not overclaim — concern on record that a bare "Saved" label could mislead (autosave writes to localStorage only and is weaker than Save Plan; and a debounced write is pending for up to 500ms after an edit). NOT decided — parked to be settled when the header is designed, because it dovetails with the save-state grouping. Reference: `SESSION_DEBOUNCE_MS = 500` (line 561).
+
+  **REJECTED / SET-ASIDE ALTERNATIVES (record so they are not relitigated):**
+  - **Sidebar pair-picker** (assign anchor/mover via sidebar controls): REJECTED — placed-list rows are full; splits user attention between sidebar assignment and on-map aiming; adds chrome.
+  - **Right-click to assign anchor/mover:** REJECTED AS PRIMARY mechanism — right-click is second-class on a trackpad, is invisible/undiscoverable, and there is no context-menu infrastructure today. May be added later as a mouse-only accelerator, but not as the foundation.
+  - **On-map "pill" button** (commit control pinned near the anchor): NOT rejected — SET ASIDE for reassessment when the dropdown is actually designed. It may earn a role later (e.g. an on-map commit control), or be revisited if the dropdown design gets stuck. Not to be relitigated as the primary mechanism, but it remains available.
 
 - **2026-06-26 — USGS NAIPPlus base-layer evaluation closed (item 20).** USGS NAIPPlus was evaluated as a toggleable second base layer and A/B tested against Esri World Imagery at two real hospital sites (UC Davis Medical Center; BAMC San Antonio) at working placement zoom. NAIP was visibly lower resolution at the zoom that matters for placement, despite deeper max zoom. The esri-leaflet dependency and dynamic-service performance cost were not justified. The evaluation branch state was reverted; Esri World Imagery retained as the sole base layer. *(No git commit records the eval — reverted — this Decisions entry is the authoritative record.)* Future paths if revisited: premium Esri/Maxar imagery via DHA ArcGIS authentication, or Mapbox/commercial sources if FedRAMP and licensing clear.
 - **2026-06-10 — Quickstart PDF retired permanently.** `VPC Mapping Tool - Quickstart.pdf` has been removed from the project. **`Portable Solution Site Mapping Tool - Quickstart.html`** is the sole quickstart source going forward; no PDF will be regenerated.
