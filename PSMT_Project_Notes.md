@@ -1,6 +1,6 @@
 # Portable Solution Site Mapping Tool — Project Notes
 
-*Last updated: 2026-06-26 — snap unified and folded into #11/#15 header rework; item 3a superseded; psmt-overhaul: 1.0 reframed as released/field-tested; working toward 1.1; items R, #1, #1b, #3b shipped; #20 closed.*
+*Last updated: 2026-06-28 — snap direction revised to ambient drag-snap (leading candidate, evaluated against the 2026-06-26 dropdown design); market/analog survey recorded; custom objects first-class for snap; survey-first rule adopted; psmt-overhaul: 1.0 reframed as released/field-tested; working toward 1.1; items R, #1, #1b, #3b shipped; #20 closed; item 3a superseded.*
 
 Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable Solution Site Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
 
@@ -198,6 +198,36 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 ---
 
 ## Decisions
+
+- **2026-06-28 — Snap direction revised to ambient drag-snap (leading candidate); market/analog survey; custom-object handling; survey-first rule.**
+
+  **CONTEXT:** This entry follows and partially revises the 2026-06-26 unified-snap decision (committed a44f3c3). After surveying how existing products handle this, the leading snap DIRECTION changed. The 2026-06-26 dropdown design is NOT erased — it remains the committed fallback and the thing the new direction is evaluated against before any snap is built.
+
+  **DECISION A — Snap direction revised to user-toggled AMBIENT DRAG-SNAP (leading candidate, not yet locked):** Instead of the Measure-style dropdown with explicit pick-anchor/pick-mover/commit, the leading direction is the consumer-standard ambient model:
+  - Snap mode is OFF by default (normal dragging, no magnet). The user turns snap mode ON via a control.
+  - While ON: dragging an object near another object's face makes it PULL flush to that face, with rotation matched, and a live alignment guide shown during the drag. Release commits.
+  - The dragged object is the mover; whatever it approaches is the anchor — assigned automatically by the drag. This DISSOLVES the explicit anchor/mover assignment problem and the two-entry-point open sub-question (drag a new catalog object near an existing one, or drag an existing object near another — same mechanism).
+  - Ctrl (or equivalent) temporarily SUPPRESSES the magnet mid-drag for free placement.
+  - Still one-time positioning, NO parent/child relationship (unchanged from 2026-06-26). A wrong snap is fixed by dragging again or undo.
+
+  This is the pattern used by Figma, Canva, Google Slides, PowerPoint, and the furniture/room planners (IKEA et al.) — near-zero learning curve, the right call for stressed users.
+
+  **SNAP STRENGTH:** start with ONE well-tuned default proximity threshold. Evaluate a small 2-3 NAMED-PRESET control (not a continuous slider — avoids pushing a meaningless number onto the user) as a fast-follow once the default is felt on real layouts. Presets cover the real range (loose/far-reaching magnet for rough field layout vs. tight/short-reach for fine alignment in clusters). Label by task-feel (e.g. "Loose/Tight") rather than mechanism ("Strong/Weak") — final wording TBD when built. The default IS the calibration the presets would center on, so it must come first.
+
+  **COSTS TO RESPECT (why this is not a trivial swap):** it hooks into the DRAG path — the most-used, most safety-sensitive interaction — rather than a self-contained mode; proximity-threshold tuning is a prototype-and-feel problem, not a spec; live-guide rendering needs clean teardown on release/cancel; regression-check BOTH safety invariants (two-tier overlap, fresh-open autosave) after touching drag.
+
+  **STATUS:** leading candidate to EVALUATE AGAINST the committed 2026-06-26 dropdown design before building snap. Not a locked reversal. To be decided with fresh eyes (and ideally a prototype) when snap is built inside #11/#15.
+
+  **DECISION B — Custom (user-added) objects are a first-class snap case:** The tool lets users add their own dimensioned objects (Custom Size workflow, vendor 'Custom', always rect) — not just TENT_DB catalog entries. This is an advantage over the closed-catalog furniture planners. Implications to carry into the snap build and the area-total work:
+  - Snap (ambient or otherwise) must work for custom objects as both mover AND anchor, not just catalog-to-catalog. Custom is always rect (simplest case for getSnapAttachLatLng) — must be an explicit test case.
+  - The parked per-object-area / facility-total feature must derive area from entered dimensions for custom objects (which carry no catalog sq-ft), not only from catalog values.
+
+  **SURVEY FINDINGS (survey-first; recorded so they are not re-run):** A market / open-source / analog survey was done before committing further snap work. No adoptable existing tool was found; PSMT occupies a real gap. Summary:
+  - **FIELD-HOSPITAL / HUMANITARIAN GIS:** vendors (BLU-MED, Western Shelter) offer layout as a CONSULTING SERVICE, not software. Humanitarian GIS (UNHCR/Azraq shelter-allocation, CartONG/HOT OSM mapping, RefuGIS/ArcGIS, UNHCR+GitHub AI) is camp MANAGEMENT / record-keeping of existing sites, requires GIS expertise — the opposite of PSMT's no-expertise goal. UNHCR standards work is doctrine/indicators (e.g. 30 sqm/person), not software. No self-serve, vendor-catalog, satellite-imagery placement tool exists.
+  - **INTERIOR / ROOM PLANNERS (closest analog):** IKEA room planner is structurally PSMT-for-furniture — a product-driven planner whose goal is confirming whether catalog items fit a specific space, fixed-dimension catalog objects, place + rotate only. This VALIDATES PSMT's constrained-catalog model (proven at retail scale). Category-standard features: drag-drop-instant-fit-check (PSMT has via overlap); 2D top-down / 3D toggle (PSMT is 2D satellite — 3D likely unnecessary for a logistics tool, noted not chased); PDF export with measurements + shopping list (PSMT has PDF; "what's placed → manifest" maps to the parked per-object-area item); snapping + measurement guides are table stakes (reinforces ambient-snap direction). PSMT's advantage: real satellite imagery as ground truth instead of manual wall entry; lightweight custom-object add instead of OBJ/FBX import. AR / "see it in my room" branch (IKEA Kreativ, photo-AI): not applicable — PSMT plans a site the user is NOT standing in, remotely; ruled out.
+  - **ROADMAP POINTERS (v2+, not now):** area-per-person / space-adequacy checks (standards-informed); site-suitability checklist (drainage/access/hazards); OpenStreetMap/HOT as openly-licensed tile data (relevant to the parked offline-tile-caching problem, where Esri licensing is a constraint).
+
+  **NEW WORKING RULE — SURVEY-FIRST:** Record that a standing rule was adopted and added to `.cursor/rules/behavior.mdc`: when taking up any new feature or function, the FIRST step is a survey of existing consumer/market/open-source products that have it — how they work, what's become the de facto standard — before designing PSMT's version. It is a starting input, not a mandate to copy (diverge deliberately when warranted). For PSMT-specific things with no analog, an empty result is valid and noted. Do the survey at the **start** of the feature, not after a design is drafted.
 
 - **2026-06-26 — Snap feature unified and folded into header rework (#11/#15).**
 

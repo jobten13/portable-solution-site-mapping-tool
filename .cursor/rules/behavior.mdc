@@ -30,6 +30,12 @@ This is a field-facing tool for mobile/field hospitals. Lives may depend on its 
 - When there is a real choice, present the options clearly and concisely, state a recommendation, and stop. Do not pick for the developer.
 - Once the developer has decided, implement that decision. Do not relitigate it.
 
+## Survey-first
+- When taking up any **new feature or function**, the first step is a **survey of existing consumer / market / open-source products** that have it — how they work, and what has become the de facto standard — **before** designing this tool's version.
+- The survey is a **starting input, not a mandate to copy**: diverge deliberately when warranted.
+- For tool-specific things with **no analog**, an empty result is valid and noted.
+- Do the survey at the **start** of the feature, not after a design is drafted.
+
 ## Reporting
 - Be precise and concise. Put the key question or decision at the end, clearly separated.
 - When you are wrong or have made a mistake, say so plainly, correct it, and move on. Do not pad or hedge.
