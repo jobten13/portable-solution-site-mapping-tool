@@ -666,6 +666,7 @@ let undoStack = [];
 let redoStack = [];
 // Session autosave
 let sessionSaveTimer = 0;
+let pendingSessionSaveOptions = {};
 // Search & overlap
 let pendingSearchResults = [];
 let overlapRaf = 0;
@@ -1766,7 +1767,7 @@ function loadScenarioFromData(data, options) {
   redoStack = [];
   updateUndoRedoButtons();
   setMode(options.fromRestore ? 'View Mode' : `Plan loaded (${objects.length} object(s))`);
-  if (!options.fromRestore) scheduleSaveSession();
+  if (!options.fromRestore) scheduleSaveSession({ allowEmptyOverwrite: data.objects.length === 0 });
 }
 
 function formatLastSaved(date) {
@@ -1796,9 +1797,25 @@ function updateLastSavedIndicator(date) {
   el.title = el.textContent + ' — stored in this browser only. Use Restore Autosave to reload (not automatic on open).';
 }
 
-function saveSession() {
+function getStoredSessionObjectCount() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.objects)) return 0;
+    return data.objects.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function saveSession(options) {
+  options = options || {};
   try {
     const data = buildScenarioData();
+    if (data.objects.length === 0 && !options.allowEmptyOverwrite) {
+      if (getStoredSessionObjectCount() > 0) return;
+    }
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
     updateLastSavedIndicator(new Date());
     updateRestoreButtonState();
@@ -1808,9 +1825,17 @@ function saveSession() {
   }
 }
 
-function scheduleSaveSession() {
+function scheduleSaveSession(options) {
+  const incoming = options || {};
+  pendingSessionSaveOptions = {
+    allowEmptyOverwrite: !!(pendingSessionSaveOptions.allowEmptyOverwrite || incoming.allowEmptyOverwrite)
+  };
   clearTimeout(sessionSaveTimer);
-  sessionSaveTimer = setTimeout(saveSession, SESSION_DEBOUNCE_MS);
+  sessionSaveTimer = setTimeout(() => {
+    const opts = pendingSessionSaveOptions;
+    pendingSessionSaveOptions = {};
+    saveSession(opts);
+  }, SESSION_DEBOUNCE_MS);
 }
 
 function updateRestoreButtonState() {
@@ -2366,7 +2391,11 @@ function deleteObj(id) {
   objects.splice(idx, 1);
   updateList();
   scheduleOverlapSummary();
-  scheduleSaveSession();
+  if (objects.length === 0) {
+    scheduleSaveSession({ allowEmptyOverwrite: true });
+  } else {
+    scheduleSaveSession();
+  }
   setMode('Object deleted. Use Undo in the header to restore.');
 }
 
@@ -2390,7 +2419,7 @@ function clearAll() {
   if (!confirm('Clear all placed objects?')) return;
   pushStateToUndo(); // so one Undo restores all
   resetPlacedObjects();
-  scheduleSaveSession();
+  scheduleSaveSession({ allowEmptyOverwrite: true });
   setMode('All objects cleared. Use Undo in the header to restore.');
 }
 
