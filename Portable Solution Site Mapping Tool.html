@@ -135,6 +135,7 @@ button.ghost:hover { background:#30363d; }
 button.danger { background:#da3633; }
 button.danger:hover { background:#f85149; }
 .header-btn { padding:6px 10px; font-size:11px; flex-shrink:0; }
+.header-btn.snap-mode-on { background:#1f6feb; border-color:#1f6feb; color:#fff; }
 #mode-display.mode-badge {
   flex:0 1 260px;
   min-width:0;
@@ -348,6 +349,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <div id="mode-display" class="mode-badge" role="status" aria-live="polite" title="Select a tent from the sidebar, then click the map to place. Press P with a tent selected to enter place mode. Click when active (or Esc) to return to view mode.">Select a tent from the sidebar, then click the map to place.</div>
   <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z or Cmd+Z). Up to 50 steps in this session. Cleared on page refresh — use Restore Autosave or Save Plan.">Undo</button>
   <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
+  <button type="button" class="ghost header-btn" id="btn-snap-mode" aria-pressed="false" aria-label="Snap off. Turn on to pull dragged structures flush to nearby faces and match rotation. Hold Ctrl or Cmd while dragging to suppress. Off by default." title="Snap off (click to turn on). When on, dragging near another structure's face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.">Snap off</button>
   <div class="header-tool-slot">
     <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distances or areas on the map. Use before or during placement to check site dimensions.">Measure ▾</button>
     <div id="measure-menu-panel" role="menu" style="display:none;position:fixed;top:0;left:0;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
@@ -420,7 +422,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" title="Name for the next structure. Appears on the map tooltip and placed list. Vendor and model name used if blank." />
       <p class="dim-note">Applied to next placement.</p>
 
-      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Select a placed object first. Next click on the map attaches to the nearest face (length or width end) and matches its rotation. Unchecks automatically after a successful snap.">
+      <label style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Select a placed object first. Next click on the map attaches to the nearest face (length or width end) and matches its rotation. Unchecks automatically after a successful snap.">
         <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
       </label>
       <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then pick a tent and click near the face to attach to. New structure matches target rotation. Nearest of four faces wins (two length ends, two width ends). Best for rect-to-rect; other shapes use bounding-box face midpoints. Unchecks automatically after a successful snap.</p>
@@ -552,6 +554,7 @@ const APP_META = {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DRAG_SUPPRESS_MS = 250;       // Ignore click shortly after drag (avoid accidental delete)
+const SNAP_PROXIMITY_DEFAULT_M = 4; // Ambient drag-snap magnet engage threshold (meters)
 /** Extra meters beyond half footprint size for rotate/delete handles (keep controls off the tent body). */
 const HANDLE_OUTSIDE_PADDING_M = 14;
 /** Pixel offset for tent info tooltip (direction 'top' → shift further above the shape). */
@@ -656,6 +659,7 @@ let areaMeasurePoints = [];
 let areaMeasureLayer = null;
 // Drag, select, handles
 let activeObjectDrag = null;
+let snapModeEnabled = false;
 let dragEndedAt = 0;
 let activeRotateDrag = null;
 let selectedObjectId = null;
@@ -913,10 +917,31 @@ function setMode(txt) {
   }
 }
 
+function updateSnapModeUI() {
+  const btn = document.getElementById('btn-snap-mode');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', String(snapModeEnabled));
+  btn.textContent = snapModeEnabled ? 'Snap on' : 'Snap off';
+  btn.classList.toggle('snap-mode-on', snapModeEnabled);
+  btn.setAttribute('aria-label', snapModeEnabled
+    ? 'Snap on. Dragging near another structure pulls flush and matches rotation. Hold Ctrl or Cmd while dragging to suppress.'
+    : 'Snap off. Turn on to pull dragged structures flush to nearby faces and match rotation. Hold Ctrl or Cmd while dragging to suppress. Off by default.');
+  btn.title = snapModeEnabled
+    ? 'Snap on. Dragging near another structure\'s face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Esc turns snap off.'
+    : 'Snap off (click to turn on). When on, dragging near another structure\'s face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.';
+}
+
+function toggleSnapMode() {
+  snapModeEnabled = !snapModeEnabled;
+  updateSnapModeUI();
+}
+
 function resetViewMode() {
   cancelPlacing();
   measureMode = false;
   areaMeasureMode = false;
+  snapModeEnabled = false;
+  updateSnapModeUI();
   endObjectDrag();
   endRotateDrag();
   setMode('View Mode');
@@ -1093,6 +1118,9 @@ function startObjectDrag(obj, startLatlng) {
     obj,
     startMouse: startLatlng,
     startCenter: L.latLng(obj.latlng.lat, obj.latlng.lng),
+    startAngleDeg: normalizeAngle(obj.angleDeg || 0),
+    snapAnchorId: null,
+    snapFace: null,
     moved: false
   };
   map.dragging.disable();
@@ -1101,7 +1129,7 @@ function startObjectDrag(obj, startLatlng) {
 
 function endObjectDrag() {
   if (!activeObjectDrag) return;
-  const { obj, moved } = activeObjectDrag;
+  const { obj, moved, snapAnchorId, snapFace } = activeObjectDrag;
   activeObjectDrag = null;
   map.dragging.enable();
   mapContainer.style.cursor = '';
@@ -1109,7 +1137,14 @@ function endObjectDrag() {
     dragEndedAt = Date.now();
     updateList();
     scheduleOverlapSummary();
-    setMode(`Moved ${sanitizeLabel(obj.label)}`);
+    let statusMsg = `Moved ${sanitizeLabel(obj.label)}`;
+    if (snapAnchorId != null) {
+      const anchor = getObjectById(snapAnchorId);
+      if (anchor && objects.includes(anchor)) {
+        statusMsg = `Snapped to ${sanitizeLabel(anchor.label)} (${snapFace} face)`;
+      }
+    }
+    setMode(statusMsg);
     scheduleSaveSession();
   }
 }
@@ -2040,11 +2075,33 @@ map.on('mousemove', e => {
     if (Math.abs(dLat) > 1e-8 || Math.abs(dLng) > 1e-8) {
       activeObjectDrag.moved = true;
     }
-    activeObjectDrag.obj.latlng = L.latLng(
+    const freeLatLng = L.latLng(
       activeObjectDrag.startCenter.lat + dLat,
       activeObjectDrag.startCenter.lng + dLng
     );
-    drawObject(activeObjectDrag.obj);
+    const suppress = e.originalEvent && (e.originalEvent.ctrlKey || e.originalEvent.metaKey);
+    const drag = activeObjectDrag;
+    const obj = drag.obj;
+    if (snapModeEnabled && !suppress) {
+      const best = findNearestSnapCandidate(obj, freeLatLng);
+      if (best) {
+        obj.latlng = best.latlng;
+        obj.angleDeg = normalizeAngle(best.anchor.angleDeg || 0);
+        drag.snapAnchorId = best.anchor.id;
+        drag.snapFace = best.face;
+      } else {
+        obj.latlng = freeLatLng;
+        obj.angleDeg = drag.startAngleDeg;
+        drag.snapAnchorId = null;
+        drag.snapFace = null;
+      }
+    } else {
+      obj.latlng = freeLatLng;
+      obj.angleDeg = drag.startAngleDeg;
+      drag.snapAnchorId = null;
+      drag.snapFace = null;
+    }
+    drawObject(obj);
   }
 });
 
@@ -2208,6 +2265,22 @@ function metersToDeg(center, dx, dy) {
   const dLat = (dy / R) * (180 / Math.PI);
   const dLng = (dx / R) * (180 / Math.PI) / Math.cos(latRad);
   return [center.lat + dLat, center.lng + dLng];
+}
+
+function findNearestSnapCandidate(mover, freeLatLng) {
+  const moverLen = mover.lengthM != null ? mover.lengthM : mover.widthM;
+  const moverWid = mover.widthM;
+  let best = null;
+  for (const obj of objects) {
+    if (obj.id === mover.id) continue;
+    const result = getSnapAttachLatLng(obj, moverLen, moverWid, freeLatLng);
+    if (!result) continue;
+    const gap = map.distance(freeLatLng, result.latlng);
+    if (gap <= SNAP_PROXIMITY_DEFAULT_M && (best === null || gap < best.gap)) {
+      best = { anchor: obj, latlng: result.latlng, face: result.face, gap };
+    }
+  }
+  return best;
 }
 
 // Given a target object and the new tent's dimensions, return { latlng, face } where
@@ -3395,6 +3468,11 @@ rebuildManageRolesPanel();
 })();
 updateOfflineBanner();
 updateUndoRedoButtons();
+updateSnapModeUI();
+(function snapModeInit() {
+  const btn = document.getElementById('btn-snap-mode');
+  if (btn) btn.addEventListener('click', toggleSnapMode);
+})();
 updateMeasureUI();
 (function measureMenuInit() {
   const menuBtn = document.getElementById('btn-measure-menu');
