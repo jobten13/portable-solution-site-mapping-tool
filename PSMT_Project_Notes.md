@@ -1,6 +1,6 @@
 # Portable Solution Site Mapping Tool — Project Notes
 
-*Last updated: 2026-06-29 — autosave empty-overwrite fix (8b46241) and ambient drag-snap phase 1 (07fa119) shipped; snap tuning backlog added; #6 amended with bulk-delete confirm; search-picker-clipping, Nominatim-email, and autosave-Part-2 parked.*
+*Last updated: 2026-06-29 — ambient drag-snap engage threshold made size-proportional + clamped (entry-jump fix); long-face capture follow-up logged, tied to shape-fidelity audit; autosave empty-overwrite fix (8b46241) and ambient drag-snap phase 1 (07fa119) shipped; snap tuning backlog added; #6 amended with bulk-delete confirm; search-picker-clipping, Nominatim-email, and autosave-Part-2 parked.*
 
 Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable Solution Site Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
 
@@ -109,13 +109,14 @@ This section defines the scope of work on the **psmt-overhaul** branch (forked f
 
 Open snap feel/geometry work following phase 1 ship (07fa119). None omitted.
 
-1. **Entry jump** — improved but still present; vestibules and small objects jump MORE than large tents. A flat 4m threshold and a fixed pull don't scale with object size. Consider a size-proportional engage distance.
-2. **Stickiness on break** — must currently turn snap off to drag a snapped object away. Hysteresis was tried and was wrong (see 2026-06-29 update); explore making the break EASIER.
-3. **Map blur/pan during drag** — observed (real: full map blurred/panned) but NOT reproducible. Diagnostic for next occurrence: check whether the map CENTER COORDINATES actually change (true pan — likely a premature mouseup re-enabling map drag during fast/jerky dragging) vs the object merely jumping (perceptual). Likely chain: fighting sticky snap → thrash → premature mouseup → map grab.
-4. **1935 short-end won't attach** — the WS GK1935 attaches its long wall to a neighbor's long side (e.g. 2032.5) rather than its short end. Triage needed: is this a bbox-face limitation, or an independent face-selection bug? Needs a read-only geometry classification.
-5. **True-face snapping for irregular shapes** — BLOCKED on the object/shape-fidelity audit. Cannot snap to true faces until shapes are audited/corrected against VENDOR_SPECS_DIGEST.md (e.g. GK1935 elongated-octagon vs cut-corner-rectangle question). Irregular-shape snap can't be fixed until the shapes themselves are.
-6. **How-to / help text still references the now-hidden #snap-to-selected checkbox** — fold this doc-sync into the next snap commit.
-7. **Snap strength presets** — 2-3 named, task-framed (loose/tight) presets — as a fast-follow once the default threshold is tuned (already partly recorded in the 2026-06-28 entry).
+1. **Entry jump** — **ADDRESSED** (this commit): entry-jump feel improved by the size-proportional clamped engage threshold shipped here — `SNAP_PROXIMITY_K=0.4`, `FLOOR=0.75m`, `CEILING=4m`; engage = clamp(K × max(widthM, lengthM), FLOOR, CEILING), replacing the flat 4m threshold. Remaining feel work on long-face capture is superseded by backlog item 2 below.
+2. **Long-face capture** — tight: on a long tent side the engage zone is a small ball around the face **midpoint**, so a small mover (e.g. vestibule) must be dragged near center before snap engages. Side-effect of the size-proportional threshold (capture radius = max jump = the same number, by design of the engage test). **REVISIT AFTER** the object/shape-fidelity audit — corrected shapes change which faces exist (elongated octagon, plus-hub) and may change the right fix. Candidate directions: a visible guide line to the intended snap point (makes a small capture zone acceptable under stress) and/or along-face attach instead of midpoint-only. Tie to true-face snapping (backlog item 6).
+3. **Stickiness on break** — must currently turn snap off to drag a snapped object away. Hysteresis was tried and was wrong (see 2026-06-29 update); explore making the break EASIER.
+4. **Map blur/pan during drag** — observed (real: full map blurred/panned) but NOT reproducible. Diagnostic for next occurrence: check whether the map CENTER COORDINATES actually change (true pan — likely a premature mouseup re-enabling map drag during fast/jerky dragging) vs the object merely jumping (perceptual). Likely chain: fighting sticky snap → thrash → premature mouseup → map grab.
+5. **1935 short-end won't attach** — the WS GK1935 attaches its long wall to a neighbor's long side (e.g. 2032.5) rather than its short end. Triage needed: is this a bbox-face limitation, or an independent face-selection bug? Needs a read-only geometry classification.
+6. **True-face snapping for irregular shapes** — BLOCKED on the object/shape-fidelity audit. Cannot snap to true faces until shapes are audited/corrected against VENDOR_SPECS_DIGEST.md (e.g. GK1935 elongated-octagon vs cut-corner-rectangle question). Irregular-shape snap can't be fixed until the shapes themselves are.
+7. **How-to / help text still references the now-hidden #snap-to-selected checkbox** — fold this doc-sync into the next snap commit.
+8. **Snap strength presets** — 2-3 named, task-framed (loose/tight) presets — as a fast-follow once the default threshold is tuned (already partly recorded in the 2026-06-28 entry).
 
 ---
 

@@ -554,7 +554,9 @@ const APP_META = {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DRAG_SUPPRESS_MS = 250;       // Ignore click shortly after drag (avoid accidental delete)
-const SNAP_PROXIMITY_DEFAULT_M = 4; // Ambient drag-snap magnet engage threshold (meters)
+const SNAP_PROXIMITY_K = 0.4;           // engage ∝ max(widthM, lengthM)
+const SNAP_PROXIMITY_FLOOR_M = 0.75;    // minimum engage distance (m)
+const SNAP_PROXIMITY_CEILING_M = 4;     // maximum engage distance (m); was flat default
 /** Extra meters beyond half footprint size for rotate/delete handles (keep controls off the tent body). */
 const HANDLE_OUTSIDE_PADDING_M = 14;
 /** Pixel offset for tent info tooltip (direction 'top' → shift further above the shape). */
@@ -2267,16 +2269,25 @@ function metersToDeg(center, dx, dy) {
   return [center.lat + dLat, center.lng + dLng];
 }
 
+function snapEngageThresholdM(mover) {
+  const size = Math.max(mover.widthM, mover.lengthM != null ? mover.lengthM : mover.widthM);
+  return Math.min(
+    SNAP_PROXIMITY_CEILING_M,
+    Math.max(SNAP_PROXIMITY_FLOOR_M, SNAP_PROXIMITY_K * size)
+  );
+}
+
 function findNearestSnapCandidate(mover, freeLatLng) {
   const moverLen = mover.lengthM != null ? mover.lengthM : mover.widthM;
   const moverWid = mover.widthM;
+  const engageM = snapEngageThresholdM(mover);
   let best = null;
   for (const obj of objects) {
     if (obj.id === mover.id) continue;
     const result = getSnapAttachLatLng(obj, moverLen, moverWid, freeLatLng);
     if (!result) continue;
     const gap = map.distance(freeLatLng, result.latlng);
-    if (gap <= SNAP_PROXIMITY_DEFAULT_M && (best === null || gap < best.gap)) {
+    if (gap <= engageM && (best === null || gap < best.gap)) {
       best = { anchor: obj, latlng: result.latlng, face: result.face, gap };
     }
   }
