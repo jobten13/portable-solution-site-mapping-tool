@@ -593,7 +593,8 @@ const TENT_DB = {
       cornerCutL: 9.333,  // 9'4" along length axis
       note:"GK1935 – 18'7\"×33'11\" elongated octagon (SW-1935), 570 sq ft" },
     { name:"GK20", widthFt:18.583, lengthFt:18.583, shape:"octagon",
-      note:"GK20 – 18'7\"×18'7\" octagon (SW-20 spec), 286 sq ft" },
+      // SW-20: regular octagon 18'7" across flats; 7'8" equal facets; ~286 sq ft
+      note:"GK20 – 18'7\" across flats, 7'8\" facets (SW-20), regular octagon, ~286 sq ft" },
     { name:"Vestibule", widthFt:7.667, lengthFt:7.333, shape:"rect",
       note:"Vestibule SO-VC8H – 7'8\"×7'4\" footprint (56 sq ft); connects to GK1935 end face; 6' sidewall height" },
     { name:"Generator 70 kVA (on trailer)", widthFt:6.04, lengthFt:14.12, shape:"rect",
@@ -835,7 +836,7 @@ function createTentCard(tent, idx) {
 
 function dimStr(tent) {
   if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
-  if (tent.shape === 'octagon') return `⯃ ${tent.widthFt}' octagon`;
+  if (tent.shape === 'octagon') return `⯃ 18'7" across, 7'8" faces`;
   if (tent.shape === 'elongated-octagon') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated oct.`;
   if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
   if (tent.shape === 'ellipse') return `◯ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
@@ -2188,7 +2189,7 @@ function drawObject(obj) {
   const tip = obj.shape === 'circle'
     ? `<b>${safeLabel}</b><br>Ø ${wFt} ft`
     : obj.shape === 'octagon'
-    ? `<b>${safeLabel}</b><br>Octagon Ø ${wFt} ft`
+    ? `<b>${safeLabel}</b><br>Octagon — 18'7" across, 7'8" faces`
     : obj.shape === 'elongated-octagon'
     ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' elong. octagon`
     : obj.shape === 'plus'
@@ -2346,23 +2347,23 @@ function rotateOffsets(offsets, angleDeg) {
   ]);
 }
 
-// Regular octagon inscribed in a square of side=widthM
-// A regular octagon with "diameter" d has corner cuts of d*(1 - 1/sqrt(2))/2 ≈ d*0.1464
+// Regular octagon inscribed in a square of side widthM (across flats).
+// Corner inset along each edge: t = widthM / (2 + √2). All 8 sides equal: widthM * (√2 - 1).
 function createGeoPolygon(center, widthM, heightM, type, angleDeg, style) {
   let points = [];
   if (type === 'octagon') {
     const hw = widthM / 2;
-    const c = hw * (1 - 1 / Math.sqrt(2)); // corner cut size
+    const t = widthM / (2 + Math.sqrt(2)); // GK20 SW-20: 18'7" across → 7'8" equal facets
     // 8 points clockwise from top-left going right
     const offsets = [
-      [ c - hw,  hw],  // top-left → top-right direction
-      [ hw - c,  hw],
-      [ hw,  hw - c],
-      [ hw, -hw + c],
-      [ hw - c, -hw],
-      [ c - hw, -hw],
-      [-hw, -hw + c],
-      [-hw,  hw - c],
+      [ t - hw,  hw],  // top-left → top-right direction
+      [ hw - t,  hw],
+      [ hw,  hw - t],
+      [ hw, -hw + t],
+      [ hw - t, -hw],
+      [ t - hw, -hw],
+      [-hw, -hw + t],
+      [-hw,  hw - t],
     ];
     points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
   }
@@ -2531,7 +2532,7 @@ function createObjectListItem(o) {
   const wFt = (o.widthM / FT_TO_M).toFixed(0);
   const lFt = (o.lengthM / FT_TO_M).toFixed(0);
   const dims = o.shape === 'circle' ? `Ø${wFt}'`
-    : o.shape === 'octagon' ? `Oct Ø${wFt}'`
+    : o.shape === 'octagon' ? `Oct 18'7"`
     : o.shape === 'elongated-octagon' ? `${wFt}'×${lFt}' Oct`
     : o.shape === 'plus' ? `${wFt}' Plus`
     : o.shape === 'ellipse' ? `${wFt}'×${lFt}' ◯`

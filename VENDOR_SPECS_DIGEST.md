@@ -50,7 +50,7 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 | Model | Spec source | Spec dimensions | Area | Shape | Tool current |
 |-------|-------------|-----------------|------|-------|--------------|
 | **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** (5.7 × 10.4 m usable); diagram labels **7'6"** and **9'4"** corner cuts (length of cut lines on diagram; tool uses inward axis projections) | 570 ft² | elongated-octagon | 18.583 × 33.917, **cornerCutW 5.303**, cornerCutL 9.333 ✓ (W: 7'6" / √2 along width axis) |
-| **GK20** | Instructions - WS_GK20 Set Up.pdf; Western-Shelter-_-Product-Catalog.pdf (no dedicated SW-20 spec sheet) | **18' 7" × 18' 7"** octagon (tool per SW-20/setup) | 286 ft² | octagon | 18.583 × 18.583 ✓ |
+| **GK20** | Instructions - WS_GK20 Set Up.pdf; Western-Shelter-_-Product-Catalog.pdf (no dedicated SW-20 spec sheet) | **18' 7"** across flats; **7' 8"** equal facets; regular octagon (SW-20) | ~286 ft² | octagon | 18.583 × 18.583 ✓ |
 | **Vestibule (SO-VC8H)** | Western Shelter SO-VC8H spec (see Vendor Specs and Manuals); replaces prior misread (6' was sidewall height, not depth) | Footprint **7'8" × 7'4"**; **6'** sidewall height | 56 ft² | rect | **7.667 × 7.333** ✓ |
 | **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ |
 
@@ -77,7 +77,7 @@ All of the following are implemented in the tool.
 4. **ZUMRO Model 400**: 20×21 exterior.
 5. **ZUMRO Model 600**: 20.4×31 exterior.
 6. **HDT**: Base-X 8D36 as ellipse 31×37; 6D31 removed (product lineup: 305 and 8D36 only).
-7. **Western Shelter GK20**: 18'7"×18'7" octagon (SW-20/setup); Generator 70 kVA on trailer 14.12'×6.04'.
+7. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft; Generator 70 kVA on trailer 14.12'×6.04'.
 8. **Western Shelter GK1935**: Diagram corner **7'6"** on width axis is the **diagonal cut** length on the drawing; `cornerCutW` in the tool is the **inward projection along the width axis** = 7.5 / √2 ≈ **5.303 ft** (with `cornerCutL` unchanged at 9.333 ft for 9'4" on length axis).
 9. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
 10. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
@@ -111,7 +111,7 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **BLU-MED** | Spec source for 2032.5/2039/Vestibule set to Instructions & Manuals filenames (no TM_*.pdf in Spec Sheets; dimensions from manuals). Tool current: all ✓ (7×8 Vestibule implemented). |
 | **DLX** | Spec filenames set to exact tech sheets in folder (Updated 11_18_24, 11_19_24). Tool current: X-24, X-32, X-HUB all ✓. |
 | **HDT Global** | Spec sheet references updated to **HDT_305shelter_13-13.pdf** and **HDT_8D36Shelter_11.pdf** (folder does not contain _11 for 305 or _10 for 8D36). 6D31 row removed from table (already removed from tool). Tool current: 305 and 8D36 ✓. |
-| **Western Shelter** | Folder name set to **Western Shelter & Third Party**. GK20: source set to Instructions - WS_GK20 Set Up and Product Catalog; tool uses 18'7"×18'7" (no SW-20.pdf in folder). Generator: trailer data sheet in folder is **TRLR75XF2**; 70 kVA dimensions (14.12'×6.04') noted as TRLR70US from generator/trailer spec. Tool current: all ✓. |
+| **Western Shelter** | Folder name set to **Western Shelter & Third Party**. GK20: source set to Instructions - WS_GK20 Set Up and Product Catalog; tool uses 18'7" across flats, 7'8" equal facets, regular octagon (SW-20; no SW-20.pdf in folder). Generator: trailer data sheet in folder is **TRLR75XF2**; 70 kVA dimensions (14.12'×6.04') noted as TRLR70US from generator/trailer spec. Tool current: all ✓. |
 | **ZUMRO** | Tool current: Model 400, 600, Quad Interface, Interconnect ✓. Interconnect dimensions from ZUMRO_Interconnect_Dimensions.md (7.17'×6.92' rect). |
 | **Tables** | “Recommendation” column removed; “Tool current” column now reflects implemented values only, all ✓. |
 | **Source Files Used** | Section rewritten to list actual paths and filenames under Vendor Specs and Manuals. |
