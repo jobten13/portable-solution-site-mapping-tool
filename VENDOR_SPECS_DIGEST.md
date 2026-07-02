@@ -49,7 +49,7 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 
 | Model | Spec source | Spec dimensions | Area | Shape | Tool current |
 |-------|-------------|-----------------|------|-------|--------------|
-| **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** (5.7 × 10.4 m usable); diagram labels **7'6"** and **9'4"** corner cuts (length of cut lines on diagram; tool uses inward axis projections) | 570 ft² | elongated-octagon | 18.583 × 33.917, **cornerCutW 5.303**, cornerCutL 9.333 ✓ (W: 7'6" / √2 along width axis) |
+| **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** overall; symmetric corner cuts; **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20) | ~570 ft² | elongated-octagon | 18.583 × 33.917, **cornerCutW 5.421**, cornerCutL 5.421 ✓ (symmetric 45° cut; each leg 5.421 ft → 7'8" exterior face) |
 | **GK20** | Instructions - WS_GK20 Set Up.pdf; Western-Shelter-_-Product-Catalog.pdf (no dedicated SW-20 spec sheet) | **18' 7"** across flats; **7' 8"** equal facets; regular octagon (SW-20) | ~286 ft² | octagon | 18.583 × 18.583 ✓ |
 | **Vestibule (SO-VC8H)** | Western Shelter SO-VC8H spec (see Vendor Specs and Manuals); replaces prior misread (6' was sidewall height, not depth) | Footprint **7'8" × 7'4"**; **6'** sidewall height | 56 ft² | rect | **7.667 × 7.333** ✓ |
 | **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ |
@@ -78,7 +78,7 @@ All of the following are implemented in the tool.
 5. **ZUMRO Model 600**: 20.4×31 exterior.
 6. **HDT**: Base-X 8D36 as ellipse 31×37; 6D31 removed (product lineup: 305 and 8D36 only).
 7. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft; Generator 70 kVA on trailer 14.12'×6.04'.
-8. **Western Shelter GK1935**: Diagram corner **7'6"** on width axis is the **diagonal cut** length on the drawing; `cornerCutW` in the tool is the **inward projection along the width axis** = 7.5 / √2 ≈ **5.303 ft** (with `cornerCutL` unchanged at 9.333 ft for 9'4" on length axis).
+8. **Western Shelter GK1935**: Overall **18'7"×33'11"**; **symmetric** corner cuts (each leg **5.421 ft**); **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20); **~570 sq ft**.
 9. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
 10. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
 
@@ -125,7 +125,7 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 
 | Change | Details |
 |--------|--------|
-| **GK1935** | `cornerCutW` in tool is **5.303 ft** (inward projection along width axis); spec diagram **7'6"** treated as diagonal cut length → divide by √2. Table and summary updated; `cornerCutL` **9.333** unchanged. |
+| **GK1935** | **Symmetric** corner cut: **`cornerCutW` and `cornerCutL` both 5.421 ft** (45° legs → **7'8"** exterior corner face); overall **18'7"×33'11"**; **~570 sq ft** usable; sheet **7'6"** = interior clear-span (same convention as GK20). Table and summary updated. |
 | **Vestibule SO-VC8H** | Footprint **7.667 × 7.333 ft** (7'8" × 7'4"), 56 sq ft; **6'** documented as sidewall height. Replaces incorrect 8×6 (6' had been misread as depth). |
 
 ---

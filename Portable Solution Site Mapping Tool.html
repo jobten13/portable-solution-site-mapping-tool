@@ -588,10 +588,10 @@ const TENT_DB = {
   ],
   "Western Shelter": [
     { name:"GK1935", widthFt:18.583, lengthFt:33.917, shape:"elongated-octagon",
-      // SW-1935: 18'7" × 33'11" overall; diagram corner cuts 7'6" (width), 9'4" (length)
-      cornerCutW: 5.303,   // 7'6" along width axis
-      cornerCutL: 9.333,  // 9'4" along length axis
-      note:"GK1935 – 18'7\"×33'11\" elongated octagon (SW-1935), 570 sq ft" },
+      // SW-1935: symmetric 45° corner cut; each leg 5.421 ft → 7'8" exterior corner face (sheet 7'6" = interior clear-span, same convention as GK20)
+      cornerCutW: 5.421,
+      cornerCutL: 5.421,
+      note:"GK1935 – 18'7\"×33'11\", symmetric corner cuts, 7'8\" corner face (SW-1935), ~570 sq ft" },
     { name:"GK20", widthFt:18.583, lengthFt:18.583, shape:"octagon",
       // SW-20: regular octagon 18'7" across flats; 7'8" equal facets; ~286 sq ft
       note:"GK20 – 18'7\" across flats, 7'8\" facets (SW-20), regular octagon, ~286 sq ft" },
