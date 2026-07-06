@@ -614,9 +614,9 @@ const TENT_DB = {
   ],
   "ZUMRO": [
     { name:"Quad Interface", widthFt:19.5, lengthFt:29.4, shape:"plus",
-      // Zumro Quad Interface spec: 29.4' L, 19.5' exterior W, 15.7' interior (arm), 454 sq ft
-      armWidthFt: 15.7,  // interior tunnel/arm width per spec
-      note:"Quad Interface – 29.4'×19.5' exterior, 15.7' arm (Zumro Quad spec), 454 sq ft" },
+      // Zumro Quad Interface: exterior footprint 29.4'×19.5' (mapped); 15.7' interior width; ~454 sq ft interior floor (air-beam — beams reduce usable area below exterior)
+      armWidthFt: 15.7,  // interior width per spec; sets arm/hub geometry in plus renderer
+      note:"Quad Interface – exterior footprint 29.4'×19.5' (site map); interior width 15.7', ~454 sq ft interior floor (air-beam — inflated beams reduce usable area below exterior); 4 Quad connection faces; side connectors ~1.9' E/W, end ~6.85' N/S (Zumro Quad spec)" },
     { name:"Model 400", widthFt:20, lengthFt:21, shape:"rect",
       note:"Model 400 – 21'L×20'W exterior (Zumro 400 Specs), 400 sq ft" },
     { name:"Model 600", widthFt:20.4, lengthFt:31, shape:"rect",

@@ -62,7 +62,7 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 |-------|-------------|--------------------------------------|------|-------|--------------|
 | **Model 400** | Zumro 400 Specs.pdf (Spec Sheets) | Length 21', Exterior width 20', Interior 19.2'; heights 10' / 10.7' | 400 ft² | rect | 20 × 21 (exterior) ✓ |
 | **Model 600** | Zumro 600 Specs.pdf (Spec Sheets) | Length 31', Exterior width 20.4', Interior 19.3'; heights 9' / 9.7' | 600 ft² | rect | 20.4 × 31 (exterior) ✓ |
-| **Quad Interface** | Zumro Quad Interface.pdf (Spec Sheets) | Length 29.4', Exterior width 19.5', Interior 15.7'; heights 8.5' / 8' | 454 ft² | plus | 19.5 × 29.4, armWidthFt 15.7 ✓ |
+| **Quad Interface** | Zumro Quad Interface.pdf (Spec Sheets) | Exterior footprint **29.4' × 19.5'** (what the tool maps); interior width **15.7'**; four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S; heights 8.5' / 8' | **~454 ft² interior** floor (air-beam — inflated beams reduce usable interior below exterior footprint); exterior footprint ~521 ft² | plus | 19.5 × 29.4, armWidthFt 15.7 ✓ (exterior footprint; render faithful — no geometry change) |
 | **Interconnect** | ZUMRO_Interconnect_Dimensions.md; engineering drawing (ZUMRO_Interconnect_to_WS / Photo - Zumro Interconnect to Western Shelter.png) | **7.17' × 6.92'** (86" × 83") | rect | 7.17 × 6.92 ✓ |
 
 ---
@@ -76,11 +76,12 @@ All of the following are implemented in the tool.
 3. **DLX X-32**: 32×21.5 (L×W per tech sheet).
 4. **ZUMRO Model 400**: 20×21 exterior.
 5. **ZUMRO Model 600**: 20.4×31 exterior.
-6. **HDT**: Base-X 8D36 as ellipse 31×37; 6D31 removed (product lineup: 305 and 8D36 only).
-7. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft; Generator 70 kVA on trailer 14.12'×6.04'.
-8. **Western Shelter GK1935**: Overall **18'7"×33'11"**; **symmetric** corner cuts (each leg **5.421 ft**); **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20); **~570 sq ft**.
-9. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
-10. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
+6. **ZUMRO Quad Interface**: Exterior footprint **29.4'×19.5'** (what the tool maps; render ~521 sq ft); interior width **15.7'**; **~454 sq ft interior** floor space (air-beam — inflated beams reduce usable interior below exterior footprint); four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S. Render faithful to exterior footprint; no geometry change.
+7. **HDT**: Base-X 8D36 as ellipse 31×37; 6D31 removed (product lineup: 305 and 8D36 only).
+8. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft; Generator 70 kVA on trailer 14.12'×6.04'.
+9. **Western Shelter GK1935**: Overall **18'7"×33'11"**; **symmetric** corner cuts (each leg **5.421 ft**); **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20); **~570 sq ft**.
+10. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
+11. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
 
 ---
 
@@ -112,7 +113,7 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **DLX** | Spec filenames set to exact tech sheets in folder (Updated 11_18_24, 11_19_24). Tool current: X-24, X-32, X-HUB all ✓. |
 | **HDT Global** | Spec sheet references updated to **HDT_305shelter_13-13.pdf** and **HDT_8D36Shelter_11.pdf** (folder does not contain _11 for 305 or _10 for 8D36). 6D31 row removed from table (already removed from tool). Tool current: 305 and 8D36 ✓. |
 | **Western Shelter** | Folder name set to **Western Shelter & Third Party**. GK20: source set to Instructions - WS_GK20 Set Up and Product Catalog; tool uses 18'7" across flats, 7'8" equal facets, regular octagon (SW-20; no SW-20.pdf in folder). Generator: trailer data sheet in folder is **TRLR75XF2**; 70 kVA dimensions (14.12'×6.04') noted as TRLR70US from generator/trailer spec. Tool current: all ✓. |
-| **ZUMRO** | Tool current: Model 400, 600, Quad Interface, Interconnect ✓. Interconnect dimensions from ZUMRO_Interconnect_Dimensions.md (7.17'×6.92' rect). |
+| **ZUMRO** | Tool current: Model 400, 600, Quad Interface (exterior footprint 29.4'×19.5'; ~454 sq ft interior floor to 15.7' interior width), Interconnect ✓. Interconnect dimensions from ZUMRO_Interconnect_Dimensions.md (7.17'×6.92' rect). |
 | **Tables** | “Recommendation” column removed; “Tool current” column now reflects implemented values only, all ✓. |
 | **Source Files Used** | Section rewritten to list actual paths and filenames under Vendor Specs and Manuals. |
 
@@ -132,3 +133,12 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 
 **Date:** 2026-04-02  
 **Action:** **HDT Base-X 305** width corrected from interior **18'** to outer cover **20.5'** (20'6") per **HDT_305shelter** spec sheet diagram (digest §3 table updated).
+
+---
+
+**Date:** 2026-07-06  
+**Action:** Digest aligned with `TENT_DB` note correction for **ZUMRO Quad Interface** (exterior footprint vs interior floor space).
+
+| Change | Details |
+|--------|--------|
+| **Quad Interface** | Exterior footprint **29.4'×19.5'** mapped in tool (~521 sq ft rendered); **~454 sq ft** documented as **interior** floor space to interior width **15.7'** (air-beam — inflated beams reduce usable interior below exterior footprint). Four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S. Render faithful to exterior footprint; no geometry change. Table, summary, and verification row updated. |
