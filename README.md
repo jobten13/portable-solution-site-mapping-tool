@@ -10,7 +10,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 |------|----------------|
 | **Map** | Esri satellite (default), street basemap toggle, hybrid place labels, live zoom/scale (`1:n`), cursor coordinates overlay |
 | **Catalog** | Five vendors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT) with spec-based footprints — see [Vendor catalog](#vendor-catalog) |
-| **Shapes** | Rectangle, octagon, elongated octagon, plus (hub), ellipse — plus **Custom Size** rectangles |
+| **Shapes** | Rectangle, octagon, cut-corner rectangle, plus (hub), ellipse — plus **Custom Size** rectangles |
 | **Placement** | Click model → click map; drag to move; orange handle rotate (Shift = 5°); red ✕ or Shift+click delete |
 | **Snap** | **Snap to selected object** — edge-to-edge on nearest of four faces; matches target rotation (best rect-to-rect) |
 | **Spacing** | Per-object clearance buffer (0–30 ft, presets); dashed ring; **footprint** (red) vs **buffer** (amber) advisories; **Intentional** for accepted buffer-only conflicts |
@@ -70,7 +70,7 @@ Dimensions follow `VENDOR_SPECS_DIGEST.md`. Default vendor colors apply on place
 | **ZUMRO** | Quad Interface, Model 400, Model 600, Interconnect |
 | **HDT** | Base-X 305, Base-X Dome (8D36) |
 
-**Footprint shapes:** `rect`, `octagon`, `elongated-octagon`, `plus` (hubs), `ellipse` (dome).
+**Footprint shapes:** `rect`, `octagon`, `cut-corner-rectangle`, `plus` (hubs), `ellipse` (dome).
 
 ## Tooltips and map hints
 
@@ -94,7 +94,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 - **Footprint overlap (red):** Solid footprints intersect. Affected objects get a **red** outline on the map, a **red** left border in the placed list, and count toward **footprint** in the status bar. This is independent of clearance buffer.
 - **Buffer / clearance advisory (amber):** When **clearance buffer > 0** on at least one object, the **dashed** ring is tested against the other object’s footprint (and buffer–buffer where both have buffers). If footprints do **not** overlap but clearance still conflicts, those objects get an **amber** outline on the map and an **amber** left border in the list. Counts appear as **buffer** in the status bar (suffix `, N buffer`) and in the sidebar warning line.
 - **Intentional (buffer only):** Rows that are **amber-only** show an **Intentional** checkbox. Checking it marks that structure so it is omitted from buffer advisories (does **not** change footprint overlap). Stored in plans as `intentionalBufferOverlap` and in undo snapshots as `intentionalBuffer`.
-- **Geometry:** Overlap uses layer coordinates in the map projection (same space as Leaflet draws), including after pan/zoom, and supports non-rectangular footprints (plus, elongated octagon, ellipse, etc.).
+- **Geometry:** Overlap uses layer coordinates in the map projection (same space as Leaflet draws), including after pan/zoom, and supports non-rectangular footprints (plus, cut-corner rectangle, ellipse, etc.).
 
 ## Reference docs
 

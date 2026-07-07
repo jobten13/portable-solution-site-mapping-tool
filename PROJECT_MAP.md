@@ -282,7 +282,7 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 | 2216 | `normalizeAngle` |
 | 2220 | `rotateOffsets` |
 | 2233 | `createGeoPolygon` |
-| 2256 | `createGeoElongatedOctagon` |
+| 2375 | `createGeoCutCornerRectangle` |
 | 2289 | `createGeoEllipse` |
 | 2310 | `createGeoPlusSign` |
 | 2334 | `createGeoRect` |
@@ -366,11 +366,11 @@ Object keyed by vendor name → array of model entries.
 | `lengthFt` | yes | Length in feet |
 | `shape` | yes | Footprint type (below) |
 | `note` | yes | Spec summary; tent card `title` |
-| `cornerCutW` | optional | Elongated octagon — width-axis cut (ft) |
-| `cornerCutL` | optional | Elongated octagon — length-axis cut (ft) |
+| `cornerCutW` | optional | Cut-corner rectangle — width-axis cut (ft) |
+| `cornerCutL` | optional | Cut-corner rectangle — length-axis cut (ft) |
 | `armWidthFt` | optional | Plus/cross hub arm width (ft) |
 
-**Shape types used in catalog:** `rect`, `octagon`, `elongated-octagon`, `plus`, `ellipse`. (`circle` supported in drawing code; not in current catalog.)
+**Shape types used in catalog:** `rect`, `octagon`, `cut-corner-rectangle`, `plus`, `ellipse`. (`circle` supported in drawing code; not in current catalog.)
 
 Dimensions convert to meters at placement (`× FT_TO_M`).
 

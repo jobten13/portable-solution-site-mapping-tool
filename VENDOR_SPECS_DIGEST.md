@@ -49,7 +49,7 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 
 | Model | Spec source | Spec dimensions | Area | Shape | Tool current |
 |-------|-------------|-----------------|------|-------|--------------|
-| **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** overall; symmetric corner cuts; **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20) | ~570 ft² | elongated-octagon | 18.583 × 33.917, **cornerCutW 5.421**, cornerCutL 5.421 ✓ (symmetric 45° cut; each leg 5.421 ft → 7'8" exterior face) |
+| **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** overall; symmetric corner cuts; **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20) | ~570 ft² | cut-corner-rectangle | 18.583 × 33.917, **cornerCutW 5.421**, cornerCutL 5.421 ✓ (symmetric 45° cut; each leg 5.421 ft → 7'8" exterior face) |
 | **GK20** | Instructions - WS_GK20 Set Up.pdf; Western-Shelter-_-Product-Catalog.pdf (no dedicated SW-20 spec sheet) | **18' 7"** across flats; **7' 8"** equal facets; regular octagon (SW-20) | ~286 ft² | octagon | 18.583 × 18.583 ✓ |
 | **Vestibule (SO-VC8H)** | Western Shelter SO-VC8H spec (see Vendor Specs and Manuals); replaces prior misread (6' was sidewall height, not depth) | Footprint **7'8" × 7'4"**; **6'** sidewall height | 56 ft² | rect | **7.667 × 7.333** ✓ |
 | **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ |

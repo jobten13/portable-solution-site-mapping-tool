@@ -30,7 +30,7 @@
     - 0.6.8: Session restore (Tier 1 #1): persist map view + objects to localStorage. Session restore on load (original behavior; superseded in v0.8.7 — tool now always opens fresh, restore is explicit via Restore Autosave button).
     - 0.6.7: Page title and header renamed to "VPC Mapping Tool."
     - 0.6.6: GK20 dimensions updated from SW-20 spec: 18'7"×18'7" (was 20'×20').
-    - 0.6.5: Non-rectangular shapes from spec docs: ellipse for 8D36 dome footprint; GK1935 elongated-octagon confirmed per SW-1935.
+    - 0.6.5: Non-rectangular shapes from spec docs: ellipse for 8D36 dome footprint; GK1935 elongated-octagon confirmed per SW-1935 — renamed to cut-corner-rectangle (geometry unchanged).
     - 0.6.4: TENT_DB updated from vendor spec docs (Blu-Med 7×8 vestibule; DLX X-24/X-32 21.5' width; Zumro 400/600 exterior dims; HDT 8D36 added).
     - 0.6.3: Added on-map rotate handle with separate move-vs-rotate interactions.
     - 0.6.2: Switched to click-then-place workflow and added true drag-to-move for placed objects.
@@ -587,7 +587,7 @@ const TENT_DB = {
       note:"7'×8' Vestibule w BTD (BM-7x8-VEST-BTD)" },
   ],
   "Western Shelter": [
-    { name:"GK1935", widthFt:18.583, lengthFt:33.917, shape:"elongated-octagon",
+    { name:"GK1935", widthFt:18.583, lengthFt:33.917, shape:"cut-corner-rectangle",
       // SW-1935: symmetric 45° corner cut; each leg 5.421 ft → 7'8" exterior corner face (sheet 7'6" = interior clear-span, same convention as GK20)
       cornerCutW: 5.421,
       cornerCutL: 5.421,
@@ -787,7 +787,7 @@ function renderTentList() {
 function tentShapeBadge(shape) {
   if (shape === 'circle') return '⬤ Circle';
   if (shape === 'octagon') return '⯃ Octagon';
-  if (shape === 'elongated-octagon') return '⯃ Elong. Octagon';
+  if (shape === 'cut-corner-rectangle') return '⯃ Cut-corner rect.';
   if (shape === 'plus') return '✛ Plus/Cross';
   if (shape === 'ellipse') return '◯ Ellipse';
   return '▬ Rectangle';
@@ -837,7 +837,7 @@ function createTentCard(tent, idx) {
 function dimStr(tent) {
   if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
   if (tent.shape === 'octagon') return `⯃ 18'7" across, 7'8" faces`;
-  if (tent.shape === 'elongated-octagon') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' elongated oct.`;
+  if (tent.shape === 'cut-corner-rectangle') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' cut-corner rect.`;
   if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
   if (tent.shape === 'ellipse') return `◯ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
   return `${tent.widthFt}' × ${tent.lengthFt}'`;
@@ -2190,8 +2190,8 @@ function drawObject(obj) {
     ? `<b>${safeLabel}</b><br>Ø ${wFt} ft`
     : obj.shape === 'octagon'
     ? `<b>${safeLabel}</b><br>Octagon — 18'7" across, 7'8" faces`
-    : obj.shape === 'elongated-octagon'
-    ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' elong. octagon`
+    : obj.shape === 'cut-corner-rectangle'
+    ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' cut-corner rect`
     : obj.shape === 'plus'
     ? `<b>${safeLabel}</b><br>${wFt}' plus/cross (arm w: ${Math.round(obj.armWidthFt||0)}')`
     : obj.shape === 'ellipse'
@@ -2245,10 +2245,10 @@ function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
   if (obj.shape === 'octagon') {
     return createGeoPolygon(obj.latlng, widthBuffered, widthBuffered, 'octagon', obj.angleDeg || 0, style);
   }
-  if (obj.shape === 'elongated-octagon') {
+  if (obj.shape === 'cut-corner-rectangle') {
     const cornerCutWm = ((obj.cornerCutW || 0) * FT_TO_M) + extraBufferM;
     const cornerCutLm = ((obj.cornerCutL || 0) * FT_TO_M) + extraBufferM;
-    return createGeoElongatedOctagon(obj.latlng, widthBuffered, lengthBuffered, cornerCutWm, cornerCutLm, obj.angleDeg || 0, style);
+    return createGeoCutCornerRectangle(obj.latlng, widthBuffered, lengthBuffered, cornerCutWm, cornerCutLm, obj.angleDeg || 0, style);
   }
   if (obj.shape === 'plus') {
     const armWidthBase = obj.armWidthFt ? obj.armWidthFt * FT_TO_M : widthM * 0.7;
@@ -2370,9 +2370,9 @@ function createGeoPolygon(center, widthM, heightM, type, angleDeg, style) {
   return L.polygon(points, style);
 }
 
-// Elongated octagon: overall widthM × lengthM, with corner cuts cornerCutW × cornerCutL
+// Cut-corner rectangle: overall widthM × lengthM, with corner cuts cornerCutW × cornerCutL
 // The 4 corners are cut diagonally. The spec gives the "bounding box" dimensions.
-function createGeoElongatedOctagon(center, widthM, lengthM, cornerCutWm, cornerCutLm, angleDeg, style) {
+function createGeoCutCornerRectangle(center, widthM, lengthM, cornerCutWm, cornerCutLm, angleDeg, style) {
   const hw = widthM / 2;    // half-width  (E-W)
   const hl = lengthM / 2;   // half-length (N-S)
   const cw = cornerCutWm;   // corner cut measured along width axis
@@ -2533,7 +2533,7 @@ function createObjectListItem(o) {
   const lFt = (o.lengthM / FT_TO_M).toFixed(0);
   const dims = o.shape === 'circle' ? `Ø${wFt}'`
     : o.shape === 'octagon' ? `Oct 18'7"`
-    : o.shape === 'elongated-octagon' ? `${wFt}'×${lFt}' Oct`
+    : o.shape === 'cut-corner-rectangle' ? `${wFt}'×${lFt}' C-crnr`
     : o.shape === 'plus' ? `${wFt}' Plus`
     : o.shape === 'ellipse' ? `${wFt}'×${lFt}' ◯`
     : `${wFt}'×${lFt}'`;
