@@ -1,6 +1,6 @@
 # Portable Solution Site Mapping Tool — Project Notes
 
-*Last updated: 2026-07-06 — ZUMRO Quad Interface shape-fidelity VERIFIED (render faithful — exterior footprint 29.4'×19.5'; 454 sq ft is interior floor, air-beam; note/digest wording synced); third shape-audit item complete; GK1935 shape-fidelity fix shipped (symmetric corner cut, 7'8" exterior face, ~570 sq ft); second shape-audit item complete; GK1935 true-face snap now unblocked; GK20 shape-fidelity fix shipped (regular octagon, exterior footprint 18'7" across / 7'8" faces); first shape-audit item complete; GK20 true-face snap now unblocked; stickiness-on-break parked (improved as side-effect of the engage-threshold change; revisit post-fidelity); ambient drag-snap engage threshold made size-proportional + clamped (entry-jump fix); long-face capture follow-up logged, tied to shape-fidelity audit; autosave empty-overwrite fix (8b46241) and ambient drag-snap phase 1 (07fa119) shipped; snap tuning backlog added; #6 amended with bulk-delete confirm; search-picker-clipping, Nominatim-email, and autosave-Part-2 parked.*
+*Last updated: 2026-07-07 — version bump to **1.1.0-dev** (`APP_META`, README, Quickstart, PROJECT_MAP synced); shape-fidelity audit **COMPLETE** (GK20, GK1935, ZUMRO Quad, X-HUB, 8D36); bump reflects fidelity audit + snap phase 1 — **psmt-overhaul** backlog still open; 2026-07-06 — ZUMRO Quad Interface shape-fidelity VERIFIED (render faithful — exterior footprint 29.4'×19.5'; 454 sq ft is interior floor, air-beam; note/digest wording synced); third shape-audit item complete; GK1935 shape-fidelity fix shipped (symmetric corner cut, 7'8" exterior face, ~570 sq ft); second shape-audit item complete; GK1935 true-face snap now unblocked; GK20 shape-fidelity fix shipped (regular octagon, exterior footprint 18'7" across / 7'8" faces); first shape-audit item complete; GK20 true-face snap now unblocked; stickiness-on-break parked (improved as side-effect of the engage-threshold change; revisit post-fidelity); ambient drag-snap engage threshold made size-proportional + clamped (entry-jump fix); long-face capture follow-up logged, tied to shape-fidelity audit; autosave empty-overwrite fix (8b46241) and ambient drag-snap phase 1 (07fa119) shipped; snap tuning backlog added; #6 amended with bulk-delete confirm; search-picker-clipping, Nominatim-email, and autosave-Part-2 parked.*
 
 Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable Solution Site Mapping Tool - Quickstart.html`**. Spec alignment: **`VENDOR_SPECS_DIGEST.md`**.
 
@@ -10,7 +10,7 @@ Operator-facing documentation: **`README.md`**. Field quickstart: **`Portable So
 
 **Portable Solution Site Mapping Tool** (released/field-tested **v1.0**; current working build **v1.1.0-dev** on `psmt-overhaul`) — Single-file HTML app for emergency field hospital site layout. Leaflet.js map at true scale, vendor `TENT_DB` (five vendors), click-then-place workflow, drag/rotate handles, snap-to-face attachment, two-tier overlap (footprint red / clearance buffer amber), undo/redo (50 steps), role tagging with custom roles, debounced browser autosave with manual **Restore Autosave**, portable **Save Plan** / **Open Plan**, GeoJSON export, PDF export with map snapshot, and print fit.
 
-**Version note:** The 1.0 / 1.1.0-dev framing above is documented here first. `APP_META`, README, Quickstart, and PROJECT_MAP still read **0.8.8** — bumping `APP_META.version` to 1.1.0-dev and syncing README/Quickstart changelog is a **separate pending task**. The doc-vs-code gap is intentional and recorded, not an oversight.
+**Version note:** `APP_META`, README, Quickstart, and PROJECT_MAP now read **1.1.0-dev** as of 2026-07-07 — the doc-vs-code gap is **closed**. This bump reflects shape-fidelity audit completion (all five non-rect catalog footprints certified) and snap phase 1 (ambient drag-snap, size-proportional engage threshold); **psmt-overhaul** backlog items (header rework, capacity, imagery, etc.) remain open.
 
 **Use case:** Field hospital planning and setup — domestic emergency response first; international expansion planned. Primary users: incident commanders and field coordinators.
 
@@ -294,6 +294,6 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 ## Doc maintenance
 
 - Bump *Last updated* and version when `APP_META.version` changes in `Portable Solution Site Mapping Tool.html`.
-- The 1.0 / 1.1.0-dev release framing in these notes may precede code/doc bumps — when `APP_META.version` moves to 1.1.0-dev, sync README, Quickstart, and this file together.
+- When `APP_META.version` changes, sync README, Quickstart, and this file together in the same commit.
 - Keep **README.md**, **PSMT_Project_Notes.md**, **Portable Solution Site Mapping Tool - Quickstart.html**, and in-app tooltips in sync on each release.
 - Shipped features: document in README changelog; remove from backlog here.
