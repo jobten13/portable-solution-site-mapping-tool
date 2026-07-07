@@ -10,7 +10,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 |------|----------------|
 | **Map** | Esri satellite (default), street basemap toggle, hybrid place labels, live zoom/scale (`1:n`), cursor coordinates overlay |
 | **Catalog** | Five vendors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT) with spec-based footprints — see [Vendor catalog](#vendor-catalog) |
-| **Shapes** | Rectangle, octagon, cut-corner rectangle, cut-corner square, plus (hub), ellipse — plus **Custom Size** rectangles |
+| **Shapes** | Rectangle, octagon, cut-corner rectangle, cut-corner square, plus (hub) — plus **Custom Size** rectangles (`ellipse` supported in drawing code for legacy plans; not in current catalog) |
 | **Placement** | Click model → click map; drag to move; orange handle rotate (Shift = 5°); red ✕ or Shift+click delete |
 | **Snap** | **Snap to selected object** — edge-to-edge on nearest of four faces; matches target rotation (best rect-to-rect) |
 | **Spacing** | Per-object clearance buffer (0–30 ft, presets); dashed ring; **footprint** (red) vs **buffer** (amber) advisories; **Intentional** for accepted buffer-only conflicts |
@@ -70,7 +70,7 @@ Dimensions follow `VENDOR_SPECS_DIGEST.md`. Default vendor colors apply on place
 | **ZUMRO** | Quad Interface, Model 400, Model 600, Interconnect |
 | **HDT** | Base-X 305, Base-X Dome (8D36) |
 
-**Footprint shapes:** `rect`, `octagon`, `cut-corner-rectangle`, `cut-corner-square`, `plus` (hubs), `ellipse` (dome).
+**Footprint shapes:** `rect`, `octagon`, `cut-corner-rectangle`, `cut-corner-square`, `plus` (hubs). (`ellipse` supported in drawing code for legacy plans; not in current catalog.)
 
 ## Tooltips and map hints
 

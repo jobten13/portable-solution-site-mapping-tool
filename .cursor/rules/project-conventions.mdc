@@ -18,6 +18,7 @@ The catalog is **designed to grow** as additional vendors/teams are added. Rules
 - **Provenance gate:** every vendor/model in `TENT_DB` must trace to a spec source documented in `VENDOR_SPECS_DIGEST.md`. Add a vendor digest-first (spec entry with source), then `TENT_DB` + `VENDOR_COLORS`. Never add a catalog model with no documented source.
 - Do not change `TENT_DB` dimensions, shapes, or shape-extra fields (`cornerCutW`, `cornerCutL`, `armWidthFt`, `endCapFt`) without a corresponding documented spec source and a digest update.
 - Known open provenance gap: DLX X-HUB `cornerCutW` / `cornerCutL` **1.0 ft** chamfer is unverified (bounding box confirmed, corner chamfer not confirmed from a primary spec). Preserve the code comment marking it unverified until DLX confirms.
+- Known open provenance gap: HDT Base-X Dome (8D36) `cornerCutW` **8.4 ft** / `cornerCutL` **13.2 ft** chamfer legs are unverified (overall 31'×37' bbox confirmed; corner legs diagram-derived by pixel-measure, not vendor-stated). Preserve the code comment marking it unverified until HDT confirms.
 
 ## Non-catalog vendor values — never treat as catalog entries
 

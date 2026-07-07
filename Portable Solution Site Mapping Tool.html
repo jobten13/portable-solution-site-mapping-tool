@@ -628,8 +628,12 @@ const TENT_DB = {
   "HDT": [
     { name:"Base-X 305", widthFt:20.5, lengthFt:25, shape:"rect",
       note:"Base-X Model 305 – 20'6\"×25' outer footprint (18' interior clear span), 450 sq ft" },
-    { name:"Base-X Dome (8D36)", widthFt:31, lengthFt:37, shape:"ellipse",
-      note:"Base-X Dome 8D36 – 31'×37' dome footprint (HDT_8D36Shelter), 935 sq ft, 8 doors" },
+    { name:"Base-X Dome (8D36)", widthFt:31, lengthFt:37, shape:"cut-corner-rectangle",
+      // HDT_8D36Shelter: interior/diagram 31'x37' (9.45x11.28 m); 935 sq ft per spec.
+      // cornerCutW / cornerCutL: 8.4 / 13.2 -- unverified from manufacturer spec sheet. Overall 31'x37' bbox confirmed from vendor sheet; corner chamfer legs NOT confirmed from a primary source. Values derived this session from pixel-measurement of the vendor's top-down diagram, cross-checked against the sheet's own area figure (31'x37' minus 935 sq ft implies ~212 sq ft of corner-cut area, closely matching the ~221 sq ft implied by these measured legs). Verify with HDT before next version.
+      cornerCutW: 8.4,
+      cornerCutL: 13.2,
+      note:"Base-X Dome 8D36 - 31'x37' (HDT_8D36Shelter), cut-corner rect (~8.4'/13.2' legs, unconfirmed), ~925 sq ft rendered, 8 doors" },
   ]
 };
 
@@ -2413,7 +2417,7 @@ function createGeoCutCornerRectangle(center, widthM, lengthM, cornerCutWm, corne
   return L.polygon(points, style);
 }
 
-// Ellipse (e.g. HDT Base-X 8D36 dome footprint): widthM = full width (E-W), lengthM = full length (N-S)
+// Ellipse (legacy saved plans only — no current catalog entry): widthM = full width (E-W), lengthM = full length (N-S)
 // Drawn as polygon with 36 points; rotation applied via rotateOffsets
 function createGeoEllipse(center, widthM, lengthM, angleDeg, style) {
   const hw = widthM / 2;

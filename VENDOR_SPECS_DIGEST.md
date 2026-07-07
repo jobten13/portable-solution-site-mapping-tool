@@ -39,7 +39,7 @@ Tech sheets: “Dimensions (L x W)” in spec table. Spec Sheets: X-Series X-24,
 | Model | Spec source | Spec dimensions | Area | Shape | Tool current |
 |-------|-------------|-----------------|------|-------|--------------|
 | **Base-X 305** | HDT_305shelter_13-13.pdf (Spec Sheets) | Outer footprint **20'6" × 25'** (18' interior clear span). Width corrected from interior clear span (18') to outer cover dimension (20'6") per **HDT_305shelter** spec diagram. | 450 ft² | rect | **20.5 × 25** ✓ |
-| **Base-X 8D36** | HDT_8D36Shelter_11.pdf (Spec Sheets) | Interior **31' × 37'** (9.45 × 11.28 m) | 935 ft² | ellipse (dome) | 31 × 37 ✓ |
+| **Base-X 8D36** | HDT_8D36Shelter_11.pdf (Spec Sheets) | Interior **31' × 37'** (9.45 × 11.28 m) | 935 ft² spec; rendered ~925 ft² with 8.4/13.2 ft legs | cut-corner-rectangle | 31 × 37 ✓; **cornerCutW 8.4**, cornerCutL 13.2 — unverified from a primary dimension spec (overall 31'×37' bbox confirmed; corner legs derived by pixel-measure from top-down diagram, cross-checked vs sheet area figure — verify with HDT). |
 
 Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) – optional for future. Anchor kits: 69KHSA305 and 69KHSA8D36.pdf in Spec Sheets.
 
@@ -77,7 +77,7 @@ All of the following are implemented in the tool.
 4. **ZUMRO Model 400**: 20×21 exterior.
 5. **ZUMRO Model 600**: 20.4×31 exterior.
 6. **ZUMRO Quad Interface**: Exterior footprint **29.4'×19.5'** (what the tool maps; render ~521 sq ft); interior width **15.7'**; **~454 sq ft interior** floor space (air-beam — inflated beams reduce usable interior below exterior footprint); four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S. Render faithful to exterior footprint; no geometry change.
-7. **HDT**: Base-X 8D36 as ellipse 31×37; 6D31 removed (product lineup: 305 and 8D36 only).
+7. **HDT**: Base-X 8D36 as cut-corner-rectangle 31×37 (cornerCutW 8.4, cornerCutL 13.2 — diagram-derived, unverified); 6D31 removed (product lineup: 305 and 8D36 only).
 8. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft; Generator 70 kVA on trailer 14.12'×6.04'.
 9. **Western Shelter GK1935**: Overall **18'7"×33'11"**; **symmetric** corner cuts (each leg **5.421 ft**); **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20); **~570 sq ft**.
 10. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
