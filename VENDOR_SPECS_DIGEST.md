@@ -30,7 +30,7 @@ Tech sheets: “Dimensions (L x W)” in spec table. Spec Sheets: X-Series X-24,
 |-------|-------------|---------------------------|------|--------|-------|--------------|
 | **X-24** | X-Series X-24 Shelter Tech Sheet Updated 11_18_24.pdf | **24 × 21.5 ft** (7.3 × 6.6 m) | 516 ft² | 10.25 ft | rect | 24 × 21.5 ✓ |
 | **X-32** | X-Series X-32 Shelter Tech Sheet Updated 11_18_24.pdf | **32 × 21.5 ft** (9.8 × 6.6 m) | 688 ft² | 10.25 ft | rect | 32 × 21.5 ✓ |
-| **X-HUB (Quad)** | X-Hub Shelter Tech Sheet Updated 11_19_24.pdf | **22 × 22 ft** (6.7 × 6.7 m) | 484 ft² (spec prints “48 ft²” – typo; 22×22=484) | 12.5 ft | plus | 22 × 22 ✓; **armWidthFt 16** — unverified from a primary dimension spec (overall 22'×22' bounding box confirmed; arm width not confirmed from manufacturer spec sheet — verify with DLX). |
+| **X-HUB (Quad)** | X-Hub Shelter Tech Sheet Updated 11_19_24.pdf | **22 × 22 ft** (6.7 × 6.7 m) | 484 ft² bbox (spec prints “48 ft²” – typo; 22×22=484); rendered ~482 ft² with 1.0 ft chamfer | 12.5 ft | cut-corner-square | 22 × 22 ✓; **cornerCutW 1.0**, cornerCutL 1.0 — unverified from a primary dimension spec (overall 22'×22' bounding box confirmed; corner chamfer not confirmed from manufacturer spec sheet — verify with DLX). |
 
 ---
 

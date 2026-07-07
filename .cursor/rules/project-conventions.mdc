@@ -17,7 +17,7 @@ The catalog is **designed to grow** as additional vendors/teams are added. Rules
 - Three things move together as a set when a vendor or model is added or changed: the `TENT_DB` entry, a matching `VENDOR_COLORS` entry for the vendor, and a section in `VENDOR_SPECS_DIGEST.md` with spec provenance. A vendor missing from `VENDOR_COLORS` silently falls back to a generic color — do not leave that gap.
 - **Provenance gate:** every vendor/model in `TENT_DB` must trace to a spec source documented in `VENDOR_SPECS_DIGEST.md`. Add a vendor digest-first (spec entry with source), then `TENT_DB` + `VENDOR_COLORS`. Never add a catalog model with no documented source.
 - Do not change `TENT_DB` dimensions, shapes, or shape-extra fields (`cornerCutW`, `cornerCutL`, `armWidthFt`, `endCapFt`) without a corresponding documented spec source and a digest update.
-- Known open provenance gap: DLX X-HUB `armWidthFt: 16` is unverified (bounding box confirmed, arm width not confirmed from a primary spec). Preserve the code comment marking it unverified until DLX confirms.
+- Known open provenance gap: DLX X-HUB `cornerCutW` / `cornerCutL` **1.0 ft** chamfer is unverified (bounding box confirmed, corner chamfer not confirmed from a primary spec). Preserve the code comment marking it unverified until DLX confirms.
 
 ## Non-catalog vendor values — never treat as catalog entries
 

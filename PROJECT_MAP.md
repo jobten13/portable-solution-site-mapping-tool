@@ -366,11 +366,11 @@ Object keyed by vendor name → array of model entries.
 | `lengthFt` | yes | Length in feet |
 | `shape` | yes | Footprint type (below) |
 | `note` | yes | Spec summary; tent card `title` |
-| `cornerCutW` | optional | Cut-corner rectangle — width-axis cut (ft) |
-| `cornerCutL` | optional | Cut-corner rectangle — length-axis cut (ft) |
+| `cornerCutW` | optional | Cut-corner rectangle (GK1935) or cut-corner square (X-HUB) — width-axis cut (ft) |
+| `cornerCutL` | optional | Cut-corner rectangle (GK1935) or cut-corner square (X-HUB) — length-axis cut (ft) |
 | `armWidthFt` | optional | Plus/cross hub arm width (ft) |
 
-**Shape types used in catalog:** `rect`, `octagon`, `cut-corner-rectangle`, `plus`, `ellipse`. (`circle` supported in drawing code; not in current catalog.)
+**Shape types used in catalog:** `rect`, `octagon`, `cut-corner-rectangle`, `cut-corner-square`, `plus`, `ellipse`. (`circle` supported in drawing code; not in current catalog.)
 
 Dimensions convert to meters at placement (`× FT_TO_M`).
 
@@ -449,7 +449,7 @@ Vendor tabs render from `TENT_DB` keys automatically (737–759).
 
 Every catalog model must trace to **`VENDOR_SPECS_DIGEST.md`**. Adding a vendor: digest entry first → `TENT_DB` + `VENDOR_COLORS`.
 
-**Known open gap:** DLX Quad (X-HUB) `armWidthFt: 16` — unverified in code comment (603–604); bounding box confirmed, arm width not confirmed from primary spec.
+**Known open gap:** DLX Quad (X-HUB) `cornerCutW` / `cornerCutL` **1.0 ft** — unverified in code comment; overall 22'×22' bounding box confirmed, corner chamfer not confirmed from primary spec.
 
 ### Designed to expand
 

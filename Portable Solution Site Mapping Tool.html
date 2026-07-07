@@ -603,12 +603,13 @@ const TENT_DB = {
   "DLX": [
     { name:"X-24", widthFt:21.5, lengthFt:24, shape:"rect",
       note:"X-Series X-24 – 24'×21.5' (L×W per tech sheet), 516 sq ft" },
-    { name:"Quad (X-HUB)", widthFt:22, lengthFt:22, shape:"plus",
-      // X-Hub Tech Sheet Nov 2024: Dimensions 22×22 ft (6.7×6.7 m). Arm width 16' from X-Series connector.
-      // Spec area printed as 48 ft² (typo); 22×22 = 484 ft².
-      // armWidthFt: 16 — unverified from manufacturer spec sheet: overall 22'×22' bounding box is confirmed, but arm width not confirmed from a primary source; verify with DLX before next version.
-      armWidthFt: 16,
-      note:"X-HUB – 22'×22' (X-Hub tech sheet), 484 sq ft, 4 doors; arm 16' for X-Series" },
+    { name:"Quad (X-HUB)", widthFt:22, lengthFt:22, shape:"cut-corner-square",
+      // X-Hub Tech Sheet Nov 2024: Dimensions 22x22 ft (6.7x6.7 m).
+      // Spec area printed as 48 ft2 (typo); 22x22 = 484 ft2 bbox.
+      // cornerCutW / cornerCutL: 1.0 -- unverified from manufacturer spec sheet: overall 22'x22' bounding box is confirmed, but corner chamfer dimension not confirmed from a primary source; verify with DLX before next version.
+      cornerCutW: 1.0,
+      cornerCutL: 1.0,
+      note:"X-HUB - 22'x22' (X-Hub tech sheet), 484 sq ft bbox, 4 doors; cut-corner square (~1' chamfer, unconfirmed)" },
     { name:"X-32", widthFt:21.5, lengthFt:32, shape:"rect",
       note:"X-Series X-32 – 32'×21.5' (L×W per tech sheet), 688 sq ft" },
   ],
@@ -788,6 +789,7 @@ function tentShapeBadge(shape) {
   if (shape === 'circle') return '⬤ Circle';
   if (shape === 'octagon') return '⯃ Octagon';
   if (shape === 'cut-corner-rectangle') return '⯃ Cut-corner rect.';
+  if (shape === 'cut-corner-square') return '⯃ Cut-corner sq.';
   if (shape === 'plus') return '✛ Plus/Cross';
   if (shape === 'ellipse') return '◯ Ellipse';
   return '▬ Rectangle';
@@ -838,6 +840,7 @@ function dimStr(tent) {
   if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
   if (tent.shape === 'octagon') return `⯃ 18'7" across, 7'8" faces`;
   if (tent.shape === 'cut-corner-rectangle') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' cut-corner rect.`;
+  if (tent.shape === 'cut-corner-square') return `⯃ ${Math.round(tent.widthFt)}' cut-corner sq.`;
   if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
   if (tent.shape === 'ellipse') return `◯ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
   return `${tent.widthFt}' × ${tent.lengthFt}'`;
@@ -2192,6 +2195,8 @@ function drawObject(obj) {
     ? `<b>${safeLabel}</b><br>Octagon — 18'7" across, 7'8" faces`
     : obj.shape === 'cut-corner-rectangle'
     ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' cut-corner rect`
+    : obj.shape === 'cut-corner-square'
+    ? `<b>${safeLabel}</b><br>${wFt}' cut-corner sq (C-crnr ~${obj.cornerCutW || 0}')`
     : obj.shape === 'plus'
     ? `<b>${safeLabel}</b><br>${wFt}' plus/cross (arm w: ${Math.round(obj.armWidthFt||0)}')`
     : obj.shape === 'ellipse'
@@ -2246,6 +2251,11 @@ function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
     return createGeoPolygon(obj.latlng, widthBuffered, widthBuffered, 'octagon', obj.angleDeg || 0, style);
   }
   if (obj.shape === 'cut-corner-rectangle') {
+    const cornerCutWm = ((obj.cornerCutW || 0) * FT_TO_M) + extraBufferM;
+    const cornerCutLm = ((obj.cornerCutL || 0) * FT_TO_M) + extraBufferM;
+    return createGeoCutCornerRectangle(obj.latlng, widthBuffered, lengthBuffered, cornerCutWm, cornerCutLm, obj.angleDeg || 0, style);
+  }
+  if (obj.shape === 'cut-corner-square') {
     const cornerCutWm = ((obj.cornerCutW || 0) * FT_TO_M) + extraBufferM;
     const cornerCutLm = ((obj.cornerCutL || 0) * FT_TO_M) + extraBufferM;
     return createGeoCutCornerRectangle(obj.latlng, widthBuffered, lengthBuffered, cornerCutWm, cornerCutLm, obj.angleDeg || 0, style);
@@ -2418,7 +2428,7 @@ function createGeoEllipse(center, widthM, lengthM, angleDeg, style) {
   return L.polygon(points, style);
 }
 
-// Plus / Cross shape (DLX X-HUB, Zumro Quad Interface):
+// Plus / Cross shape (Zumro Quad Interface):
 // totalWM   = full E-W tip-to-tip span
 // totalLM   = full N-S tip-to-tip span
 // armWidthM = width of each arm (the connecting tunnel dimension)
@@ -2534,6 +2544,7 @@ function createObjectListItem(o) {
   const dims = o.shape === 'circle' ? `Ø${wFt}'`
     : o.shape === 'octagon' ? `Oct 18'7"`
     : o.shape === 'cut-corner-rectangle' ? `${wFt}'×${lFt}' C-crnr`
+    : o.shape === 'cut-corner-square' ? `${wFt}' C-crnr sq`
     : o.shape === 'plus' ? `${wFt}' Plus`
     : o.shape === 'ellipse' ? `${wFt}'×${lFt}' ◯`
     : `${wFt}'×${lFt}'`;
