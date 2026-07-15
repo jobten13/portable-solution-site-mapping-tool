@@ -290,6 +290,27 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 - **2026-06-26 — USGS NAIPPlus base-layer evaluation closed (item 20).** USGS NAIPPlus was evaluated as a toggleable second base layer and A/B tested against Esri World Imagery at two real hospital sites (UC Davis Medical Center; BAMC San Antonio) at working placement zoom. NAIP was visibly lower resolution at the zoom that matters for placement, despite deeper max zoom. The esri-leaflet dependency and dynamic-service performance cost were not justified. The evaluation branch state was reverted; Esri World Imagery retained as the sole base layer. *(No git commit records the eval — reverted — this Decisions entry is the authoritative record.)* Future paths if revisited: premium Esri/Maxar imagery via DHA ArcGIS authentication, or Mapbox/commercial sources if FedRAMP and licensing clear.
 - **2026-06-10 — Quickstart PDF retired permanently.** `VPC Mapping Tool - Quickstart.pdf` has been removed from the project. **`Portable Solution Site Mapping Tool - Quickstart.html`** is the sole quickstart source going forward; no PDF will be regenerated.
 
+- **2026-07-07 — Item 15 (#mode-display) reconsidered; header/sidebar UX discussion (Tier C planning)**
+
+  Developer questioned whether `#mode-display` earns its central header real estate, given it is prone to truncation (ellipsis) and sits in the most contested part of the header row. Investigation (Cursor read-only report) pulled every `setMode()` call site (~35 distinct messages) and grouped them into three categories with different needs:
+
+  1. **Ongoing state** (placement-armed "Click to place {tent}", Measure/Area Measure Mode, selection "Selected {label}...") — needs to persist while true.
+  2. **One-off confirmations** (~24 messages: Moved/Snapped/Attached/Rotation updated, Undo/Redo, Plan saved/loaded, exports, buffer/scale presets, delete/clear, search fallback, autosave failures) — describe something that already happened, irrelevant a moment later.
+  3. **Idle/instructional** (1 message: "Select a tent from the sidebar, then click the map to place.") — shown when nothing is happening; this is the one visibly breaking (truncated) in field screenshots.
+
+  **Leaning direction (NOT YET DECIDED, NOT BUILT):**
+  - Idle/instructional message → move to a dismissible full-screen onboarding popup shown on first open, which the user can permanently clear. Persistent mode-display would then stay minimal/blank when idle rather than repeating onboarding text forever.
+  - Ongoing state → **OPEN SUB-QUESTION:** floating near the map (next to zoom control) vs. sticky-pinned section in the sidebar above Setup (mirroring the existing pinned Placed-list pattern at the bottom of the sidebar). Tradeoff: map placement is semantically closer to the mostly map-interaction instructions it carries, but real-estate/collision with existing map overlays (layers control, overlap pill, cursor-position readout) not yet checked. Sidebar placement keeps the map visually clean and reuses an existing pin mechanism.
+  - One-off confirmations → split into two toast treatments rather than one bar: spatial confirmations (Snapped/Attached/Moved) anchored near the object/snap face on the map, fading; action-triggered confirmations (Save/Undo/Print Fit/exports/etc.) anchored near the triggering button, fading (possibly a brief button color-flash).
+
+  **New finding:** Measure Mode / Area Measure Mode already have a dedicated point-of-action strip (`#measure-strip`, header-anchored under `#btn-measure-menu` via `getBoundingClientRect`) showing live step instructions — this duplicates the "Measure Mode"/"Area Measure Mode" string simultaneously shown in `#mode-display`. Open question raised: does Measure Mode need `#mode-display` representation at all, given `#measure-strip` already covers it?
+
+  **Investigated and confirmed NOT a drop-in reuse:** `#measure-strip`'s positioning technique (fixed + `getBoundingClientRect` under a stable header button) does not generalize to placement-armed (would need to anchor to a scrolling sidebar catalog item) or selection (would need latlng-to-pixel conversion tracking pan/zoom/drag on the map). Extending point-of-action messaging to those two categories is real new positioning work, not a copy of Measure's implementation.
+
+  **Related, also discussed (item 10a/14 direction, NOT YET BUILT):** "How to use" trigger leaning toward a small icon (not a header button) given stated real-estate constraints, opening a full-screen semi-translucent modal on hover-preview + click-to-pin. Placement leaning toward map-corner (near zoom/layers controls) rather than header, specifically to avoid adding to the header crowding that this same Tier C work is trying to reduce. Open question: does this supersede item 4 (point-of-action tooltips) or coexist with it — **NOT DECIDED**.
+
+  **Status:** Entirely open design discussion. No implementation, no code changes, no final decisions from this entry. Bug found and fixed during this investigation (measure mode not exiting on placement-arm) shipped separately as commit `9371c9e` and is logged under "Deferred / discussed" as its own item (finished-state asymmetry), not part of this entry.
+
 ---
 
 ## Doc maintenance
