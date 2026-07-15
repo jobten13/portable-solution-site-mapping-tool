@@ -878,6 +878,7 @@ COLORS.forEach(c => {
 // ─── Place from selected tent ────────────────────────────────────────────────────
 function startPlacing() {
   if (!selectedTent) { alert('Select a tent model first.'); return; }
+  if (measureMode || areaMeasureMode) clearMeasure();
   placingMode = true;
   customMode = false;
   map.dragging.disable();
@@ -886,6 +887,7 @@ function startPlacing() {
 }
 
 function startCustomPlace() {
+  if (measureMode || areaMeasureMode) clearMeasure();
   placingMode = true;
   customMode = true;
   map.dragging.disable();
