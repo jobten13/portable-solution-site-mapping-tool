@@ -155,6 +155,7 @@ Open work only. Shipped items removed from this list.
 | 11 | **Layout templates** | MSF-style starter layouts (JSON config + place-at-origin) |
 | 12 | **Layer visibility by role** | Filter map/list for review and print |
 | 13 | **Validation rules** | Min clearance gap, simple access-path checks (configurable) |
+| — | **Selected object footprint highlight** | Selected object has no visual highlight on its footprint — only the rotate/delete handles indicate what's currently selected, and the map-floating readout (upper-left) is text-only, not spatially tied to the object. In a dense layout this makes it hard to visually locate the selected object at a glance. Developer's suggested starting point: a short glow effect on the selected object's footprint outline, similar in spirit to existing overlap red/amber styling. Not designed in detail, not built, not scheduled. |
 
 ### Design notes (backlog)
 
@@ -409,6 +410,38 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
   **RELATED — Save/Open vs. Export, discussed same session:** developer confirmed Save/Open (JSON) stays a distinct round-trip pair (the working file you load back into PSMT) and is NOT merged with Export. Export (GeoJSON/PDF, already a single dropdown with format choice) remains separate — one-way outputs, not round-trippable. GeoJSON export's own value is separately logged for reconsideration (see Deferred/discussed entry, this session, commit d51fbeb) — unrelated to this grouping decision.
 
   **STATUS:** Design decided. Nothing built. This informs the upcoming item **10b** reorder (sidebar section order) — Setup no longer exists as a section to place; Plan gains a scenario-name field; search bar gains a new checkbox; scale presets remain physically where they are (unmoved) pending item 19.
+
+- **2026-08-10 — Role/Label consolidation + Vendor-section role relocation (design decided, not yet built).**
+
+  Following an extended discussion (including a read-only Cursor design review that raised valid technical objections, addressed below), the developer settled on the following design for role and label handling. Nothing built yet.
+
+  **BACKGROUND / WHAT WAS CONSIDERED AND REJECTED:** The developer initially wanted to reduce UI clutter by merging label and role into a single free-text field per object. Cursor's design review correctly flagged that this would break zone/capacity tallying, since a single free-text field cannot both group same-function objects together (e.g. multiple "ICU" tents counting as one category) AND give each object a unique, distinguishable name (e.g. "ICU West" vs "ICU East") — those are mutually exclusive outcomes for one plain-text value, not a technical limitation to solve, but a real tradeoff. This was clarified through discussion and the true merge was **ABANDONED**.
+
+  **FINAL DECISION** — label and role remain two separate stored properties, **UNCHANGED IN MECHANISM**, but role becomes the sole user-facing customization point:
+
+  1. **LABEL** — becomes **LOCKED / NON-EDITABLE** in the UI. Always the vendor/model default string (e.g. "BLU-MED 2032.5"). The stored property and its existing behavior are unchanged; only the editable text input is removed from the UI. This is reversible — re-adding an editable label field later is normal UI work, not a schema reversal, if ever wanted.
+
+  2. **ROLE** — mechanically **UNCHANGED** from today (same dropdown, same built-in options: Triage/Ward/ICU/Pharmacy/Support/Morgue, same Custom free-text option, same shared-list/localStorage persistence via `psmt-custom-roles`). Custom role text can serve as either a reusable shared category (type "ICU" on multiple tents to group them) or a unique instance name (type "ICU West" for one specific tent) — this is the user's choice per-tent, not a system distinction; the tool has no way to detect that "ICU West" is "a kind of ICU" without exact string match.
+
+  3. **ROLE SELECTOR RELOCATES** from Label & Style into the **VENDOR** section — physically in the box where a tent model is chosen, so role is decided at the moment of placement, not as a separate pre-set-elsewhere step. Selector is **OPTIONAL** (defaults to "—") and **RESETS** after each placement (does not persist as a sticky default across multiple placements of the same or different models).
+
+  4. **CUSTOM ROLE CREATE + MANAGE/DELETE** relocate together (not split) from Label & Style's "Manage roles" panel into the same Vendor-section selector. Built-in roles remain protected from deletion; an object using a since-deleted custom role keeps that role string unchanged (orphaned, not broken) — same as today.
+
+  5. **IDENTITY TEXT SHOWN AS "LABEL — ROLE"** (combined), everywhere the app currently shows label alone, **WHEN** role is set to something other than "—": delete confirmations, "Selected X — drag to move" readout, snap toasts, hover tooltip, placed-list row, PDF object lines. Example: "Delete BLU-MED 2032.5 — Triage?" instead of just "Delete BLU-MED 2032.5?". When role is still "—", these surfaces show label alone (unchanged from today). This resolves the earlier concern about role-only messages being ambiguous across multiple same-role objects (e.g. "Delete Triage?" not knowing which Triage tent) — vendor/model in the combined string always disambiguates which physical object.
+
+  6. **PERMANENT ROLE/LABEL TEXT ON MAP FOOTPRINT** (item **#8**) — the combined "Label — Role" string (or Label alone if role is "—") displays permanently on the object's footprint on the map, not just in the hover tooltip. **CONFIRMED NEW WORK** (no permanent-tooltip-on-structure pattern exists today). Open technical questions flagged by Cursor's design review, **NOT YET ANSWERED**, to resolve when this is actually built: rotation (a normal divIcon/tooltip does not rotate with the polygon — misalignment likely without extra handling), sizing/truncation on small footprints (e.g. Vestibule) with longer role strings, visual density when adjacent tents both have permanent labels, z-index vs existing handles/tooltips/measure permanent tooltips, and lifecycle sync on every `drawObject` call (place, drag, rotate, undo, load) matching the existing handle-sync pattern.
+
+  7. **HOVER TOOLTIP ON MAP OBJECTS STAYS AS-IS** — kept deliberately even though the combined "Label — Role" text (once #6 is built) will duplicate much of it. Developer's stated reasoning: being able to roll over any object and immediately see role, dimensions, and vendor without hunting through the placed list is a genuine, separate convenience — not just leftover redundancy.
+
+  8. **LABEL & STYLE SECTION** becomes **STYLE-ONLY** once role/label editing and role management both leave — narrows to Options (color, opacity, rotation, clearance buffer + presets, apply-to-all). Its name is likely misleading once labels leave but renaming/redesign is explicitly **DEFERRED** to later, not decided tonight.
+
+  9. **CUSTOM SIZE'S SEPARATE LABEL FIELD** (`#custom-label`) — flagged by Cursor's design review as an inconsistency (catalog path loses its editable label; Custom Size still has one) but **NOT YET DECIDED** — open question for a future session, not resolved tonight.
+
+  10. **`setSelectedObject`'s EXISTING SYNC BEHAVIOR** (copying `obj.role` into the Label & Style role dropdown on selection) is **OBSOLETE** once role moves to the Vendor section and resets-after-placement — this old sync must be removed, not carried over, when built. This was identified as a technical snag during design discussion and resolved via decision #11 below rather than by patching the old sync.
+
+  11. **NEW: MAP-CLICK SELECTION NOW SCROLLS THE PLACED LIST** to the selected object's row (new work — confirmed via read-only check that no such scroll-to-selection exists today in either direction). This completes backlog item **2/18** ("Selecting a placed-list row should fly-to AND highlight the object on the map") — the reverse direction (list-row click → `map.panTo`) was **CONFIRMED ALREADY BUILT** via read-only check; only map-click → list-scroll was missing. No reordering of the underlying `objects` array occurs — purely a scroll-position change, chosen specifically over an earlier "move selected row to top" idea after a read-only check surfaced real side effects that idea would have caused: undo/redo snapshot ambiguity (would every selection become an undo step or not), and unintended changes to Save Plan/GeoJSON/PDF export ordering and map z-order, all of which currently follow strict `objects` array order. Scrolling-only avoids all of those.
+
+  **STATUS:** All of the above is **DESIGN, NOT BUILT**. This affects Save Plan JSON, undo snapshots, GeoJSON export, PDF export text, and the print zone-summary line only in that the "Label — Role" **DISPLAY** combination is new formatting logic at each of those surfaces — the underlying label and role properties themselves are unchanged, so no schema migration is needed for existing saved plans.
 
 ---
 
