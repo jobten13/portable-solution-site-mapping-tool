@@ -296,6 +296,24 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .mode-badge.mode-badge-action:hover {
   background:#161b22; border-color:#58a6ff;
 }
+.psmt-toast {
+  display:none;
+  position:fixed;
+  z-index:1300;
+  max-width:min(360px, calc(100vw - 16px));
+  padding:6px 12px;
+  font-size:11px;
+  line-height:1.35;
+  color:#e6edf3;
+  background:#161b22;
+  border:1px solid #30363d;
+  border-radius:6px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.45);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.2s ease;
+}
+.psmt-toast.psmt-toast-visible { opacity:1; }
 .version-badge {
   position:fixed; right:10px; bottom:8px; z-index:1200;
   padding:2px 7px; border-radius:10px; font-size:10px;
@@ -328,7 +346,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 @media print {
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
-  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill { display:none !important; }
+  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, .psmt-toast { display:none !important; }
   #main { display:block !important; height:100vh !important; }
   #map { width:100vw !important; height:100vh !important; }
   .leaflet-control-container { display:none !important; }
@@ -343,7 +361,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <div id="search-wrap">
     <div id="search-bar">
       <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng — press / to focus. Works offline for coordinates only." />
-      <button class="blue" onclick="searchLocation()" title="Search by name or coordinates. Requires network unless entering lat, lng directly.">Search</button>
+      <button class="blue" onclick="searchLocation(event)" title="Search by name or coordinates. Requires network unless entering lat, lng directly.">Search</button>
     </div>
     <select id="search-results" aria-label="Search result matches" title="When several matches exist, the first is centered automatically — pick another here to refine."></select>
   </div>
@@ -366,6 +384,8 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <span id="autosave-indicator" title="Autosave status for this browser. Layout is not restored automatically on open — use Restore Autosave when needed.">Not yet saved</span>
   <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last layout auto-saved in this browser (localStorage). The app opens with a fresh map each time — nothing loads until you click here or Open Plan. Confirm if structures are already placed.">Restore Autosave</button>
 </div>
+<div id="action-toast" class="psmt-toast" role="status" aria-live="polite"></div>
+<div id="spatial-toast" class="psmt-toast" role="status" aria-live="polite"></div>
 <div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;" title="No network connection. Address search is unavailable; enter lat, lng in the search box to jump. Placed layouts and editing still work; map tiles may not load.">
   Offline — using local data. Map imagery may not load. Enter <strong>lat, lng</strong> in search to go to a location.
 </div>
@@ -384,10 +404,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         <label class="search-opt" style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;" title="Search prioritizes results near the current map view. Uncheck for global search. Falls back to global if no nearby match found."><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
         <h3 style="font-size:11px;margin-top:12px;color:#8b949e;">Scale Presets</h3>
         <div class="scale-btn-row">
-          <button class="scale-btn" onclick="applyScalePreset(100)" title="Zoom to approximately 1:100 scale. Manual zoom remains available after applying.">1:100</button>
-          <button class="scale-btn" onclick="applyScalePreset(150)" title="Zoom to approximately 1:150 scale. Manual zoom remains available after applying.">1:150</button>
-          <button class="scale-btn" onclick="applyScalePreset(200)" title="Zoom to approximately 1:200 scale. Manual zoom remains available after applying.">1:200</button>
-          <button class="scale-btn" onclick="applyScalePreset(500)" title="Zoom to approximately 1:500 scale. Manual zoom remains available after applying.">1:500</button>
+          <button class="scale-btn" onclick="applyScalePreset(100, event)" title="Zoom to approximately 1:100 scale. Manual zoom remains available after applying.">1:100</button>
+          <button class="scale-btn" onclick="applyScalePreset(150, event)" title="Zoom to approximately 1:150 scale. Manual zoom remains available after applying.">1:150</button>
+          <button class="scale-btn" onclick="applyScalePreset(200, event)" title="Zoom to approximately 1:200 scale. Manual zoom remains available after applying.">1:200</button>
+          <button class="scale-btn" onclick="applyScalePreset(500, event)" title="Zoom to approximately 1:500 scale. Manual zoom remains available after applying.">1:500</button>
         </div>
       </div>
     </div>
@@ -458,11 +478,11 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         <input type="range" id="obj-buffer" min="0" max="30" value="0" step="1" aria-label="Clearance buffer feet" title="Clearance zone in feet, 0–30. Draws a dashed ring. Triggers amber advisory when a clearance ring conflicts with another footprint or clearance ring (footprint overlap stays red). Set to 0 to disable."
           oninput="document.getElementById('buffer-val').textContent=this.value" />
         <div class="inline-controls">
-          <button class="scale-btn" onclick="applyBufferPreset(0)" title="Set clearance buffer to 0 ft for the next placement (no dashed ring, no buffer advisories for that structure).">None</button>
-          <button class="scale-btn" onclick="applyBufferPreset(5)" title="Apply 5 ft clearance buffer — standard spacing for access and airflow.">Std 5 ft</button>
-          <button class="scale-btn" onclick="applyBufferPreset(10)" title="Apply 10 ft clearance buffer — use for generators or high-traffic corridors.">High 10 ft</button>
+          <button class="scale-btn" onclick="applyBufferPreset(0, event)" title="Set clearance buffer to 0 ft for the next placement (no dashed ring, no buffer advisories for that structure).">None</button>
+          <button class="scale-btn" onclick="applyBufferPreset(5, event)" title="Apply 5 ft clearance buffer — standard spacing for access and airflow.">Std 5 ft</button>
+          <button class="scale-btn" onclick="applyBufferPreset(10, event)" title="Apply 10 ft clearance buffer — use for generators or high-traffic corridors.">High 10 ft</button>
         </div>
-        <button class="ghost" onclick="applyBufferToAll()" style="width:100%;margin-top:6px;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
+        <button class="ghost" onclick="applyBufferToAll(event)" style="width:100%;margin-top:6px;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
       </div>
     </div>
 
@@ -491,11 +511,11 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Load a saved plan file. If structures are placed, you will be asked to confirm before your layout is replaced.">Open Plan</button>
       <button type="button" class="ghost" id="export-toggle" style="width:100%;margin-top:4px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="export-panel" aria-label="Toggle export options (GeoJSON, PDF)" title="Export layout as GeoJSON for GIS tools or a PDF briefing document with map image and zone summary.">Export ▾</button>
       <div id="export-panel" style="display:none;" role="region" aria-labelledby="export-toggle">
-        <button class="ghost" onclick="exportGeoJSON()" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
-        <button class="ghost" onclick="exportPDF()" style="width:100%;margin-top:4px;" title="Download a PDF with map snapshot and structure summary. Requires network to load export libraries. Falls back to text-only PDF if map capture fails.">Export PDF</button>
+        <button class="ghost" onclick="exportGeoJSON(event)" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
+        <button class="ghost" onclick="exportPDF(event)" style="width:100%;margin-top:4px;" title="Download a PDF with map snapshot and structure summary. Requires network to load export libraries. Falls back to text-only PDF if map capture fails.">Export PDF</button>
         <p class="dim-note" style="margin-top:6px;">Requires network connection to load PDF and html2canvas libraries.</p>
       </div>
-      <button class="ghost" onclick="printFitToPage()" style="width:100%;margin-top:4px;" aria-label="Print fit to page" title="Frame all placed structures and open the print dialog. View restores after printing. Enable print background graphics in browser settings for the satellite image to appear.">Print Fit</button>
+      <button class="ghost" onclick="printFitToPage(event)" style="width:100%;margin-top:4px;" aria-label="Print fit to page" title="Frame all placed structures and open the print dialog. View restores after printing. Enable print background graphics in browser settings for the satellite image to appear.">Print Fit</button>
     </div>
 
     </div><!-- /sidebar-scroll -->
@@ -505,7 +525,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <div style="padding:10px 12px 6px;flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
-          <button class="danger" onclick="clearAll()" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
+          <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
         </div>
         <div id="overlap-warning" class="warn-text" style="display:none;"></div>
       </div>
@@ -907,6 +927,80 @@ function getDefaultModeMessage() {
   return 'Select a tent from the sidebar, then click the map to place.';
 }
 
+const ACTION_TOAST_DURATION_MS = 2800;
+const SPATIAL_TOAST_DURATION_MS = 2200;
+let toastHideTimer = null;
+
+function clearToasts() {
+  if (toastHideTimer != null) {
+    clearTimeout(toastHideTimer);
+    toastHideTimer = null;
+  }
+  ['action-toast', 'spatial-toast'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('psmt-toast-visible');
+    el.textContent = '';
+    el.style.display = 'none';
+  });
+}
+
+function scheduleToastHide(durationMs) {
+  if (toastHideTimer != null) clearTimeout(toastHideTimer);
+  toastHideTimer = setTimeout(() => {
+    toastHideTimer = null;
+    clearToasts();
+  }, durationMs);
+}
+
+function clampToastPosition(el, left, top) {
+  const margin = 8;
+  const tw = el.offsetWidth || 0;
+  const th = el.offsetHeight || 0;
+  const maxLeft = Math.max(margin, window.innerWidth - tw - margin);
+  const maxTop = Math.max(margin, window.innerHeight - th - margin);
+  el.style.left = Math.max(margin, Math.min(left, maxLeft)) + 'px';
+  el.style.top = Math.max(margin, Math.min(top, maxTop)) + 'px';
+}
+
+/** Transient confirmation near a control (getBoundingClientRect). Replaces any visible toast. */
+function showActionToast(message, anchorEl) {
+  clearToasts();
+  const toast = document.getElementById('action-toast');
+  if (!toast) return;
+  toast.textContent = String(message || '');
+  toast.style.display = 'block';
+  let left = 8;
+  let top = 48;
+  if (anchorEl && typeof anchorEl.getBoundingClientRect === 'function') {
+    const rect = anchorEl.getBoundingClientRect();
+    left = rect.left;
+    top = rect.bottom + 4;
+    if (top + toast.offsetHeight > window.innerHeight - 8) {
+      top = rect.top - toast.offsetHeight - 4;
+    }
+  }
+  clampToastPosition(toast, left, top);
+  requestAnimationFrame(() => { toast.classList.add('psmt-toast-visible'); });
+  scheduleToastHide(ACTION_TOAST_DURATION_MS);
+}
+
+/** Transient confirmation at a map lat/lng (container-projected). pointer-events none via CSS. */
+function showSpatialToast(message, latlng) {
+  clearToasts();
+  const toast = document.getElementById('spatial-toast');
+  if (!toast || !latlng || typeof map === 'undefined' || !map) return;
+  toast.textContent = String(message || '');
+  toast.style.display = 'block';
+  const pt = map.latLngToContainerPoint(latlng);
+  const mapRect = map.getContainer().getBoundingClientRect();
+  const left = mapRect.left + pt.x - (toast.offsetWidth / 2);
+  const top = mapRect.top + pt.y - toast.offsetHeight - 10;
+  clampToastPosition(toast, left, top);
+  requestAnimationFrame(() => { toast.classList.add('psmt-toast-visible'); });
+  scheduleToastHide(SPATIAL_TOAST_DURATION_MS);
+}
+
 function setMode(txt) {
   const mapEl = document.getElementById('map');
   if (mapEl) mapEl.classList.remove('map-mode-place', 'map-mode-measure');
@@ -1151,14 +1245,15 @@ function endObjectDrag() {
     dragEndedAt = Date.now();
     updateList();
     scheduleOverlapSummary();
-    let statusMsg = `Moved ${sanitizeLabel(obj.label)}`;
     if (snapAnchorId != null) {
       const anchor = getObjectById(snapAnchorId);
       if (anchor && objects.includes(anchor)) {
-        statusMsg = `Snapped to ${sanitizeLabel(anchor.label)} (${snapFace} face)`;
+        const faceMid = getNearestFaceMidpointLatLng(anchor, obj.latlng);
+        if (faceMid) {
+          showSpatialToast(`Snapped to ${sanitizeLabel(anchor.label)} (${snapFace} face)`, faceMid);
+        }
       }
     }
-    setMode(statusMsg);
     scheduleSaveSession();
   }
 }
@@ -1179,7 +1274,6 @@ function endRotateDrag() {
   mapContainer.style.cursor = '';
   updateList();
   scheduleOverlapSummary();
-  setMode('Rotation updated');
   scheduleSaveSession();
 }
 
@@ -1255,7 +1349,6 @@ function undo() {
   redoStack.push(getObjectsSnapshot());
   applySnapshot(undoStack.pop());
   updateUndoRedoButtons();
-  setMode('Undo');
 }
 
 function redo() {
@@ -1263,7 +1356,6 @@ function redo() {
   undoStack.push(getObjectsSnapshot());
   applySnapshot(redoStack.pop());
   updateUndoRedoButtons();
-  setMode('Redo');
 }
 
 function updateUndoRedoButtons() {
@@ -1352,14 +1444,16 @@ function setBufferInput(ft) {
   label.textContent = String(value);
 }
 
-function applyBufferPreset(ft) {
+function applyBufferPreset(ft, evt) {
   setBufferInput(ft);
-  setMode(`Clearance preset selected: ${ft} ft`);
+  const anchor = (evt && evt.currentTarget) || document.getElementById('obj-buffer');
+  showActionToast(`Clearance preset selected: ${ft} ft`, anchor);
 }
 
-function applyBufferToAll() {
+function applyBufferToAll(evt) {
+  const anchor = (evt && evt.currentTarget) || null;
   if (!objects.length) {
-    setMode('No placed objects to update');
+    showActionToast('No placed objects to update', anchor);
     return;
   }
   const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
@@ -1371,7 +1465,7 @@ function applyBufferToAll() {
   });
   updateList();
   scheduleOverlapSummary();
-  setMode(`Applied ${bufferFt} ft clearance to ${objects.length} object(s)`);
+  showActionToast(`Applied ${bufferFt} ft clearance to ${objects.length} object(s)`, anchor);
   scheduleSaveSession();
 }
 
@@ -1511,7 +1605,6 @@ function saveScenario() {
     `psmt-scenario-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.json`,
     'application/json'
   );
-  setMode(`Plan saved (${scenario.objects.length} object(s))`);
 }
 
 function buildScenarioData() {
@@ -1565,7 +1658,7 @@ function downloadJsonFile(data, filename, mime) {
   URL.revokeObjectURL(url);
 }
 
-function exportGeoJSON() {
+function exportGeoJSON(evt) {
   const features = objects.map(o => {
     const feature = o.layer && o.layer.toGeoJSON ? o.layer.toGeoJSON() : null;
     if (!feature) return null;
@@ -1603,7 +1696,8 @@ function exportGeoJSON() {
     `psmt-layout-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.geojson`,
     'application/geo+json'
   );
-  setMode(`GeoJSON exported (${features.length} feature(s))`);
+  const anchor = (evt && evt.currentTarget) || null;
+  showActionToast(`GeoJSON exported (${features.length} feature(s))`, anchor);
 }
 
 function setExportChromeVisible(visible) {
@@ -1651,9 +1745,10 @@ function waitForTilesIdle() {
   });
 }
 
-async function exportPDF() {
+async function exportPDF(evt) {
+  const pdfAnchor = (evt && evt.currentTarget) || null;
   if (typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
-    setMode('PDF export requires network connection to load libraries.');
+    showActionToast('PDF export requires network connection to load libraries.', pdfAnchor);
     return;
   }
   const { jsPDF } = window.jspdf;
@@ -1738,13 +1833,13 @@ async function exportPDF() {
     doc.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', imgX, margin, drawW, drawH);
     appendPdfSummary(doc, margin + drawH + 8);
     doc.save(filename);
-    setMode('PDF exported: ' + filename);
+    showActionToast('PDF exported: ' + filename, pdfAnchor);
   } catch (err) {
     console.error(err);
     const doc = new jsPDF();
     appendPdfSummary(doc, 20);
     doc.save(filename);
-    setMode('PDF exported without map image (map capture failed).');
+    showActionToast('PDF exported without map image (map capture failed).', pdfAnchor);
   } finally {
     setExportChromeVisible(true);
     map.invalidateSize();
@@ -1815,7 +1910,7 @@ function loadScenarioFromData(data, options) {
   undoStack = [];
   redoStack = [];
   updateUndoRedoButtons();
-  setMode(options.fromRestore ? 'View Mode' : `Plan loaded (${objects.length} object(s))`);
+  if (options.fromRestore) setMode('View Mode');
   if (!options.fromRestore) scheduleSaveSession({ allowEmptyOverwrite: data.objects.length === 0 });
 }
 
@@ -1870,7 +1965,8 @@ function saveSession(options) {
     updateRestoreButtonState();
   } catch (e) {
     updateLastSavedIndicator(null);
-    setMode('Autosave failed. Please use Save Plan to export your plan manually.');
+    const saveBtn = document.querySelector('button[onclick^="saveScenario"]');
+    showActionToast('Autosave failed. Please use Save Plan to export your plan manually.', saveBtn || document.getElementById('autosave-indicator'));
   }
 }
 
@@ -1916,21 +2012,22 @@ function updateRestoreButtonState() {
 }
 
 function restoreAutosave() {
+  const restoreBtn = document.getElementById('btn-restore-autosave');
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) {
-      setMode('No autosave found.');
+      showActionToast('No autosave found.', restoreBtn);
       updateRestoreButtonState();
       return;
     }
     const data = JSON.parse(raw);
     if (!data || !Array.isArray(data.objects)) {
-      setMode('No autosave found.');
+      showActionToast('No autosave found.', restoreBtn);
       updateRestoreButtonState();
       return;
     }
     if (!data.map || !Array.isArray(data.map.center) || data.map.center.length !== 2) {
-      setMode('No autosave found.');
+      showActionToast('No autosave found.', restoreBtn);
       updateRestoreButtonState();
       return;
     }
@@ -1938,7 +2035,7 @@ function restoreAutosave() {
     const lng = toNumber(data.map.center[1], null);
     const zoom = toNumber(data.map.zoom, null);
     if (lat == null || lng == null || zoom == null || lat < -90 || lat > 90 || lng < -180 || lng > 180 || zoom < 0 || zoom > 22) {
-      setMode('No autosave found.');
+      showActionToast('No autosave found.', restoreBtn);
       updateRestoreButtonState();
       return;
     }
@@ -1950,7 +2047,6 @@ function restoreAutosave() {
     }
     loadScenarioFromData(data, { fromRestore: true });
     updateScaleRatio();
-    const restoreBtn = document.getElementById('btn-restore-autosave');
     if (restoreBtn) {
       const prevRestoreLabel = restoreBtn.textContent;
       restoreBtn.textContent = 'Restored!';
@@ -1962,7 +2058,7 @@ function restoreAutosave() {
     }
     updateRestoreButtonState();
   } catch (e) {
-    setMode('No autosave found.');
+    showActionToast('No autosave found.', restoreBtn);
     updateRestoreButtonState();
   }
 }
@@ -2350,6 +2446,33 @@ function getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng) {
   return { latlng: L.latLng(lat, lng), face: nearest.axis };
 }
 
+/** Nearest face midpoint of target to nearLatLng (same face geometry as getSnapAttachLatLng). Toast-only helper. */
+function getNearestFaceMidpointLatLng(target, nearLatLng) {
+  const tHL = (target.lengthM != null ? target.lengthM : target.widthM) / 2;
+  const tHW = target.widthM / 2;
+  if (!tHL || tHL <= 0 || !tHW || tHW <= 0 || !nearLatLng) return null;
+
+  const angleDeg = normalizeAngle(target.angleDeg || 0);
+  const rad = angleDeg * Math.PI / 180;
+  const sinA = Math.sin(rad);
+  const cosA = Math.cos(rad);
+  const center = target.latlng;
+
+  const faces = [
+    L.latLng(metersToDeg(center, -tHL * sinA, tHL * cosA)),
+    L.latLng(metersToDeg(center, tHL * sinA, -tHL * cosA)),
+    L.latLng(metersToDeg(center, -tHW * cosA, -tHW * sinA)),
+    L.latLng(metersToDeg(center, tHW * cosA, tHW * sinA)),
+  ];
+
+  let nearest = null, nearestDist = Infinity;
+  faces.forEach(pt => {
+    const d = nearLatLng.distanceTo(pt);
+    if (d < nearestDist) { nearestDist = d; nearest = pt; }
+  });
+  return nearest;
+}
+
 function normalizeAngle(deg) {
   return ((deg % 360) + 360) % 360;
 }
@@ -2499,7 +2622,7 @@ function deleteObj(id) {
   } else {
     scheduleSaveSession();
   }
-  setMode('Object deleted. Use Undo in the header to restore.');
+  showActionToast('Object deleted. Use Undo in the header to restore.', document.getElementById('btn-undo'));
 }
 
 function resetPlacedObjects() {
@@ -2517,13 +2640,13 @@ function resetPlacedObjects() {
   scheduleOverlapSummary();
 }
 
-function clearAll() {
+function clearAll(evt) {
   if (!objects.length) return;
   if (!confirm('Clear all placed objects?')) return;
   pushStateToUndo(); // so one Undo restores all
   resetPlacedObjects();
   scheduleSaveSession({ allowEmptyOverwrite: true });
-  setMode('All objects cleared. Use Undo in the header to restore.');
+  showActionToast('All objects cleared. Use Undo in the header to restore.', (evt && evt.currentTarget) || null);
 }
 
 function updateList() {
@@ -2761,7 +2884,7 @@ function drawAreaMeasureLayer() {
 
 function finishAreaMeasure() {
   if (!areaMeasureMode || areaMeasurePoints.length < 3) {
-    setMode('Area measure requires at least 3 points');
+    showActionToast('Area measure requires at least 3 points', document.getElementById('btn-finish-area-header'));
     return;
   }
   const areaM2 = polygonAreaMeters(areaMeasurePoints);
@@ -3182,7 +3305,8 @@ function updateOfflineBanner() {
 }
 
 // ─── Address Search ──────────────────────────────────────────────────────────────
-async function searchLocation() {
+async function searchLocation(evt) {
+  const searchAnchor = (evt && evt.currentTarget) || document.querySelector('#search-bar button');
   const input = document.getElementById('address-input').value.trim();
   if (!input) return;
 
@@ -3196,12 +3320,12 @@ async function searchLocation() {
     clearSearchResults();
     map.setView([lat, lng], 17);
     L.popup().setLatLng([lat, lng]).setContent(`📍 ${lat.toFixed(5)}, ${lng.toFixed(5)}`).openOn(map);
-    setMode('Go to coordinates (works offline)');
+    showActionToast('Go to coordinates (works offline)', searchAnchor);
     return;
   }
 
   if (!navigator.onLine) {
-    setMode('Offline — enter lat, lng to go to location');
+    showActionToast('Offline — enter lat, lng to go to location', searchAnchor);
     alert('Search requires network. Enter coordinates as lat, lng to jump (e.g. 34.05, -118.25).');
     return;
   }
@@ -3225,10 +3349,14 @@ async function searchLocation() {
       focusSearchResult(results[0]);
       if (results.length > 1) {
         showSearchResults(results);
-        setMode(`Search matched ${results.length} places; pick exact result`);
+        showActionToast(`Search matched ${results.length} places; pick exact result`, searchAnchor);
       } else {
         clearSearchResults();
-        setMode(usedGlobalFallback ? 'No nearby match found; centered best global result' : 'View Mode');
+        if (usedGlobalFallback) {
+          showActionToast('No nearby match found; centered best global result', searchAnchor);
+        } else {
+          setMode('View Mode');
+        }
       }
     } else {
       clearSearchResults();
@@ -3341,13 +3469,16 @@ function updatePrintMeta() {
   if (zonesEl) zonesEl.textContent = getZoneSummary();
 }
 
-function applyScalePreset(targetDenominator) {
+function applyScalePreset(targetDenominator, evt) {
   const lat = map.getCenter().lat * Math.PI / 180;
   const metersPerPixelTarget = targetDenominator * 0.000264583;
   const zoom = Math.log2((40075016.686 * Math.cos(lat)) / (metersPerPixelTarget * 256));
   const boundedZoom = Math.max(0, Math.min(21, zoom));
   map.setZoom(boundedZoom);
-  setMode(`Scale preset applied: 1:${targetDenominator.toLocaleString()} (manual zoom still enabled)`);
+  showActionToast(
+    `Scale preset applied: 1:${targetDenominator.toLocaleString()} (manual zoom still enabled)`,
+    (evt && evt.currentTarget) || null
+  );
 }
 
 function getPlacedBounds() {
@@ -3362,7 +3493,8 @@ function getPlacedBounds() {
   return bounds;
 }
 
-function printFitToPage() {
+function printFitToPage(evt) {
+  const printAnchor = (evt && evt.currentTarget) || null;
   const previousCenter = map.getCenter();
   const previousZoom = map.getZoom();
   const bounds = getPlacedBounds();
@@ -3387,9 +3519,9 @@ function printFitToPage() {
 
   if (bounds && bounds.isValid()) {
     map.fitBounds(bounds.pad(0.15), { maxZoom: 19 });
-    setMode('Print Fit: fitted placed objects to page');
+    showActionToast('Print Fit: fitted placed objects to page', printAnchor);
   } else {
-    setMode('Print Fit: no objects found, printing current view');
+    showActionToast('Print Fit: no objects found, printing current view', printAnchor);
   }
 
   setTimeout(printAndRestore, 180);
