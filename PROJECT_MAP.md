@@ -4,7 +4,7 @@ Orientation document for developers and collaborators. Describes **what this pro
 
 For **how to work on it** (read-only vs. authorized changes, scope discipline, catalog provenance, data-handling rules), see `.cursor/rules/` — especially `behavior.mdc`, `project-conventions.mdc`, and `data-handling.mdc`. This file does not duplicate those rules.
 
-**Current version:** `1.1.0-dev` (`APP_META.version`, `lastUpdated` `2026-07-07` in `Portable Solution Site Mapping Tool.html`).
+**Current version:** `1.2.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-10` in `Portable Solution Site Mapping Tool.html`).
 
 ---
 

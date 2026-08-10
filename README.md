@@ -1,10 +1,10 @@
 # Portable Solution Site Mapping Tool
 
-Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**1.1.0-dev**, `lastUpdated` **2026-07-07** in `APP_META`).
+Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**1.2.0-dev**, `lastUpdated` **2026-08-10** in `APP_META`).
 
 **Primary file:** `Portable Solution Site Mapping Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
 
-## Current release (1.1.0-dev)
+## Current release (1.2.0-dev)
 
 | Area | What you get |
 |------|----------------|
@@ -25,7 +25,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 
 **Load behavior:** Each open starts at the default map view (NYC area) with an empty layout. Previous work is **not** applied automatically — use **Restore Autosave** or **Open Plan**. Autosave still runs in the background and updates the **Autosaved …** timestamp when valid data exists in this browser.
 
-**Hover hints (v1.1.0-dev):** Control `title` text and map tooltips match current behavior — including fresh-open/autosave, footprint vs buffer overlap, snap auto-uncheck, and delete confirm on map and placed list.
+**Hover hints (v1.2.0-dev):** Control `title` text and map tooltips match current behavior — including fresh-open/autosave, footprint vs buffer overlap, snap auto-uncheck, and delete confirm on map and placed list.
 
 ## Quick Start Card
 
@@ -74,7 +74,7 @@ Dimensions follow `VENDOR_SPECS_DIGEST.md`. Default vendor colors apply on place
 
 ## Tooltips and map hints
 
-Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. Aligned with behavior as of **v1.1.0-dev**.
+Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. Aligned with behavior as of **v1.2.0-dev**.
 
 | Area | What the hint explains |
 |------|-------------------------|
@@ -110,6 +110,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| 1.2.0-dev | 2026-08-10 | Tier C complete — toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb). |
 | 1.1.0-dev | 2026-07-07 | Object/shape-fidelity audit complete — all five non-rect TENT_DB shapes verified: GK20 (regular octagon), GK1935 (cut-corner-rectangle), ZUMRO Quad (faithful), DLX X-HUB (cut-corner-square), HDT 8D36 (asymmetric cut-corner-rectangle). True-face snap (#6) unblocked. |
 | 0.8.8   | 2026-05-19 | Tooltip/title/aria aligned with current behavior; list delete confirm; README, PSMT_Project_Notes, and Quickstart synced. |
 | 0.8.7   | 2026-04-01 | Two-tier overlap (footprint red / clearance buffer amber), `intentionalBufferOverlap` in plans, overlap pill + split status bar, layer-space overlap tests, map/list styling + Intentional checkbox, buffer vs footprint intersection logic, tooltip pass, tent tooltip sticky off / close on drag. **Fresh open on load** — use **Restore Autosave** or **Open Plan**. |
