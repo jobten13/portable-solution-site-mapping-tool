@@ -361,9 +361,70 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 /* Note */
 .dim-note { font-size:10px; color:#8b949e; margin-top:4px; font-style:italic; }
 
+.start-here-modal {
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.start-here-modal.is-open { display:flex; }
+.start-here-backdrop {
+  position:absolute;
+  inset:0;
+  background:rgba(1,4,9,0.72);
+}
+.start-here-dialog {
+  position:relative;
+  z-index:1;
+  width:min(440px, calc(100vw - 32px));
+  max-height:calc(100vh - 32px);
+  overflow:auto;
+  background:#161b22;
+  border:1px solid #30363d;
+  border-radius:10px;
+  padding:20px 22px 18px;
+  box-shadow:0 12px 40px rgba(0,0,0,0.55);
+}
+.start-here-dialog h2 {
+  font-size:16px;
+  font-weight:600;
+  color:#e6edf3;
+  margin:0 28px 14px 0;
+}
+.start-here-dialog ol {
+  margin:0;
+  padding-left:20px;
+  color:#8b949e;
+  font-size:13px;
+  line-height:1.55;
+}
+.start-here-dialog li { margin-bottom:10px; }
+.start-here-dialog li:last-child { margin-bottom:0; }
+.start-here-dialog li strong { color:#e6edf3; font-weight:600; }
+.start-here-close {
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:32px;
+  height:32px;
+  padding:0;
+  border:1px solid #30363d;
+  border-radius:6px;
+  background:#21262d;
+  color:#e6edf3;
+  font-size:18px;
+  line-height:1;
+  cursor:pointer;
+}
+.start-here-close:hover { background:#30363d; }
+.start-here-close:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
+
 @media print {
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
-  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, #map-state-readout, .psmt-toast { display:none !important; }
+  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, #map-state-readout, .psmt-toast, .start-here-modal { display:none !important; }
   #main { display:block !important; height:100vh !important; }
   #map { width:100vw !important; height:100vh !important; }
   .leaflet-control-container { display:none !important; }
@@ -375,6 +436,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 <div id="header">
   <h1>Portable Solution Site Mapping Tool</h1>
+  <button type="button" class="ghost header-btn" id="btn-start-here" aria-haspopup="dialog" aria-controls="start-here-modal" title="Short how-to: place, arrange, and check overlaps. Opens anytime — not a one-time popup.">Start Here</button>
   <div id="search-wrap">
     <div id="search-bar">
       <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng — press / to focus. Works offline for coordinates only." />
@@ -401,6 +463,19 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <span id="autosave-indicator" title="Autosave status for this browser. Layout is not restored automatically on open — use Restore Autosave when needed.">Not yet saved</span>
   <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last layout auto-saved in this browser (localStorage). The app opens with a fresh map each time — nothing loads until you click here or Open Plan. Confirm if structures are already placed.">Restore Autosave</button>
 </div>
+<div id="start-here-modal" class="start-here-modal" role="dialog" aria-modal="true" aria-labelledby="start-here-title" aria-hidden="true">
+  <div class="start-here-backdrop" data-start-here-close="1"></div>
+  <div class="start-here-dialog">
+    <button type="button" class="start-here-close" id="btn-start-here-close" aria-label="Close how-to">&times;</button>
+    <h2 id="start-here-title">How to use this tool</h2>
+    <!-- PLACEHOLDER: Start Here modal copy — replace in a future content pass -->
+    <ol>
+      <li><strong>Pick a structure</strong> — Choose a shelter from the sidebar, then click the map to place it.</li>
+      <li><strong>Arrange it</strong> — Drag to move, use the handle to rotate. Turn on Snap to line it up flush with a neighbor.</li>
+      <li><strong>Check for overlap</strong> — Red means footprints collide. Amber means clearance buffers touch. Fix before finalizing.</li>
+    </ol>
+  </div>
+</div>
 <div id="action-toast" class="psmt-toast" role="status" aria-live="polite"></div>
 <div id="spatial-toast" class="psmt-toast" role="status" aria-live="polite"></div>
 <div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;" title="No network connection. Address search is unavailable; enter lat, lng in the search box to jump. Placed layouts and editing still work; map tiles may not load.">
@@ -426,22 +501,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <button class="scale-btn" onclick="applyScalePreset(200, event)" title="Zoom to approximately 1:200 scale. Manual zoom remains available after applying.">1:200</button>
           <button class="scale-btn" onclick="applyScalePreset(500, event)" title="Zoom to approximately 1:500 scale. Manual zoom remains available after applying.">1:500</button>
         </div>
-      </div>
-    </div>
-
-    <!-- How to use -->
-    <div class="sb-section">
-      <button type="button" class="ghost" id="how-to-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="how-to-panel" title="Step-by-step guide covering placement, snap attachment, saving, undo, and keyboard shortcuts.">How to use ▾</button>
-      <div id="how-to-panel" style="display:none;" role="region" aria-labelledby="how-to-toggle">
-        <ol style="font-size:11px;color:#8b949e;margin:8px 0 0 0;padding-left:18px;line-height:1.6;">
-          <li>Search for a site (address or <code>lat, lng</code>). The app opens with a fresh map — use <strong>Restore Autosave</strong> if you had work in this browser.</li>
-          <li>Select a tent from the list (or enter Custom Size and click Place Custom), then click the map to place.</li>
-          <li>Click a placed object to select it; drag to move, drag the orange handle to rotate. Delete with the red ✕ (confirms), Shift+click the footprint, or ✕ in the placed list.</li>
-          <li>To attach structures: select the target, check <strong>Snap to selected object</strong>, pick the tent, click near the face to attach to (unchecks after a successful snap).</li>
-          <li>Watch overlap counts in the status bar and map pill — red = footprint overlap; amber = clearance conflict (use <strong>Intentional</strong> on amber-only rows if deliberate).</li>
-          <li>Use Plan to Save, Open, or Export (GeoJSON/PDF). Undo / Redo in the header (Ctrl+Z / Ctrl+Y).</li>
-          <li>Press Esc (or click the mode badge) to return to view mode.</li>
-        </ol>
       </div>
     </div>
 
@@ -607,7 +666,6 @@ const UNDO_MAX = 50;
 const FT_TO_M = 0.3048;
 const MAX_LABEL_LENGTH = 80;
 const SESSION_KEY = 'psmt-session';
-const STORAGE_KEY_HOWTO = 'psmt_howto_open';
 const STORAGE_KEY_OPTIONS = 'psmt_options_open';
 const STORAGE_KEY_SETUP = 'psmt_setup_open';
 const STORAGE_KEY_EXPORT = 'psmt_export_open';
@@ -1129,10 +1187,46 @@ function makeCollapsible(panelId, btnId, storageKey, labels) {
     btn.setAttribute('aria-expanded', 'true');
   }
 }
-makeCollapsible('how-to-panel', 'how-to-toggle', STORAGE_KEY_HOWTO, { closed: 'How to use ▾', open: 'How to use ▴' });
 makeCollapsible('style-advanced', 'style-options-toggle', STORAGE_KEY_OPTIONS, { closed: 'Options ▾', open: 'Options ▴' });
 makeCollapsible('setup-panel', 'setup-toggle', STORAGE_KEY_SETUP, { closed: 'Setup ▾', open: 'Setup ▴' });
 makeCollapsible('export-panel', 'export-toggle', STORAGE_KEY_EXPORT, { closed: 'Export ▾', open: 'Export ▴' });
+
+function isStartHereModalOpen() {
+  const modal = document.getElementById('start-here-modal');
+  return !!(modal && modal.classList.contains('is-open'));
+}
+
+function openStartHereModal() {
+  const modal = document.getElementById('start-here-modal');
+  if (!modal) return;
+  modal.classList.add('is-open');
+  modal.setAttribute('aria-hidden', 'false');
+  const closeBtn = document.getElementById('btn-start-here-close');
+  if (closeBtn) closeBtn.focus();
+}
+
+function closeStartHereModal() {
+  const modal = document.getElementById('start-here-modal');
+  if (!modal) return;
+  modal.classList.remove('is-open');
+  modal.setAttribute('aria-hidden', 'true');
+  const openBtn = document.getElementById('btn-start-here');
+  if (openBtn) openBtn.focus();
+}
+
+(function initStartHereModal() {
+  const openBtn = document.getElementById('btn-start-here');
+  const closeBtn = document.getElementById('btn-start-here-close');
+  const modal = document.getElementById('start-here-modal');
+  if (!openBtn || !modal) return;
+  openBtn.addEventListener('click', () => openStartHereModal());
+  if (closeBtn) closeBtn.addEventListener('click', () => closeStartHereModal());
+  modal.addEventListener('click', e => {
+    if (e.target && e.target.getAttribute && e.target.getAttribute('data-start-here-close')) {
+      closeStartHereModal();
+    }
+  });
+})();
 
 function updateMeasureUI() {
   const hasMeasurement = !!measureTempLayer || !!areaMeasureLayer || (measureMode && measureStart !== null) || (areaMeasureMode && areaMeasurePoints.length > 0);
@@ -3597,6 +3691,11 @@ function isTypingTarget(target) {
 }
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && isStartHereModalOpen()) {
+    e.preventDefault();
+    closeStartHereModal();
+    return;
+  }
   if (isTypingTarget(e.target)) return;
 
   if (e.key === 'Escape') {
