@@ -137,13 +137,6 @@ button.danger { background:#da3633; }
 button.danger:hover { background:#f85149; }
 .header-btn { padding:6px 10px; font-size:11px; flex-shrink:0; }
 .header-btn.snap-mode-on { background:#1f6feb; border-color:#1f6feb; color:#fff; }
-#mode-display.mode-badge {
-  flex:0 1 260px;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
 #autosave-indicator {
   flex:0 0 auto;
   white-space:nowrap;
@@ -303,16 +296,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 }
 #statusbar span { color:#58a6ff; }
 
-.mode-badge {
-  padding:3px 8px; border-radius:12px; font-size:11px;
-  background:#1f2937; color:#58a6ff; border:1px solid #1f6feb;
-}
-.mode-badge.mode-badge-action {
-  cursor: pointer;
-}
-.mode-badge.mode-badge-action:hover {
-  background:#161b22; border-color:#58a6ff;
-}
 .psmt-toast {
   display:none;
   position:fixed;
@@ -444,7 +427,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     </div>
     <select id="search-results" aria-label="Search result matches" title="When several matches exist, the first is centered automatically — pick another here to refine."></select>
   </div>
-  <div id="mode-display" class="mode-badge" role="status" aria-live="polite" title="Select a tent from the sidebar, then click the map to place. Press P with a tent selected to enter place mode. Click when active (or Esc) to return to view mode.">Select a tent from the sidebar, then click the map to place.</div>
   <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z or Cmd+Z). Up to 50 steps in this session. Cleared on page refresh — use Restore Autosave or Save Plan.">Undo</button>
   <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
   <button type="button" class="ghost header-btn" id="btn-snap-mode" aria-pressed="false" aria-label="Snap off. Turn on to pull dragged structures flush to nearby faces and match rotation. Hold Ctrl or Cmd while dragging to suppress. Off by default." title="Snap off (click to turn on). When on, dragging near another structure's face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.">Snap off</button>
@@ -998,10 +980,6 @@ function cancelPlacing() {
   setMode('View Mode');
 }
 
-function getDefaultModeMessage() {
-  return 'Select a tent from the sidebar, then click the map to place.';
-}
-
 const ACTION_TOAST_DURATION_MS = 2800;
 const SPATIAL_TOAST_DURATION_MS = 2200;
 let toastHideTimer = null;
@@ -1097,24 +1075,11 @@ function syncMapStateReadout(txt) {
 function setMode(txt) {
   const mapEl = document.getElementById('map');
   if (mapEl) mapEl.classList.remove('map-mode-place', 'map-mode-measure');
-  const el = document.getElementById('mode-display');
-  const displayTxt = (txt === 'View Mode') ? getDefaultModeMessage() : txt;
-  el.textContent = displayTxt;
-  el.title = displayTxt;
   if (mapEl) {
     if (txt !== 'View Mode') {
       if (txt.startsWith('Click to place')) mapEl.classList.add('map-mode-place');
       else if (txt.indexOf('Measure') !== -1) mapEl.classList.add('map-mode-measure');
     }
-  }
-  if (txt === 'View Mode') {
-    el.classList.remove('mode-badge-action');
-    el.setAttribute('role', 'status');
-    el.removeAttribute('tabindex');
-  } else {
-    el.classList.add('mode-badge-action');
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
   }
   syncMapStateReadout(txt);
 }
@@ -1150,18 +1115,6 @@ function resetViewMode() {
   clearMeasureStartMarker();
   updateMeasureUI();
 }
-
-(function initModeBadgeClick() {
-  const el = document.getElementById('mode-display');
-  if (!el) return;
-  function goBack() {
-    if (el.textContent !== getDefaultModeMessage()) resetViewMode();
-  }
-  el.addEventListener('click', goBack);
-  el.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goBack(); }
-  });
-})();
 
 function makeCollapsible(panelId, btnId, storageKey, labels) {
   const panel = document.getElementById(panelId);
@@ -3815,10 +3768,6 @@ document.getElementById('zoom-level').textContent = map.getZoom();
 updateScaleRatio();
 updatePrintMeta();
 scheduleOverlapSummary();
-(function initHeaderTruncateTitles() {
-  const md = document.getElementById('mode-display');
-  if (md && md.textContent.trim()) md.title = md.textContent.trim();
-})();
 if (!lastSavedHydratedFromStorage) {
   updateLastSavedIndicator(undefined);
 }
