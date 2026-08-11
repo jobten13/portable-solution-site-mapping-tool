@@ -108,18 +108,6 @@ body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; hei
   font-size:12px;
 }
 #search-results.visible { display:block; }
-.search-opt {
-  display:flex;
-  align-items:center;
-  gap:6px;
-  font-size:11px;
-  color:#8b949e;
-  white-space:nowrap;
-}
-.search-opt input {
-  width:auto;
-  margin:0;
-}
 button {
   padding:7px 14px; border-radius:6px; border:none;
   background:#238636; color:white; cursor:pointer; font-size:12px;
@@ -206,7 +194,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   border:2px solid transparent; transition:all 0.15s;
 }
 .color-swatch.active { border-color:white; transform:scale(1.15); }
-.scale-btn-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
 .scale-btn {
   background:#21262d; border:1px solid #30363d; color:#8b949e;
   padding:5px 8px; font-size:11px; border-radius:6px;
@@ -469,23 +456,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <div id="sidebar">
     <div id="sidebar-scroll">
     <div id="measure-readout" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">No measurement.</div>
-    <!-- Setup (operation name, search bias, scale presets) -->
-    <div class="sb-section">
-      <button type="button" class="ghost" id="setup-toggle" style="width:100%;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="setup-panel" aria-label="Toggle setup (scale and operation name)" title="Set operation name for PDF and print, configure search behavior, and apply map scale presets.">Setup ▾</button>
-      <div id="setup-panel" style="display:none;" role="region" aria-labelledby="setup-toggle">
-        <h3 style="font-size:11px;margin-top:8px;color:#8b949e;">Print Metadata</h3>
-        <label>Operation Name</label>
-        <input type="text" id="operation-name" placeholder="e.g. UC Davis Parking Lot Surge Site" aria-label="Operation name for print metadata" title="Appears on the PDF title block and print footer. Set this before exporting or printing." />
-        <label class="search-opt" style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;" title="Search prioritizes results near the current map view. Uncheck for global search. Falls back to global if no nearby match found."><input type="checkbox" id="search-local-bias" checked /> Prefer current map area</label>
-        <h3 style="font-size:11px;margin-top:12px;color:#8b949e;">Scale Presets</h3>
-        <div class="scale-btn-row">
-          <button class="scale-btn" onclick="applyScalePreset(100, event)" title="Zoom to approximately 1:100 scale. Manual zoom remains available after applying.">1:100</button>
-          <button class="scale-btn" onclick="applyScalePreset(150, event)" title="Zoom to approximately 1:150 scale. Manual zoom remains available after applying.">1:150</button>
-          <button class="scale-btn" onclick="applyScalePreset(200, event)" title="Zoom to approximately 1:200 scale. Manual zoom remains available after applying.">1:200</button>
-          <button class="scale-btn" onclick="applyScalePreset(500, event)" title="Zoom to approximately 1:500 scale. Manual zoom remains available after applying.">1:500</button>
-        </div>
-      </div>
-    </div>
 
     <!-- Vendor Tabs -->
     <div class="sb-section">
@@ -566,7 +536,9 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <!-- Plan -->
     <div class="sb-section">
       <h3>Plan</h3>
-      <button class="blue" onclick="saveScenario()" style="width:100%;" title="Download layout as a JSON file to reopen, share, or archive. Use regularly — autosave is browser-only and can be lost if storage is cleared.">Save Plan</button>
+      <label>Scenario Name</label>
+      <input type="text" id="operation-name" placeholder="e.g. West Lawn 40-bed layout" aria-label="Scenario name" title="Name for this layout scenario. Used on Save Plan / Open Plan, PDF title, and print footer. Distinguishes what-if layouts for the same site." />
+      <button class="blue" onclick="saveScenario()" style="width:100%;margin-top:8px;" title="Download layout as a JSON file to reopen, share, or archive. Use regularly — autosave is browser-only and can be lost if storage is cleared.">Save Plan</button>
       <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Load a saved plan file. If structures are placed, you will be asked to confirm before your layout is replaced.">Open Plan</button>
       <button type="button" class="ghost" id="export-toggle" style="width:100%;margin-top:4px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="export-panel" aria-label="Toggle export options (GeoJSON, PDF)" title="Export layout as GeoJSON for GIS tools or a PDF briefing document with map image and zone summary.">Export ▾</button>
       <div id="export-panel" style="display:none;" role="region" aria-labelledby="export-toggle">
@@ -604,7 +576,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 </div>
 <div id="version-display" class="version-badge">v—</div>
 <div id="print-meta">
-  Operation: <span id="print-meta-operation">Untitled</span> |
+  Scenario: <span id="print-meta-operation">Untitled</span> |
   Printed: <span id="print-meta-date">-</span> |
   Scale: <span id="print-meta-scale">-</span> |
   Center: <span id="print-meta-center">-</span> |
@@ -651,7 +623,6 @@ const FT_TO_M = 0.3048;
 const MAX_LABEL_LENGTH = 80;
 const SESSION_KEY = 'psmt-session';
 const STORAGE_KEY_OPTIONS = 'psmt_options_open';
-const STORAGE_KEY_SETUP = 'psmt_setup_open';
 const STORAGE_KEY_EXPORT = 'psmt_export_open';
 const CUSTOM_ROLES_KEY = 'psmt-custom-roles';
 const ROLES = ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue'];
@@ -1133,9 +1104,7 @@ function makeCollapsible(panelId, btnId, storageKey, labels) {
   }
   btn.onclick = toggle;
   const raw = localStorage.getItem(storageKey);
-  const wasOpen = panelId === 'setup-panel'
-    ? (raw === null || raw === 'true')
-    : raw === 'true';
+  const wasOpen = raw === 'true';
   if (wasOpen) {
     panel.style.display = 'block';
     btn.textContent = openLabel;
@@ -1143,7 +1112,6 @@ function makeCollapsible(panelId, btnId, storageKey, labels) {
   }
 }
 makeCollapsible('style-advanced', 'style-options-toggle', STORAGE_KEY_OPTIONS, { closed: 'Options ▾', open: 'Options ▴' });
-makeCollapsible('setup-panel', 'setup-toggle', STORAGE_KEY_SETUP, { closed: 'Setup ▾', open: 'Setup ▴' });
 makeCollapsible('export-panel', 'export-toggle', STORAGE_KEY_EXPORT, { closed: 'Export ▾', open: 'Export ▴' });
 
 function isStartHereModalOpen() {
@@ -1705,7 +1673,6 @@ function buildScenarioData() {
     },
     ui: {
       operationName,
-      preferCurrentMapArea: !!document.getElementById('search-local-bias').checked,
       bufferFt: Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0)
     },
     objects: objects.map(o => ({
@@ -1973,9 +1940,7 @@ function loadScenarioFromData(data, options) {
     if (typeof data.ui.operationName === 'string') {
       document.getElementById('operation-name').value = data.ui.operationName;
     }
-    if (typeof data.ui.preferCurrentMapArea === 'boolean') {
-      document.getElementById('search-local-bias').checked = data.ui.preferCurrentMapArea;
-    }
+    // preferCurrentMapArea from older plans is ignored — search always prefers the current map area.
     if (Number.isFinite(parseFloat(data.ui.bufferFt))) {
       setBufferInput(parseFloat(data.ui.bufferFt));
     }
@@ -3416,18 +3381,13 @@ async function searchLocation(evt) {
   }
 
   try {
-    const preferLocal = document.getElementById('search-local-bias').checked;
+    // Always prefer current map area; fall back to global if no nearby match.
     let results = [];
     let usedGlobalFallback = false;
-
-    if (preferLocal) {
-      results = await fetchSearchResults(input, true);
-      if (!results.length) {
-        results = await fetchSearchResults(input, false);
-        usedGlobalFallback = !!results.length;
-      }
-    } else {
+    results = await fetchSearchResults(input, true);
+    if (!results.length) {
       results = await fetchSearchResults(input, false);
+      usedGlobalFallback = !!results.length;
     }
 
     if (results.length > 0) {
@@ -3552,18 +3512,6 @@ function updatePrintMeta() {
     `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
   const zonesEl = document.getElementById('print-meta-zones');
   if (zonesEl) zonesEl.textContent = getZoneSummary();
-}
-
-function applyScalePreset(targetDenominator, evt) {
-  const lat = map.getCenter().lat * Math.PI / 180;
-  const metersPerPixelTarget = targetDenominator * 0.000264583;
-  const zoom = Math.log2((40075016.686 * Math.cos(lat)) / (metersPerPixelTarget * 256));
-  const boundedZoom = Math.max(0, Math.min(21, zoom));
-  map.setZoom(boundedZoom);
-  showActionToast(
-    `Scale preset applied: 1:${targetDenominator.toLocaleString()} (manual zoom still enabled)`,
-    (evt && evt.currentTarget) || null
-  );
 }
 
 function getPlacedBounds() {
