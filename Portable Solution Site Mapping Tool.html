@@ -460,6 +460,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <h3>Vendor</h3>
       <div class="vendor-tabs" id="vendor-tabs"></div>
       <div class="tent-list" id="tent-list"></div>
+      <!-- INTENTIONAL: extended-catalog toggle is hidden until deliberately revealed (display:none by design).
+           Working control — not dead code. Flag-not-branch architecture per Decisions 2026-08-11
+           (Catalog import — IMPORT SCOPE). To activate: a controlled future commit that removes
+           display:none on #extended-catalog-wrap (plan/build/audit/visual) — no runtime activation path. -->
+      <div id="extended-catalog-wrap" style="display:none;margin-top:8px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8b949e;cursor:pointer;" title="When on, catalog also lists extended (non-standard) models. Session-only; resets on reload.">
+          <input type="checkbox" id="chk-extended-catalog" aria-label="Show extended catalog" /> Show extended catalog
+        </label>
+      </div>
     </div>
 
     <!-- Properties -->
@@ -837,34 +846,80 @@ L.control.scale({ imperial: true, metric: true, maxWidth: 120 }).addTo(map);
   });
 })();
 
-// ─── Build Vendor Tabs ──────────────────────────────────────────────────────────
+// ─── Build Vendor Tabs (tier-filtered catalog) ──────────────────────────────────
 let currentVendor = Object.keys(TENT_DB)[0];
+let showExtendedCatalog = false; // session-only; not persisted
 const tabContainer = document.getElementById('vendor-tabs');
 const tentListEl = document.getElementById('tent-list');
+const extendedCatalogChk = document.getElementById('chk-extended-catalog');
 
-Object.keys(TENT_DB).forEach(v => {
-  const t = document.createElement('div');
-  t.className = 'vtab' + (v === currentVendor ? ' active' : '');
-  t.textContent = v;
-  t.setAttribute('role', 'button');
-  t.setAttribute('tabindex', '0');
-  t.setAttribute('aria-label', `Select vendor ${v}`);
-  t.title = `Show ${v} tent models. Selecting a model applies the vendor default color.`;
-  t.onclick = () => setVendor(v);
-  t.onkeydown = ev => {
-    if (ev.key === 'Enter' || ev.key === ' ') {
-      ev.preventDefault();
-      setVendor(v);
+/** Missing / non-'standard' tier → extended (fail-closed: untagged models stay hidden). */
+function catalogTierOf(tent) {
+  return tent.tier === 'standard' ? 'standard' : 'extended';
+}
+function isCatalogModelVisible(tent) {
+  return showExtendedCatalog || catalogTierOf(tent) === 'standard';
+}
+function visibleCatalogModels(vendor) {
+  return (TENT_DB[vendor] || []).filter(isCatalogModelVisible);
+}
+function visibleCatalogVendors() {
+  return Object.keys(TENT_DB).filter(v => visibleCatalogModels(v).length > 0);
+}
+function tentCatalogKey(vendor, tent) {
+  return `${vendor}_${tent.id}`;
+}
+
+function applyExtendedCatalogToggle() {
+  showExtendedCatalog = !!(extendedCatalogChk && extendedCatalogChk.checked);
+  if (selectedTent && selectedTent.id && selectedTent.vendor) {
+    const stillVisible = visibleCatalogModels(selectedTent.vendor).some(t => t.id === selectedTent.id);
+    if (!stillVisible) {
+      cancelPlacing();
+      selectedTent = null;
     }
-  };
-  t.id = 'vtab-' + v;
-  tabContainer.appendChild(t);
-});
+  }
+  renderVendorTabs();
+  renderTentList();
+}
+
+function renderVendorTabs() {
+  const vendors = visibleCatalogVendors();
+  if (!vendors.length) {
+    tabContainer.textContent = '';
+    return;
+  }
+  if (!vendors.includes(currentVendor)) {
+    currentVendor = vendors[0];
+    selectedColor = VENDOR_COLORS[currentVendor] || selectedColor;
+    syncColorSwatches();
+  }
+  tabContainer.textContent = '';
+  vendors.forEach(v => {
+    const t = document.createElement('div');
+    t.className = 'vtab' + (v === currentVendor ? ' active' : '');
+    t.textContent = v;
+    t.setAttribute('role', 'button');
+    t.setAttribute('tabindex', '0');
+    t.setAttribute('aria-label', `Select vendor ${v}`);
+    t.title = `Show ${v} tent models. Selecting a model applies the vendor default color.`;
+    t.onclick = () => setVendor(v);
+    t.onkeydown = ev => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        setVendor(v);
+      }
+    };
+    t.id = 'vtab-' + v;
+    tabContainer.appendChild(t);
+  });
+}
 
 function setVendor(v) {
   currentVendor = v;
   document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
-  document.getElementById('vtab-' + v).classList.add('active');
+  const tab = document.getElementById('vtab-' + v);
+  if (tab) tab.classList.add('active');
   selectedColor = VENDOR_COLORS[v] || selectedColor;
   syncColorSwatches();
   renderTentList();
@@ -873,8 +928,8 @@ function setVendor(v) {
 function renderTentList() {
   tentListEl.textContent = '';
   const fragment = document.createDocumentFragment();
-  TENT_DB[currentVendor].forEach((tent, idx) => {
-    fragment.appendChild(createTentCard(tent, idx));
+  visibleCatalogModels(currentVendor).forEach(tent => {
+    fragment.appendChild(createTentCard(tent));
   });
   tentListEl.appendChild(fragment);
 }
@@ -889,9 +944,10 @@ function tentShapeBadge(shape) {
   return '▬ Rectangle';
 }
 
-function createTentCard(tent, idx) {
+function createTentCard(tent) {
   const card = document.createElement('div');
-  const isSelected = selectedTent && selectedTent._key === `${currentVendor}_${idx}`;
+  const key = tentCatalogKey(currentVendor, tent);
+  const isSelected = selectedTent && selectedTent._key === key;
   card.className = 'tent-item' + (isSelected ? ' selected' : '');
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
@@ -915,7 +971,7 @@ function createTentCard(tent, idx) {
   card.appendChild(badge);
 
   card.onclick = () => {
-    selectedTent = { ...tent, _key: `${currentVendor}_${idx}`, vendor: currentVendor };
+    selectedTent = { ...tent, _key: key, vendor: currentVendor };
     selectedColor = VENDOR_COLORS[currentVendor] || selectedColor;
     syncColorSwatches();
     renderTentList();
@@ -940,6 +996,10 @@ function dimStr(tent) {
   return `${tent.widthFt}' × ${tent.lengthFt}'`;
 }
 
+if (extendedCatalogChk) {
+  extendedCatalogChk.addEventListener('change', applyExtendedCatalogToggle);
+}
+renderVendorTabs();
 renderTentList();
 
 // ─── Color Swatches ──────────────────────────────────────────────────────────────
