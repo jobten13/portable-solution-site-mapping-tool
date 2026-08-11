@@ -213,8 +213,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 }
 .obj-color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 .obj-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e6edf3; }
-.obj-name-input { background:transparent; border:none; padding:0; font:inherit; min-width:0; }
-.obj-name-input:focus { outline:1px solid #58a6ff; outline-offset:1px; }
 .obj-del { background:none; border:none; color:#8b949e; padding:2px 5px; font-size:13px; }
 .obj-del:hover { color:#f85149; background:none; }
 .obj-role-select {
@@ -467,10 +465,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <!-- Properties -->
     <div class="sb-section">
       <h3>Label & Style</h3>
-
-      <label>Custom Label (optional)</label>
-      <input type="text" id="obj-label" placeholder="e.g. Triage A..." aria-label="Custom object label" title="Name for the next structure. Appears on the map tooltip and placed list. Vendor and model name used if blank." />
-      <p class="dim-note">Applied to next placement.</p>
 
       <label style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Select a placed object first. Next click on the map attaches to the nearest face (length or width end) and matches its rotation. Unchecks automatically after a successful snap.">
         <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
@@ -927,7 +921,7 @@ COLORS.forEach(c => {
 
 // ─── Place from selected tent ────────────────────────────────────────────────────
 function startPlacing() {
-  if (!selectedTent) { alert('Select a tent model first.'); return; }
+  if (!selectedTent) { alert('NOTICE:\nSelect a tent model first.'); return; }
   if (measureMode || areaMeasureMode) clearMeasure();
   placingMode = true;
   customMode = false;
@@ -1303,7 +1297,7 @@ function endObjectDrag() {
       if (anchor && objects.includes(anchor)) {
         const faceMid = getNearestFaceMidpointLatLng(anchor, obj.latlng);
         if (faceMid) {
-          showSpatialToast(`Snapped to ${sanitizeLabel(anchor.label)} (${snapFace} face)`, faceMid);
+          showSpatialToast(`Snapped to ${formatObjectIdentity(anchor)} (${snapFace} face)`, faceMid);
         }
       }
     }
@@ -1471,7 +1465,7 @@ function syncRotateHandle() {
   });
   deleteHandleLayer.on('click', ev => {
     L.DomEvent.stop(ev);
-    if (confirm(`Delete "${obj.label}"?`)) deleteObj(obj.id);
+    if (confirm(`CONFIRM:\nDelete "${formatObjectIdentity(obj)}"?`)) deleteObj(obj.id);
   });
 }
 
@@ -1510,7 +1504,7 @@ function applyBufferToAll(evt) {
     return;
   }
   const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
-  if (!confirm(`Apply ${bufferFt} ft buffer to all ${objects.length} placed object(s)?`)) return;
+  if (!confirm(`CONFIRM:\nApply ${bufferFt} ft buffer to all ${objects.length} placed object(s)?`)) return;
   pushStateToUndo();
   objects.forEach(o => {
     o.bufferFt = bufferFt;
@@ -1525,6 +1519,13 @@ function applyBufferToAll(evt) {
 function sanitizeLabel(value, fallback = 'Untitled') {
   const trimmed = String(value || '').trim().slice(0, MAX_LABEL_LENGTH);
   return trimmed || fallback;
+}
+
+/** Display identity: "Label — Role" when role is set; label alone when role is "—"/empty. */
+function formatObjectIdentity(o) {
+  const label = sanitizeLabel(o && o.label);
+  const role = String((o && o.role) != null ? o.role : '—');
+  return (role && role !== '—') ? `${label} — ${role}` : label;
 }
 
 function getCustomRolesFromStorage() {
@@ -1848,8 +1849,8 @@ async function exportPDF(evt) {
         const dims = (o.widthM != null && o.lengthM != null)
           ? `${(o.widthM * 3.28084).toFixed(1)}×${(o.lengthM * 3.28084).toFixed(1)} ft`
           : '—';
-        const role = String(o.role || '—');
-        addLine(`${i + 1}. ${o.label || 'Unlabeled'} — ${dims} — ${role}`);
+        const identity = formatObjectIdentity({ label: o.label || 'Unlabeled', role: o.role });
+        addLine(`${i + 1}. ${identity} — ${dims}`);
       });
     }
     y += lineHeight;
@@ -1901,7 +1902,7 @@ async function exportPDF(evt) {
 
 function loadScenarioPrompt() {
   if (objects.length > 0) {
-    if (!confirm('Warning: opening a plan will replace your current layout, including your autosaved session. To keep your current work, use Save Plan to download it first. Continue?')) return;
+    if (!confirm('CONFIRM:\nWarning: opening a plan will replace your current layout, including your autosaved session. To keep your current work, use Save Plan to download it first. Continue?')) return;
   }
   document.getElementById('scenario-file-input').click();
 }
@@ -2090,7 +2091,7 @@ function restoreAutosave() {
       return;
     }
     if (objects.length > 0) {
-      if (!confirm('This will replace your current layout with the autosaved session. Unsaved work will be lost. Continue?')) {
+      if (!confirm('CONFIRM:\nThis will replace your current layout with the autosaved session. Unsaved work will be lost. Continue?')) {
         updateRestoreButtonState();
         return;
       }
@@ -2158,7 +2159,6 @@ map.on('click', e => {
   const opacity = parseInt(document.getElementById('obj-opacity').value) / 100;
   const angleDeg = normalizeAngle(parseFloat(document.getElementById('obj-rotation').value) || 0);
   const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
-  const customLabelInput = document.getElementById('obj-label').value.trim();
 
   if (customMode) {
     widthFt  = parseFloat(document.getElementById('custom-w').value) || 20;
@@ -2171,7 +2171,7 @@ map.on('click', e => {
     lengthFt = selectedTent.lengthFt;
     shape    = selectedTent.shape;
     vendor   = selectedTent.vendor;
-    label    = customLabelInput || `${vendor} ${selectedTent.name}`;
+    label    = `${vendor} ${selectedTent.name}`;
   }
   label = sanitizeLabel(label);
 
@@ -2381,11 +2381,11 @@ function drawObject(obj) {
     layer.on('click', ev => {
       if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
       if (ev.originalEvent && ev.originalEvent.shiftKey) {
-        if (confirm(`Delete "${obj.label}"?`)) deleteObj(obj.id);
+        if (confirm(`CONFIRM:\nDelete "${formatObjectIdentity(obj)}"?`)) deleteObj(obj.id);
         return;
       }
       setSelectedObject(obj.id);
-      setMode(`Selected ${sanitizeLabel(obj.label)} — drag to move`);
+      setMode(`Selected ${formatObjectIdentity(obj)} — drag to move`);
       updateList();
       scrollPlacedListToObject(obj.id);
     });
@@ -2694,7 +2694,7 @@ function resetPlacedObjects() {
 
 function clearAll(evt) {
   if (!objects.length) return;
-  if (!confirm('Clear all placed objects?')) return;
+  if (!confirm('CONFIRM:\nClear all placed objects?')) return;
   pushStateToUndo(); // so one Undo restores all
   resetPlacedObjects();
   scheduleSaveSession({ allowEmptyOverwrite: true });
@@ -2759,7 +2759,7 @@ function createObjectListItem(o) {
   row.onclick = () => {
     setSelectedObject(o.id);
     map.panTo(o.latlng);
-    setMode(`Selected ${sanitizeLabel(o.label)} — drag to move`);
+    setMode(`Selected ${formatObjectIdentity(o)} — drag to move`);
     updateList();
   };
 
@@ -2767,21 +2767,10 @@ function createObjectListItem(o) {
   dot.className = 'obj-color-dot';
   dot.style.background = normalizeColor(o.color);
 
-  const name = document.createElement('input');
-  name.type = 'text';
-  name.className = 'obj-name obj-name-input';
-  name.value = sanitizeLabel(o.label);
-  name.setAttribute('aria-label', `Label for ${sanitizeLabel(o.label)}`);
-  name.onclick = ev => ev.stopPropagation();
-  name.onblur = () => {
-    const newLabel = sanitizeLabel(name.value);
-    if (newLabel === o.label) return;
-    pushStateToUndo();
-    o.label = newLabel;
-    drawObject(o);
-    updateList();
-    scheduleSaveSession();
-  };
+  const name = document.createElement('div');
+  name.className = 'obj-name';
+  name.textContent = formatObjectIdentity(o);
+  name.setAttribute('aria-label', formatObjectIdentity(o));
 
   const meta = document.createElement('div');
   meta.style.fontSize = '10px';
@@ -2791,7 +2780,7 @@ function createObjectListItem(o) {
 
   const roleSelect = document.createElement('select');
   roleSelect.className = 'obj-role-select';
-  roleSelect.setAttribute('aria-label', `Role for ${sanitizeLabel(o.label)}`);
+  roleSelect.setAttribute('aria-label', `Role for ${formatObjectIdentity(o)}`);
   getEffectiveRoles().forEach(r => {
     const opt = document.createElement('option');
     opt.value = r;
@@ -2804,17 +2793,18 @@ function createObjectListItem(o) {
     pushStateToUndo();
     o.role = roleSelect.value;
     drawObject(o);
+    updateList();
     scheduleSaveSession();
   };
 
   const del = document.createElement('button');
   del.className = 'obj-del';
   del.textContent = '✕';
-  del.setAttribute('aria-label', `Delete ${sanitizeLabel(o.label)}`);
+  del.setAttribute('aria-label', `Delete ${formatObjectIdentity(o)}`);
   del.title = 'Delete this structure (confirm). Use Undo to restore before refreshing.';
   del.onclick = ev => {
     ev.stopPropagation();
-    if (confirm(`Delete "${sanitizeLabel(o.label)}"?`)) deleteObj(o.id);
+    if (confirm(`CONFIRM:\nDelete "${formatObjectIdentity(o)}"?`)) deleteObj(o.id);
   };
 
   row.appendChild(dot);
@@ -3374,7 +3364,7 @@ async function searchLocation(evt) {
   if (coordMatch) {
     const lat = parseFloat(coordMatch[1]), lng = parseFloat(coordMatch[2]);
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      alert('Coordinates out of range. Use latitude [-90, 90] and longitude [-180, 180].');
+      alert('NOTICE:\nCoordinates out of range. Use latitude [-90, 90] and longitude [-180, 180].');
       return;
     }
     clearSearchResults();
@@ -3386,7 +3376,7 @@ async function searchLocation(evt) {
 
   if (!navigator.onLine) {
     showActionToast('Offline — enter lat, lng to go to location', searchAnchor);
-    alert('Search requires network. Enter coordinates as lat, lng to jump (e.g. 34.05, -118.25).');
+    alert('NOTICE:\nSearch requires network. Enter coordinates as lat, lng to jump (e.g. 34.05, -118.25).');
     return;
   }
 
@@ -3415,11 +3405,11 @@ async function searchLocation(evt) {
       }
     } else {
       clearSearchResults();
-      alert('Location not found.');
+      alert('NOTICE:\nLocation not found.');
     }
   } catch (e) {
     clearSearchResults();
-    alert('Search failed. Check connection.');
+    alert('NOTICE:\nSearch failed. Check connection.');
   }
 }
 
@@ -3585,13 +3575,13 @@ document.getElementById('scenario-file-input').addEventListener('change', e => {
       const data = JSON.parse(String(reader.result || '{}'));
       loadScenarioFromData(data);
     } catch (err) {
-      alert(`Failed to load scenario: ${err.message || 'Invalid file.'}`);
+      alert(`NOTICE:\nFailed to load scenario: ${err.message || 'Invalid file.'}`);
     } finally {
       e.target.value = '';
     }
   };
   reader.onerror = () => {
-    alert('Failed to read scenario file.');
+    alert('NOTICE:\nFailed to read scenario file.');
     e.target.value = '';
   };
   reader.readAsText(file);
