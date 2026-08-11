@@ -1,12 +1,12 @@
 # Vendor Tent Specs Digest (PoP 3)
 
-**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT) are used for placement and when loading plans. HDT 6D31 was removed per product lineup; only Base-X 305 and Base-X Dome (8D36) remain for HDT.
+**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot) are used for placement and when loading plans. HDT 6D31 was removed per product lineup; only Base-X 305 and Base-X Dome (8D36) remain for HDT. Hard-sided Craftsmen / FORTS / WillScot added 2026-08-11 (PSC-primary, fidelity unconfirmed).
 
 ---
 
 **Source:** `C:\Users\jason\Desktop\IMPACTS Project\PoP 3\VPC Mapping\Vendor Specs and Manuals`  
-**Folders:** **BLU-MED**, **DLX**, **HDT Global**, **Western Shelter & Third Party**, **ZUMRO**  
-**Purpose:** Align Portable Solution Site Mapping Tool `TENT_DB` with manufacturer spec sheets for accurate length, width, height, and shapes.
+**Folders:** Soft-sided OEM pack — **BLU-MED**, **DLX**, **HDT Global**, **Western Shelter & Third Party**, **ZUMRO**. Hard-sided **Craftsmen**, **FORTS**, **WillScot** (added 2026-08-11) have **no OEM folders** in that pack — PSC combined catalog via performer-team transfer only.  
+**Purpose:** Align Portable Solution Site Mapping Tool `TENT_DB` with manufacturer spec sheets where they exist; hard-sided entries document PSC-primary, unconfirmed footprints until OEM sheets are obtained.
 
 ---
 
@@ -67,6 +67,31 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 
 ---
 
+## 6. Craftsmen (hard-sided)
+
+| Model | Spec source | Spec dimensions (W × L) | Shape | Notes | Tool current |
+|-------|-------------|-------------------------|-------|-------|--------------|
+| **8-Bed ICU Trailer** | PSC combined catalog (performer-team specs); no OEM sheet as of import | **Expanded 22.5' × 53'** (mapped); closed **8.5' × 53'** reference-only | rect | Beds **8** (PSC-stated). Elevated; ramp required; ramp run grade-dependent. Fidelity **unconfirmed**. | 22.5 × 53 ✓ |
+
+---
+
+## 7. FORTS (hard-sided)
+
+| Model | Spec source | Spec dimensions (W × L) | Shape | Notes | Tool current |
+|-------|-------------|-------------------------|-------|-------|--------------|
+| **Model 38** | PSC / data.js base unit (performer-team); no OEM sheet as of import | **18' × 20'** | rect | Beds **"~2 to 3"** derived/unconfirmed (not per-unit vendor-stated). Single base unit, not full PSC assembly. Elevated; ramp required; ramp run grade-dependent. Fidelity **unconfirmed**. | 18 × 20 ✓ |
+
+---
+
+## 8. WillScot (hard-sided)
+
+| Model | Spec source | Spec dimensions (W × L) | Shape | Notes | Tool current |
+|-------|-------------|-------------------------|-------|-------|--------------|
+| **Patient Unit** | PSC combined catalog (performer-team); no OEM sheet as of import | **23.5' × 60'** (23'6") | rect | Beds **6 to 10** (6 critical / 10 medical surge, PSC p.134 — range). Pairing intent with Staff Unit. Elevated; ramp required; ramp run grade-dependent. Fidelity **unconfirmed**. | 23.5 × 60 ✓ |
+| **Staff Unit** | PSC combined catalog (performer-team); no OEM sheet as of import | **11.75' × 60'** (11'9") | rect | Beds **null** (flex/support). Pairing intent with Patient Unit. Elevated; ramp required; ramp run grade-dependent. Fidelity **unconfirmed**. | 11.75 × 60 ✓ |
+
+---
+
 ## Summary: Changes Applied in Portable Solution Site Mapping Tool
 
 All of the following are implemented in the tool.
@@ -82,6 +107,7 @@ All of the following are implemented in the tool.
 9. **Western Shelter GK1935**: Overall **18'7"×33'11"**; **symmetric** corner cuts (each leg **5.421 ft**); **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20); **~570 sq ft**.
 10. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
 11. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
+12. **Craftsmen / FORTS / WillScot (hard-sided, 2026-08-11 import):** PSC-primary, fidelity **unconfirmed** (no OEM sheet). Craftsmen 8-Bed ICU Trailer mapped **expanded 53'×22.5'** (closed 53'×8.5' reference-only). FORTS Model 38 **18'×20'** base unit; beds **"~2 to 3"** derived. WillScot **Patient** 23.5'×60' beds **6 to 10**; **Staff** 11.75'×60' beds null — two placeable units, pairing intent in notes.
 
 ---
 
@@ -92,6 +118,7 @@ All of the following are implemented in the tool.
 - **HDT Global**: Spec Sheets — HDT_305shelter_13-13.pdf, HDT_8D36Shelter_11.pdf, Anchor Kits 69KHSA305 and 69KHSA8D36.pdf.
 - **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. **SO-VC8H** vestibule footprint (7'8"×7'4") and sidewall height per Western Shelter SO-VC8H spec. Product catalog: Western-Shelter-_-Product-Catalog.pdf.
 - **ZUMRO**: Spec Sheets — Zumro 400 Specs.pdf, Zumro 600 Specs.pdf, Zumro Quad Interface.pdf, UC DAVIS SPEC SHEET PACKAGE 011325.pdf. Interconnect: ZUMRO_Interconnect_Dimensions.md (root), engineering drawing Photo - Zumro Interconnect to Western Shelter.png / ZUMRO Interconnect to WS (1).jpg; footprint 7.17'×6.92' (86"×83"), rect.
+- **Craftsmen / FORTS / WillScot (hard-sided):** No OEM sheets in the reference package as of 2026-08-11 import. Dimensions and notes from **PSC combined catalog** (Vendor Product Catalog Template - Revised Version.pdf) via performer-team transfer (`PSMT Data Transfer.json`); fidelity **unconfirmed**.
 
 ---
 
@@ -117,7 +144,7 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **Tables** | “Recommendation” column removed; “Tool current” column now reflects implemented values only, all ✓. |
 | **Source Files Used** | Section rewritten to list actual paths and filenames under Vendor Specs and Manuals. |
 
-**Spec sheet verification note:** Dimensions in this digest were previously verified against manufacturer docs; PDF content was not re-extracted in this pass. Folder contents were cross-checked to ensure every tent in `TENT_DB` has a corresponding spec or manual in **Vendor Specs and Manuals**.
+**Spec sheet verification note:** Dimensions in this digest were previously verified against manufacturer docs; PDF content was not re-extracted in this pass. Folder contents were cross-checked so every **soft-sided** tent in `TENT_DB` has a corresponding spec or manual in **Vendor Specs and Manuals**. The four **hard-sided** models (Craftsmen 8-Bed ICU Trailer, FORTS Model 38, WillScot Patient Unit, WillScot Staff Unit) have **no OEM sheet** in that pack — provenance is PSC via another performer team only; fidelity **unconfirmed** as of the 2026-08-11 import.
 
 ---
 
@@ -142,3 +169,14 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | Change | Details |
 |--------|--------|
 | **Quad Interface** | Exterior footprint **29.4'×19.5'** mapped in tool (~521 sq ft rendered); **~454 sq ft** documented as **interior** floor space to interior width **15.7'** (air-beam — inflated beams reduce usable interior below exterior footprint). Four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S. Render faithful to exterior footprint; no geometry change. Table, summary, and verification row updated. |
+
+---
+
+**Date:** 2026-08-11  
+**Action:** Hard-sided vendors **Craftsmen**, **FORTS**, **WillScot** added to digest + `TENT_DB` (catalog import Step 4). PSC-primary; fidelity **unconfirmed**; no OEM sheets.
+
+| Change | Details |
+|--------|--------|
+| **Craftsmen 8-Bed ICU Trailer** | Mapped **expanded 22.5'×53'**; closed 8.5'×53' reference-only; beds **8**. |
+| **FORTS Model 38** | **18'×20'** base unit; beds **"~2 to 3"** derived. |
+| **WillScot Patient / Staff** | Patient **23.5'×60'** beds **6 to 10**; Staff **11.75'×60'** beds null; two placeable units. |

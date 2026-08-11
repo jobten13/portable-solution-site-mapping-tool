@@ -733,6 +733,46 @@ const TENT_DB = {
       bedCapacity: { value: 18, display: "18", provenance: "data.js" },
       provenance: "Transfer hdt-8d36. Geometry authority (2026-08-11): 31×37 bbox stands; \"clear span\" applies to the 31' width only; no separate exterior published; flop-out is buffer territory. Cut-corner legs unconfirmed (diagram-derived). Beds from transfer.",
       note:"Base-X Dome 8D36 - 31'x37' (HDT_8D36Shelter), cut-corner rect (~8.4'/13.2' legs, unconfirmed), ~925 sq ft rendered, 8 doors" },
+  ],
+  "Craftsmen": [
+    { id:"craftsmen-8bed-icu", name:"8-Bed ICU Trailer", tier:"standard", structure:"hard-sided",
+      widthFt:22.5, lengthFt:53, shape:"rect",
+      fidelity:"unconfirmed",
+      bedCapacity: { value: 8, display: "8", provenance: "PSC combined catalog / data.js" },
+      provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Mapped footprint = EXPANDED 53'×22.5' (closed 53'×8.5' reference-only, unusable closed). Transfer craftsmen-8bed-icu.",
+      note:"8-Bed ICU Trailer – expanded 53'×22.5' (1192.5 sq ft); closed 53'×8.5' preserved for reference only. Elevated structure; ramp entrance required; ramp run is grade-dependent." },
+  ],
+  "FORTS": [
+    { id:"forts-38", name:"Model 38", tier:"standard", structure:"hard-sided",
+      widthFt:18, lengthFt:20, shape:"rect",
+      fidelity:"unconfirmed",
+      bedCapacity: {
+        value: { min: 2, max: 3 },
+        display: "~2 to 3",
+        provenance: "data.js",
+        note: "DERIVED: diagram-derived from uneven per-unit bed icons in PSC assembly drawing; not vendor-stated per Model 38. PSC assembly is 6 ICU or 10 Med-Surg beds across six Model 38 units + auxiliaries."
+      },
+      provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Base-unit 18'×20' (not full PSC assembly envelope). Transfer forts-38.",
+      note:"Model 38 – 18'×20' base unit (360 sq ft); single unit, not full PSC assembly. Elevated structure; ramp entrance required; ramp run is grade-dependent." },
+  ],
+  "WillScot": [
+    { id:"wilscot-patient", name:"Patient Unit", tier:"standard", structure:"hard-sided",
+      widthFt:23.5, lengthFt:60, shape:"rect",
+      fidelity:"unconfirmed",
+      bedCapacity: {
+        value: { min: 6, max: 10 },
+        display: "6 to 10",
+        provenance: "PSC p.134: 6 critical / 10 medical surge (range, not adjudication); transfer had flat 6 — overridden per 2026-08-11 Decisions",
+        note: "Acuity-dependent: 6 critical care or 10 medical surge (both vendor-stated). Pair with Staff Unit (wilscot-staff); PSC: two buildings intended to connect through a central hallway — planner arranges."
+      },
+      provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Exterior 23.5'×60'. Transfer wilscot-patient.",
+      note:"Patient Unit – 23'6\"×60' (1410 sq ft). Beds 6 to 10 (6 critical / 10 medical surge). Intended to pair with Staff Unit via central hallway (planner arranges; supports mixed deployments). Elevated structure; ramp entrance required; ramp run is grade-dependent." },
+    { id:"wilscot-staff", name:"Staff Unit", tier:"standard", structure:"hard-sided",
+      widthFt:11.75, lengthFt:60, shape:"rect",
+      fidelity:"unconfirmed",
+      bedCapacity: { value: null, display: null, provenance: "data.js — staff/flex space, no patient beds" },
+      provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Exterior 11.75'×60'. Transfer wilscot-staff.",
+      note:"Staff Unit – 11'9\"×60' (705 sq ft); flex/support, no patient beds. Intended to pair with Patient Unit via central hallway (planner arranges; supports mixed deployments). Elevated structure; ramp entrance required; ramp run is grade-dependent." },
   ]
 };
 
@@ -742,7 +782,10 @@ const VENDOR_COLORS = {
   'Western Shelter': '#3fb950',
   'DLX': '#f78166',
   'ZUMRO': '#ffa657',
-  'HDT': '#d2a8ff'
+  'HDT': '#d2a8ff',
+  'Craftsmen': '#0d9488',
+  'FORTS': '#ca8a04',
+  'WillScot': '#c026d3'
 };
 function getVendorColor(vendor) {
   return (vendor && VENDOR_COLORS[vendor]) || selectedColor;
