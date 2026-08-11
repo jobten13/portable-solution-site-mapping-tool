@@ -443,6 +443,14 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 
   **STATUS:** All of the above is **DESIGN, NOT BUILT**. This affects Save Plan JSON, undo snapshots, GeoJSON export, PDF export text, and the print zone-summary line only in that the "Label — Role" **DISPLAY** combination is new formatting logic at each of those surfaces — the underlying label and role properties themselves are unchanged, so no schema migration is needed for existing saved plans.
 
+- **2026-08-10 — README/Quickstart doc sync deliberately batched, not per-change.**
+
+  Multiple sidebar redesign changes are landing in quick succession tonight (Setup dissolution shipped in 487c777; Role/Label consolidation and a Prefer-current-map-area-related multi-match search picker rebuild both still pending). Developer decided **NOT** to update `README.md` and `Portable Solution Site Mapping Tool - Quickstart.html` after each individual change, since the sidebar's shape is still actively moving and updating operator-facing docs piecemeal would mean rewriting the same sections multiple times as things keep shifting.
+
+  **DECISION:** README/Quickstart sync happens as **ONE batched pass**, done once the sidebar redesign work has settled — treated as a hard requirement before the **NEXT** version bump (same discipline as the 1.1.0-dev and 1.2.0-dev bumps, which required README/Quickstart/PROJECT_MAP sync in the same commit). This does **not** apply to `PSMT_Project_Notes.md` itself, which continues to be updated in the same commit as each code change, per existing project convention — only the operator-facing docs are being batched.
+
+  Known stale references as of this entry: README/Quickstart still describe the Setup section (removed in 487c777) and will need that section's content removed/rewritten as part of the eventual batch.
+
 ---
 
 ## Doc maintenance
