@@ -2309,6 +2309,7 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
   drawObject(obj);
   setSelectedObject(obj.id);
   updateList();
+  scrollPlacedListToObject(obj.id);
   scheduleOverlapSummary();
   scheduleSaveSession();
 }
@@ -2386,6 +2387,7 @@ function drawObject(obj) {
       setSelectedObject(obj.id);
       setMode(`Selected ${sanitizeLabel(obj.label)} — drag to move`);
       updateList();
+      scrollPlacedListToObject(obj.id);
     });
   };
   bindDragStart(obj.layer);
@@ -2717,6 +2719,14 @@ function updateList() {
   const fragment = document.createDocumentFragment();
   objects.forEach(o => fragment.appendChild(createObjectListItem(o)));
   el.appendChild(fragment);
+}
+
+/** Scroll the placed-list row for id into view. Does not reorder objects[]. */
+function scrollPlacedListToObject(id) {
+  const listRoot = document.getElementById('obj-list-items');
+  if (!listRoot || id == null) return;
+  const el = listRoot.querySelector('[data-obj-id="' + id + '"]');
+  if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function createObjectListItem(o) {
