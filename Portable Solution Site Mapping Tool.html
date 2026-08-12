@@ -165,18 +165,37 @@ button.danger:hover { background:#f85149; }
 .vtab.active { background:#1f6feb; border-color:#1f6feb; color:white; }
 
 /* Tent list */
-.tent-list { display:flex; flex-direction:column; gap:4px; }
+.tent-list { display:flex; flex-direction:column; gap:3px; }
 .tent-item {
-  padding:8px 10px; background:#21262d; border-radius:6px;
+  padding:6px 8px; background:#21262d; border-radius:6px;
   border:1px solid #30363d; cursor:pointer; transition:all 0.15s;
 }
 .tent-item:hover { border-color:#58a6ff; background:#1c2128; }
 .tent-item.selected { border-color:#238636; background:#0d2414; }
-.tent-name { font-size:13px; font-weight:500; color:#e6edf3; }
-.tent-dims { font-size:11px; color:#8b949e; margin-top:2px; }
-.tent-shape-badge {
-  display:inline-block; font-size:10px; padding:1px 5px; border-radius:3px;
-  background:#30363d; color:#8b949e; margin-top:3px;
+.tent-card-line1 {
+  display:flex; align-items:center; gap:6px;
+}
+.tent-name {
+  flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:13px; font-weight:500; color:#e6edf3;
+}
+.tent-dims { font-size:11px; color:#8b949e; margin-top:1px; }
+.catalog-header-row {
+  display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;
+}
+.catalog-header-row h3 { margin-bottom:0; }
+.catalog-roles-btn {
+  flex-shrink:0; background:none; border:1px solid #30363d; color:#8b949e;
+  width:26px; height:26px; border-radius:6px; padding:0; font-size:14px; line-height:1;
+  cursor:pointer;
+}
+.catalog-roles-btn:hover { border-color:#58a6ff; color:#e6edf3; background:#1c2128; }
+.catalog-roles-btn:focus-visible { outline:2px solid #58a6ff; outline-offset:1px; }
+.role-custom-inline {
+  display:flex; gap:4px; align-items:center; margin-top:4px;
+}
+.role-custom-inline input {
+  flex:1; padding:4px 6px; font-size:11px; margin:0;
 }
 
 /* Properties */
@@ -216,7 +235,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .obj-del { background:none; border:none; color:#8b949e; padding:2px 5px; font-size:13px; }
 .obj-del:hover { color:#f85149; background:none; }
 .obj-role-select {
-  font-size:10px; padding:2px 4px; max-width:80px;
+  font-size:10px; padding:2px 4px; max-width:80px; width:auto; flex-shrink:0;
   background:#21262d; border:1px solid #30363d; border-radius:4px; color:#e6edf3;
 }
 .obj-role-select:focus { outline:2px solid #58a6ff; outline-offset:1px; }
@@ -457,7 +476,14 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
     <!-- Catalog Tabs -->
     <div class="sb-section">
-      <h3>Catalog</h3>
+      <div class="catalog-header-row">
+        <h3>Catalog</h3>
+        <button type="button" class="catalog-roles-btn" id="btn-catalog-roles" aria-expanded="false" aria-haspopup="true" aria-controls="manage-roles-panel" title="View and remove custom roles. Default roles cannot be removed. Removing a role does not change existing structure assignments." aria-label="Manage custom roles">⚙</button>
+      </div>
+      <div id="manage-roles-panel" role="region" aria-label="Manage custom roles" style="display:none;position:fixed;top:0;left:0;z-index:1002;min-width:200px;max-width:min(280px, calc(100vw - 16px));background:#21262d;border:1px solid #30363d;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
+        <div id="manage-roles-list"></div>
+        <p class="dim-note" style="margin-top:8px;margin-bottom:0;font-size:10px;">Removed roles stay on existing structures.</p>
+      </div>
       <div class="vendor-tabs" id="vendor-tabs"></div>
       <div class="tent-list" id="tent-list"></div>
       <!-- INTENTIONAL: extended-catalog toggle is hidden until deliberately revealed (display:none by design).
@@ -479,19 +505,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
       </label>
       <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then pick a tent and click near the face to attach to. New structure matches target rotation. Nearest of four faces wins (two length ends, two width ends). Best for rect-to-rect; other shapes use bounding-box face midpoints. Unchecks automatically after a successful snap.</p>
-
-      <label>Role / Zone</label>
-      <select id="obj-role" aria-label="Object role or zone" title="Functional zone for this structure. Used in zone summary in PDF and GeoJSON exports. Add custom roles below if needed."></select>
-      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;">
-        <input type="text" id="custom-role-input" placeholder="Add custom role..." aria-label="Add custom role or zone" title="Type a role name and press Enter or click Add. Saved in this browser and travels with plan files."
-          style="flex:1;padding:7px 10px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:11px;outline:none;" />
-        <button type="button" class="ghost scale-btn" id="btn-add-role" title="Add the typed role to the list. Duplicates and blank entries are ignored." aria-label="Add custom role">Add</button>
-      </div>
-      <button type="button" class="ghost scale-btn" id="btn-manage-roles" style="width:100%;margin-top:6px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="manage-roles-panel" title="View and remove custom roles. Default roles cannot be removed. Removing a role does not change existing structure assignments.">Manage roles ▾</button>
-      <div id="manage-roles-panel" style="display:none;margin-top:6px;padding:8px;border:1px solid #30363d;border-radius:6px;background:#161b22;" role="region" aria-labelledby="btn-manage-roles">
-        <div id="manage-roles-list"></div>
-        <p class="dim-note" style="margin-top:8px;margin-bottom:0;font-size:10px;">Removed roles stay on existing structures.</p>
-      </div>
 
       <label title="Click a swatch to set color for the next placement. Choosing a tent from the catalog still applies the vendor default until you pick a swatch.">Color</label>
       <div class="color-row" id="color-swatches" role="group" aria-label="Color for next placement"></div>
@@ -629,6 +642,11 @@ const STORAGE_KEY_OPTIONS = 'psmt_options_open';
 const STORAGE_KEY_EXPORT = 'psmt_export_open';
 const CUSTOM_ROLES_KEY = 'psmt-custom-roles';
 const ROLES = ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue'];
+/** Sentinel option value for create-anywhere custom role (not a stored role string). */
+const CUSTOM_ROLE_OPTION_VALUE = '__psmt_custom__';
+const CUSTOM_ROLE_OPTION_LABEL = 'Custom…';
+/** Session-only sticky role per catalog card key (`vendor_id`). Not persisted. */
+const cardRoleByKey = Object.create(null);
 
 // ─── Tent Database ──────────────────────────────────────────────────────────────
 // All dimensions in feet (width × length). Circles use widthFt as diameter.
@@ -1065,14 +1083,127 @@ function renderTentList() {
   tentListEl.appendChild(fragment);
 }
 
-function tentShapeBadge(shape) {
-  if (shape === 'circle') return '⬤ Circle';
-  if (shape === 'octagon') return '⯃ Octagon';
-  if (shape === 'cut-corner-rectangle') return '⯃ Cut-corner rect.';
-  if (shape === 'cut-corner-square') return '⯃ Cut-corner sq.';
-  if (shape === 'plus') return '✛ Plus/Cross';
-  if (shape === 'ellipse') return '◯ Ellipse';
-  return '▬ Rectangle';
+function getCardRole(key) {
+  if (!key) return '—';
+  const v = cardRoleByKey[key];
+  return (v != null && v !== '') ? String(v) : '—';
+}
+
+function setCardRole(key, role) {
+  if (!key) return;
+  cardRoleByKey[key] = String(role || '—');
+}
+
+function formatCardDimsBeds(tent) {
+  const dims = dimStr(tent);
+  const display = tent && tent.bedCapacity && tent.bedCapacity.display;
+  if (display != null && display !== '') return `${dims} · ${display}`;
+  return dims;
+}
+
+function fillRoleSelectOptions(selectEl, selectedValue) {
+  if (!selectEl) return;
+  const roles = getEffectiveRoles();
+  const want = String(selectedValue != null ? selectedValue : '—');
+  selectEl.textContent = '';
+  roles.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    selectEl.appendChild(opt);
+  });
+  const customOpt = document.createElement('option');
+  customOpt.value = CUSTOM_ROLE_OPTION_VALUE;
+  customOpt.textContent = CUSTOM_ROLE_OPTION_LABEL;
+  selectEl.appendChild(customOpt);
+  if (roles.includes(want)) selectEl.value = want;
+  else if (want && want !== '—' && want !== CUSTOM_ROLE_OPTION_VALUE) {
+    const orphan = document.createElement('option');
+    orphan.value = want;
+    orphan.textContent = want;
+    selectEl.insertBefore(orphan, customOpt);
+    selectEl.value = want;
+  } else {
+    selectEl.value = '—';
+  }
+}
+
+/**
+ * Wire a role <select> for Custom… create-anywhere.
+ * onCommit(roleString) when a real role is chosen (including after custom create).
+ */
+function wireRoleSelect(selectEl, { getSelected, onCommit, mountEl }) {
+  if (!selectEl || selectEl._psmtRoleWired) return;
+  selectEl._psmtRoleWired = true;
+  let prevValue = getSelected();
+  fillRoleSelectOptions(selectEl, prevValue);
+
+  const stop = ev => ev.stopPropagation();
+  selectEl.addEventListener('click', stop);
+  selectEl.addEventListener('mousedown', stop);
+
+  selectEl.addEventListener('change', () => {
+    const v = selectEl.value;
+    if (v === CUSTOM_ROLE_OPTION_VALUE) {
+      showRoleCustomInline(mountEl || selectEl.parentElement, selectEl, prevValue, (created) => {
+        if (created) {
+          prevValue = created;
+          onCommit(created);
+          rebuildRoleDropdowns();
+        } else {
+          fillRoleSelectOptions(selectEl, prevValue);
+        }
+      });
+      return;
+    }
+    prevValue = v;
+    onCommit(v);
+  });
+}
+
+function showRoleCustomInline(mountEl, selectEl, prevValue, done) {
+  if (!mountEl) { done(null); return; }
+  const existing = mountEl.querySelector('.role-custom-inline');
+  if (existing) existing.remove();
+  const row = document.createElement('div');
+  row.className = 'role-custom-inline';
+  row.addEventListener('click', ev => ev.stopPropagation());
+  row.addEventListener('mousedown', ev => ev.stopPropagation());
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.maxLength = 40;
+  inp.placeholder = 'New role name…';
+  inp.setAttribute('aria-label', 'New custom role name');
+  let finished = false;
+  const finish = (commit) => {
+    if (finished) return;
+    finished = true;
+    const raw = inp.value;
+    row.remove();
+    if (!commit) { done(null); return; }
+    const trimmed = String(raw || '').trim();
+    if (!trimmed) { done(null); return; }
+    if (addCustomRole(trimmed)) {
+      done(sanitizeLabel(trimmed, '').slice(0, 40));
+    } else {
+      const match = getEffectiveRoles().find(r => r.toLowerCase() === trimmed.toLowerCase());
+      done(match || null);
+    }
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', () => {
+    setTimeout(() => {
+      if (!row.isConnected) return;
+      if (String(inp.value || '').trim()) finish(true);
+      else finish(false);
+    }, 0);
+  });
+  row.appendChild(inp);
+  mountEl.appendChild(row);
+  inp.focus();
 }
 
 function createTentCard(tent) {
@@ -1082,24 +1213,37 @@ function createTentCard(tent) {
   card.className = 'tent-item' + (isSelected ? ' selected' : '');
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
-  card.setAttribute('aria-label', `Select tent ${tent.name}, ${dimStr(tent)}`);
+  card.setAttribute('aria-label', `Select tent ${tent.name}, ${formatCardDimsBeds(tent)}`);
   if (tent.note) card.title = tent.note;
+
+  const line1 = document.createElement('div');
+  line1.className = 'tent-card-line1';
 
   const name = document.createElement('div');
   name.className = 'tent-name';
   name.textContent = tent.name;
 
+  const roleSelect = document.createElement('select');
+  roleSelect.className = 'obj-role-select catalog-role-select';
+  roleSelect.dataset.catalogKey = key;
+  roleSelect.setAttribute('aria-label', `Role for ${tent.name} when placing`);
+  roleSelect.title = 'Role baked into each placement of this model. Remembers last choice this session.';
+
+  line1.appendChild(name);
+  line1.appendChild(roleSelect);
+
   const dims = document.createElement('div');
   dims.className = 'tent-dims';
-  dims.textContent = dimStr(tent);
+  dims.textContent = formatCardDimsBeds(tent);
 
-  const badge = document.createElement('div');
-  badge.className = 'tent-shape-badge';
-  badge.textContent = tentShapeBadge(tent.shape);
-
-  card.appendChild(name);
+  card.appendChild(line1);
   card.appendChild(dims);
-  card.appendChild(badge);
+
+  wireRoleSelect(roleSelect, {
+    getSelected: () => getCardRole(key),
+    onCommit: (role) => { setCardRole(key, role); },
+    mountEl: card
+  });
 
   card.onclick = () => {
     selectedTent = { ...tent, _key: key, vendor: currentVendor };
@@ -1119,19 +1263,22 @@ function createTentCard(tent) {
 
 function dimStr(tent) {
   if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
-  if (tent.shape === 'octagon') return `⯃ 18'7" across, 7'8" faces`;
-  if (tent.shape === 'cut-corner-rectangle') return `⯃ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' cut-corner rect.`;
-  if (tent.shape === 'cut-corner-square') return `⯃ ${Math.round(tent.widthFt)}' cut-corner sq.`;
-  if (tent.shape === 'plus') return `✛ ${Math.round(tent.widthFt)}' plus/cross`;
-  if (tent.shape === 'ellipse') return `◯ ${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
+  if (tent.shape === 'octagon') return `18'7" across, 7'8" faces`;
+  if (tent.shape === 'cut-corner-rectangle') return `${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' cut-corner rect.`;
+  if (tent.shape === 'cut-corner-square') return `${Math.round(tent.widthFt)}' cut-corner sq.`;
+  if (tent.shape === 'plus') {
+    const a = Math.round(Math.min(tent.widthFt, tent.lengthFt));
+    const b = Math.round(Math.max(tent.widthFt, tent.lengthFt));
+    return `${a}'×${b}' 4-way hub`;
+  }
+  if (tent.shape === 'ellipse') return `${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
   return `${tent.widthFt}' × ${tent.lengthFt}'`;
 }
 
 if (extendedCatalogChk) {
   extendedCatalogChk.addEventListener('change', applyExtendedCatalogToggle);
 }
-renderVendorTabs();
-renderTentList();
+// Catalog tabs/list rendered in init after role helpers exist (getEffectiveRoles).
 
 // ─── Color Swatches ──────────────────────────────────────────────────────────────
 const swatchContainer = document.getElementById('color-swatches');
@@ -1707,9 +1854,6 @@ function syncRotateHandle() {
 function setSelectedObject(id) {
   selectedObjectId = id;
   syncRotateHandle();
-  const obj = getObjectById(id);
-  const roleEl = document.getElementById('obj-role');
-  if (roleEl && obj) roleEl.value = obj.role || '—';
 }
 
 function computeAngleFromCenter(center, target) {
@@ -1808,19 +1952,21 @@ function addCustomRole(value) {
 }
 
 function rebuildRoleDropdowns() {
-  const sel = document.getElementById('obj-role');
-  if (!sel) return;
-  const roles = getEffectiveRoles();
-  const prev = sel.value;
-  sel.textContent = '';
-  roles.forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = r;
-    sel.appendChild(opt);
+  document.querySelectorAll('select.obj-role-select').forEach(sel => {
+    let current;
+    if (sel.dataset.catalogKey) {
+      current = getCardRole(sel.dataset.catalogKey);
+    } else if (sel.dataset.objId) {
+      const obj = getObjectById(Number(sel.dataset.objId));
+      current = obj ? (obj.role || '—') : '—';
+    } else {
+      current = sel.value === CUSTOM_ROLE_OPTION_VALUE ? '—' : sel.value;
+    }
+    const wired = sel._psmtRoleWired;
+    sel._psmtRoleWired = false;
+    fillRoleSelectOptions(sel, current);
+    sel._psmtRoleWired = wired;
   });
-  const matchPrev = roles.find(r => r === prev);
-  sel.value = matchPrev != null ? matchPrev : '—';
 }
 
 function rebuildManageRolesPanel() {
@@ -2416,8 +2562,13 @@ map.on('click', e => {
     endCapFt:   selectedTent.endCapFt,
     armWidthFt: selectedTent.armWidthFt,
   } : {};
-  const roleEl = document.getElementById('obj-role');
-  extra.role = roleEl ? roleEl.value : '—';
+  if (customMode) {
+    extra.role = '—';
+  } else if (selectedTent && selectedTent._key) {
+    extra.role = getCardRole(selectedTent._key);
+  } else {
+    extra.role = '—';
+  }
 
   const color = getVendorColor(vendor);
   let placeLatLng = e.latlng;
@@ -2520,7 +2671,7 @@ map.on('mouseup', () => {
 function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angleDeg, bufferFt, vendor, extra={}) {
   pushStateToUndo();
   const id = ++objectId;
-  const role = String(extra.role != null ? extra.role : (document.getElementById('obj-role')?.value || '—'));
+  const role = String(extra.role != null ? extra.role : '—');
   const { role: _r, ...extraWithoutRole } = extra;
   const obj = {
     id,
@@ -3013,24 +3164,25 @@ function createObjectListItem(o) {
   meta.style.whiteSpace = 'nowrap';
   meta.textContent = `${dims}${angleText}${bufferText}`;
 
+  const wrap = document.createElement('div');
+  wrap.dataset.objId = String(o.id);
+  wrap.style.marginBottom = '4px';
+
   const roleSelect = document.createElement('select');
   roleSelect.className = 'obj-role-select';
+  roleSelect.dataset.objId = String(o.id);
   roleSelect.setAttribute('aria-label', `Role for ${formatObjectIdentity(o)}`);
-  getEffectiveRoles().forEach(r => {
-    const opt = document.createElement('option');
-    opt.value = r;
-    opt.textContent = r;
-    if (String(o.role || '—') === r) opt.selected = true;
-    roleSelect.appendChild(opt);
+  wireRoleSelect(roleSelect, {
+    getSelected: () => String(o.role || '—'),
+    onCommit: (role) => {
+      pushStateToUndo();
+      o.role = role;
+      drawObject(o);
+      updateList();
+      scheduleSaveSession();
+    },
+    mountEl: wrap
   });
-  roleSelect.onclick = ev => ev.stopPropagation();
-  roleSelect.onchange = () => {
-    pushStateToUndo();
-    o.role = roleSelect.value;
-    drawObject(o);
-    updateList();
-    scheduleSaveSession();
-  };
 
   const del = document.createElement('button');
   del.className = 'obj-del';
@@ -3047,10 +3199,6 @@ function createObjectListItem(o) {
   row.appendChild(meta);
   row.appendChild(roleSelect);
   row.appendChild(del);
-
-  const wrap = document.createElement('div');
-  wrap.dataset.objId = String(o.id);
-  wrap.style.marginBottom = '4px';
   wrap.appendChild(row);
 
   if (inBufferOnly) {
@@ -3871,37 +4019,35 @@ document.head.appendChild(style);
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.getElementById('version-display').textContent = `v${APP_META.version}`;
-rebuildRoleDropdowns();
 rebuildManageRolesPanel();
-(function initCustomRoleControls() {
-  const addBtn = document.getElementById('btn-add-role');
-  const roleInp = document.getElementById('custom-role-input');
-  const manageBtn = document.getElementById('btn-manage-roles');
-  const managePanel = document.getElementById('manage-roles-panel');
-  if (manageBtn && managePanel) {
-    manageBtn.addEventListener('click', () => {
-      const isOpen = managePanel.style.display !== 'none';
-      managePanel.style.display = isOpen ? 'none' : 'block';
-      manageBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
-      manageBtn.textContent = isOpen ? 'Manage roles ▾' : 'Manage roles ▴';
-    });
+(function initCatalogRolesPopover() {
+  const btn = document.getElementById('btn-catalog-roles');
+  const panel = document.getElementById('manage-roles-panel');
+  if (!btn || !panel) return;
+  function closePanel() {
+    panel.style.display = 'none';
+    btn.setAttribute('aria-expanded', 'false');
   }
-  if (!addBtn || !roleInp) return;
-  addBtn.addEventListener('click', () => {
-    if (addCustomRole(roleInp.value)) {
-      roleInp.value = '';
-      rebuildRoleDropdowns();
-      rebuildManageRolesPanel();
-      updateList();
-    }
+  function openPanel() {
+    rebuildManageRolesPanel();
+    panel.style.display = 'block';
+    const rect = btn.getBoundingClientRect();
+    panel.style.top = (rect.bottom + 4) + 'px';
+    let left = rect.right - panel.offsetWidth;
+    if (left < 8) left = 8;
+    panel.style.left = left + 'px';
+    btn.setAttribute('aria-expanded', 'true');
+  }
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (panel.style.display === 'block') closePanel();
+    else openPanel();
   });
-  roleInp.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addBtn.click();
-    }
-  });
+  panel.addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', closePanel);
 })();
+renderVendorTabs();
+renderTentList();
 updateOfflineBanner();
 updateUndoRedoButtons();
 updateSnapModeUI();
