@@ -671,6 +671,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" title="Length of the custom footprint in feet. North-south dimension at 0° rotation." />
         </div>
       </div>
+      <div style="margin-top:6px;">
+        <label>Beds (optional)</label>
+        <input type="number" id="custom-beds" min="0" step="1" placeholder="—" aria-label="Optional bed count for custom structure" title="Optional patient beds for this custom footprint. Leave blank if none. Blank is omitted from the bed total; 0 counts as zero beds." />
+      </div>
       <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" title="Label for this custom structure. Appears on the map tooltip and placed list." />
       <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;" title="Place a rectangle with the dimensions above. Click this button then click the map to position it.">Place Custom</button>
     </div>
@@ -702,7 +706,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         </div>
         <div id="placed-totals" class="placed-totals" aria-live="polite">
           <button type="button" class="placed-totals-beds" id="placed-totals-beds" aria-pressed="false" title="Bed total mode: All. Click for Ward/ICU only (exact role match; Triage excluded).">Beds (all): 0</button>
-          <div class="placed-totals-uncounted" id="placed-totals-uncounted" title="No matching catalog model for bed capacity (Custom sizes, renamed labels, or unknown vendors). Omitted from the bed total."></div>
+          <div class="placed-totals-uncounted" id="placed-totals-uncounted" title="No bed capacity source: renamed/unknown catalog label, or Custom Size with beds left blank. Custom structures with beds entered are counted. Omitted from the bed total."></div>
           <div class="placed-totals-area">
             <span id="placed-totals-sqft">0 sq ft (0 w/ buffer)</span>
             <button type="button" class="placed-totals-info" id="placed-totals-info" aria-label="Utilities disclaimer" aria-expanded="false">ⓘ</button>
@@ -1892,25 +1896,29 @@ function clearRotateHandle() {
 }
 
 function getObjectsSnapshot() {
-  return objects.map(o => ({
-    id: o.id,
-    latlng: { lat: o.latlng.lat, lng: o.latlng.lng },
-    label: o.label,
-    shape: o.shape,
-    widthM: o.widthM,
-    lengthM: o.lengthM,
-    color: o.color,
-    opacity: o.opacity,
-    angleDeg: o.angleDeg,
-    bufferFt: o.bufferFt,
-    vendor: o.vendor,
-    role: o.role,
-    cornerCutW: o.cornerCutW,
-    cornerCutL: o.cornerCutL,
-    endCapFt: o.endCapFt,
-    armWidthFt: o.armWidthFt,
-    intentionalBuffer: !!o.intentionalBuffer
-  }));
+  return objects.map(o => {
+    const snap = {
+      id: o.id,
+      latlng: { lat: o.latlng.lat, lng: o.latlng.lng },
+      label: o.label,
+      shape: o.shape,
+      widthM: o.widthM,
+      lengthM: o.lengthM,
+      color: o.color,
+      opacity: o.opacity,
+      angleDeg: o.angleDeg,
+      bufferFt: o.bufferFt,
+      vendor: o.vendor,
+      role: o.role,
+      cornerCutW: o.cornerCutW,
+      cornerCutL: o.cornerCutL,
+      endCapFt: o.endCapFt,
+      armWidthFt: o.armWidthFt,
+      intentionalBuffer: !!o.intentionalBuffer
+    };
+    if (Number.isFinite(o.customBeds)) snap.customBeds = o.customBeds;
+    return snap;
+  });
 }
 
 function applySnapshot(snapshot) {
@@ -2230,25 +2238,29 @@ function buildScenarioData() {
       operationName,
       bufferFt: Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0)
     },
-    objects: objects.map(o => ({
-      id: o.id,
-      latlng: { lat: o.latlng.lat, lng: o.latlng.lng },
-      label: o.label,
-      shape: o.shape,
-      widthM: o.widthM,
-      lengthM: o.lengthM,
-      color: o.color,
-      opacity: o.opacity,
-      angleDeg: o.angleDeg || 0,
-      bufferFt: o.bufferFt || 0,
-      vendor: o.vendor || '',
-      role: String(o.role || '—'),
-      cornerCutW: o.cornerCutW,
-      cornerCutL: o.cornerCutL,
-      endCapFt: o.endCapFt,
-      armWidthFt: o.armWidthFt,
-      intentionalBufferOverlap: !!o.intentionalBuffer
-    })),
+    objects: objects.map(o => {
+      const row = {
+        id: o.id,
+        latlng: { lat: o.latlng.lat, lng: o.latlng.lng },
+        label: o.label,
+        shape: o.shape,
+        widthM: o.widthM,
+        lengthM: o.lengthM,
+        color: o.color,
+        opacity: o.opacity,
+        angleDeg: o.angleDeg || 0,
+        bufferFt: o.bufferFt || 0,
+        vendor: o.vendor || '',
+        role: String(o.role || '—'),
+        cornerCutW: o.cornerCutW,
+        cornerCutL: o.cornerCutL,
+        endCapFt: o.endCapFt,
+        armWidthFt: o.armWidthFt,
+        intentionalBufferOverlap: !!o.intentionalBuffer
+      };
+      if (Number.isFinite(o.customBeds)) row.customBeds = o.customBeds;
+      return row;
+    }),
     customRoles: getEffectiveRoles().filter(r => !ROLES.includes(r))
   };
 }
@@ -2283,6 +2295,7 @@ function exportGeoJSON(evt) {
       opacity: o.opacity,
       intentional_buffer_overlap: !!o.intentionalBuffer
     };
+    if (Number.isFinite(o.customBeds)) feature.properties.custom_beds = o.customBeds;
     return feature;
   }).filter(Boolean);
 
@@ -2671,7 +2684,7 @@ function restoreAutosave() {
 function buildObjectFromRaw(raw, idx) {
   const vendor = String(raw.vendor || 'Loaded');
   const defaultColor = (vendor && VENDOR_COLORS[vendor]) || normalizeColor(raw.color || '#58a6ff');
-  return {
+  const obj = {
     id: Number.isFinite(raw.id) ? raw.id : (idx + 1),
     latlng: {
       lat: toNumber(raw.latlng && raw.latlng.lat, 0),
@@ -2696,6 +2709,12 @@ function buildObjectFromRaw(raw, idx) {
     layerBuffer: null,
     roleLabelLayer: null
   };
+  // Additive customBeds: Custom only; missing/invalid → no field (older plans load clean).
+  if (vendor === 'Custom') {
+    const beds = normalizeCustomBeds(raw.customBeds);
+    if (beds != null) obj.customBeds = beds;
+  }
+  return obj;
 }
 
 // ─── Map Click ────────────────────────────────────────────────────────────────────
@@ -2738,6 +2757,8 @@ map.on('click', e => {
   } : {};
   if (customMode) {
     extra.role = '—';
+    const beds = normalizeCustomBeds(document.getElementById('custom-beds').value);
+    if (beds != null) extra.customBeds = beds;
   } else if (selectedTent && selectedTent._key) {
     extra.role = getCardRole(selectedTent._key);
   } else {
@@ -3402,6 +3423,14 @@ function resolveCatalogTent(obj) {
   return list.find(t => sanitizeLabel(`${vendor} ${t.name}`) === want) || null;
 }
 
+/** Optional Custom Size beds: blank/invalid → null; finite ≥ 0 (incl. 0) → number. */
+function normalizeCustomBeds(value) {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n);
+}
+
 /** Bed min/max contribution from a catalog tent. Null capacity → 0/0, not a range. */
 function bedContributionFromTent(tent) {
   const bc = tent && tent.bedCapacity;
@@ -3413,6 +3442,22 @@ function bedContributionFromTent(tent) {
   const n = Number(v);
   if (!Number.isFinite(n)) return { min: 0, max: 0, isRange: false };
   return { min: n, max: n, isRange: false };
+}
+
+/**
+ * Resolve bed contribution for totals.
+ * hasSource false → uncounted (no catalog match and no customBeds).
+ * Custom + finite customBeds (incl. 0) is a source; catalog match (even null beds) is a source.
+ */
+function resolveBedContribution(obj) {
+  if (obj && obj.vendor === 'Custom' && Number.isFinite(obj.customBeds)) {
+    const n = Number(obj.customBeds);
+    return { hasSource: true, min: n, max: n, isRange: false };
+  }
+  const tent = resolveCatalogTent(obj);
+  if (!tent) return { hasSource: false, min: 0, max: 0, isRange: false };
+  const c = bedContributionFromTent(tent);
+  return { hasSource: true, min: c.min, max: c.max, isRange: c.isRange };
 }
 
 function objectAreaSqFt(obj, withBuffer) {
@@ -3460,16 +3505,15 @@ function updatePlacedTotals() {
   objects.forEach(obj => {
     footprintSqFt += objectAreaSqFt(obj, false);
     bufferedSqFt += objectAreaSqFt(obj, true);
-    const tent = resolveCatalogTent(obj);
-    if (!tent) {
+    const bed = resolveBedContribution(obj);
+    if (!bed.hasSource) {
       uncounted += 1;
       return;
     }
     if (wardIcuOnly && !roleCountsInWardIcuMode(obj.role)) return;
-    const c = bedContributionFromTent(tent);
-    minBeds += c.min;
-    maxBeds += c.max;
-    if (c.isRange) anyRange = true;
+    minBeds += bed.min;
+    maxBeds += bed.max;
+    if (bed.isRange) anyRange = true;
   });
 
   const modeLabel = wardIcuOnly ? 'Ward/ICU' : 'all';
