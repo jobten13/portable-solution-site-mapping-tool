@@ -291,6 +291,33 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   border-radius:6px;
   box-shadow:0 1px 4px rgba(0,0,0,0.35);
   pointer-events:none;
+  align-items:center;
+  gap:8px;
+}
+#map-state-readout .map-state-readout-text {
+  flex:1 1 auto;
+  min-width:0;
+}
+#map-state-readout .map-state-disarm {
+  pointer-events:auto;
+  flex:0 0 auto;
+  margin:0;
+  padding:0 2px;
+  border:none;
+  background:transparent;
+  color:#58a6ff;
+  font-size:13px;
+  line-height:1;
+  cursor:pointer;
+  border-radius:3px;
+}
+#map-state-readout .map-state-disarm:hover {
+  color:#f0f6fc;
+  background:rgba(88,166,255,0.15);
+}
+#map-state-readout .map-state-disarm:focus-visible {
+  outline:2px solid #58a6ff;
+  outline-offset:1px;
 }
 
 /* Status */
@@ -1023,10 +1050,7 @@ function applyExtendedCatalogToggle() {
   showExtendedCatalog = !!(extendedCatalogChk && extendedCatalogChk.checked);
   if (selectedTent && selectedTent.id && selectedTent.vendor) {
     const stillVisible = visibleCatalogModels(selectedTent.vendor).some(t => t.id === selectedTent.id);
-    if (!stillVisible) {
-      cancelPlacing();
-      selectedTent = null;
-    }
+    if (!stillVisible) cancelPlacing();
   }
   renderVendorTabs();
   renderTentList();
@@ -1246,6 +1270,11 @@ function createTentCard(tent) {
   });
 
   card.onclick = () => {
+    // Armed card click again → disarm (continuous placement). Role <select> stops propagation.
+    if (placingMode && !customMode && selectedTent && selectedTent._key === key) {
+      cancelPlacing();
+      return;
+    }
     selectedTent = { ...tent, _key: key, vendor: currentVendor };
     selectedColor = VENDOR_COLORS[currentVendor] || selectedColor;
     syncColorSwatches();
@@ -1326,6 +1355,9 @@ function cancelPlacing() {
   customMode = false;
   map.dragging.enable();
   map.getContainer().style.cursor = '';
+  const hadSelection = !!selectedTent;
+  selectedTent = null;
+  if (hadSelection) renderTentList();
   setMode('View Mode');
 }
 
@@ -1407,18 +1439,36 @@ function syncMapStateReadout(txt) {
   const readout = document.getElementById('map-state-readout');
   if (!readout) return;
   const msg = String(txt || '');
+  const isPlaceArmed = msg.startsWith('Click to place');
   const isOngoing =
     msg === 'Measure Mode' ||
     msg === 'Area Measure Mode' ||
-    msg.startsWith('Click to place') ||
+    isPlaceArmed ||
     msg.startsWith('Selected ');
-  if (isOngoing) {
-    readout.textContent = msg;
-    readout.style.display = 'block';
-  } else {
-    readout.textContent = '';
+  readout.textContent = '';
+  if (!isOngoing) {
     readout.style.display = 'none';
+    return;
   }
+  const label = document.createElement('span');
+  label.className = 'map-state-readout-text';
+  label.textContent = isPlaceArmed ? `${msg} — ✕ or Esc to stop` : msg;
+  readout.appendChild(label);
+  if (isPlaceArmed) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'map-state-disarm';
+    btn.setAttribute('aria-label', 'Cancel placement');
+    btn.title = 'Cancel placement (stay in View Mode). Esc, re-click the armed catalog card, or click a placed structure also cancel.';
+    btn.textContent = '✕';
+    btn.addEventListener('click', ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      cancelPlacing();
+    });
+    readout.appendChild(btn);
+  }
+  readout.style.display = 'flex';
 }
 
 function setMode(txt) {
@@ -2593,13 +2643,19 @@ map.on('click', e => {
   const postMode = attachedToLabel
     ? `Attached to ${sanitizeLabel(attachedToLabel)} (${attachedFace} face)`
     : null;
-  cancelPlacing();
-  if (postMode) setMode(postMode);
 
   if (attachedToLabel) {
     const snapHint = document.getElementById('snap-hint');
     if (snapCheck) snapCheck.checked = false;
     if (snapHint) snapHint.style.display = 'none';
+  }
+
+  // Catalog: stay armed for continuous placement. Custom Size: one-shot disarm (unchanged).
+  if (customMode) {
+    cancelPlacing();
+    if (postMode) setMode(postMode);
+  } else if (selectedTent) {
+    setMode(`Click to place ${selectedTent.vendor} ${selectedTent.name}`);
   }
 });
 
@@ -2760,12 +2816,24 @@ function drawObject(obj) {
     layer.on('mousedown', ev => {
       if (ev.originalEvent && ev.originalEvent.button !== 0) return;
       L.DomEvent.stop(ev);
+      // While armed, hitting a placed object disarms and selects (no stack place on map click).
+      if (placingMode) {
+        cancelPlacing();
+        setSelectedObject(obj.id);
+        setMode(`Selected ${formatObjectIdentity(obj)} — drag to move`);
+        updateList();
+        scrollPlacedListToObject(obj.id);
+      }
       startObjectDrag(obj, ev.latlng);
     });
   };
   const bindSelect = layer => {
     layer.on('click', ev => {
       if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+      if (placingMode) {
+        L.DomEvent.stop(ev);
+        cancelPlacing();
+      }
       if (ev.originalEvent && ev.originalEvent.shiftKey) {
         if (confirm(`CONFIRM:\nDelete "${formatObjectIdentity(obj)}"?`)) deleteObj(obj.id);
         return;
