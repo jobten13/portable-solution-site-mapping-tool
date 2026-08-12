@@ -701,16 +701,18 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <div id="sidebar-placed">
       <div style="padding:10px 12px 6px;flex-shrink:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
+          <div style="display:flex;align-items:center;gap:4px;min-width:0;">
+            <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;margin:0;">Placed (<span id="obj-count">0</span>)</h3>
+            <button type="button" class="placed-totals-info" id="placed-totals-info" aria-label="Totals disclaimer" aria-expanded="false" title="Totals caveat: utilities excluded; bed figures are manufacturer recommendations.">ⓘ</button>
+          </div>
           <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
         </div>
+        <div class="placed-totals-disclaimer" id="placed-totals-disclaimer" hidden>Utilities (water, hygiene, waste) are excluded from footprint totals — account for them separately. Bed figures are manufacturer recommendations; actual capacity varies with site-specific use.</div>
         <div id="placed-totals" class="placed-totals" aria-live="polite">
           <button type="button" class="placed-totals-beds" id="placed-totals-beds" aria-pressed="false" title="Bed total mode: All. Click for Ward/ICU only (exact role match; Triage excluded).">Beds (all): 0</button>
           <div class="placed-totals-uncounted" id="placed-totals-uncounted" title="No bed capacity source: renamed/unknown catalog label, or Custom Size with beds left blank. Custom structures with beds entered are counted. Omitted from the bed total."></div>
           <div class="placed-totals-area">
             <span id="placed-totals-sqft">0 sq ft (0 w/ buffer)</span>
-            <button type="button" class="placed-totals-info" id="placed-totals-info" aria-label="Utilities disclaimer" aria-expanded="false">ⓘ</button>
-            <div class="placed-totals-disclaimer" id="placed-totals-disclaimer" hidden>Utilities (water, hygiene, waste) are excluded from footprint totals — account for them separately.</div>
           </div>
         </div>
         <div id="overlap-warning" class="warn-text" style="display:none;"></div>
