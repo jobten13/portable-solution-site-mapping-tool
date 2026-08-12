@@ -156,7 +156,39 @@ button.danger:hover { background:#f85149; }
   line-height:1.35;
   color:#8b949e;
 }
-.placed-totals-beds { color:#e6edf3; }
+.placed-totals-beds {
+  color:#e6edf3;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  width:100%;
+  box-sizing:border-box;
+  margin:0;
+  padding:3px 8px;
+  border:1px solid #30363d;
+  background:#21262d;
+  font:inherit;
+  font-size:11px;
+  line-height:1.35;
+  text-align:left;
+  cursor:pointer;
+  border-radius:6px;
+}
+.placed-totals-beds::after {
+  content:'⇄';
+  flex-shrink:0;
+  color:#8b949e;
+  font-size:12px;
+  line-height:1;
+}
+.placed-totals-beds:hover {
+  background:#30363d;
+  border-color:#484f58;
+  color:#f0f6fc;
+}
+.placed-totals-beds:hover::after { color:#58a6ff; }
+.placed-totals-beds:focus-visible { outline:2px solid #58a6ff; outline-offset:1px; }
 .placed-totals-uncounted {
   display:none;
   color:#f78166;
@@ -669,7 +701,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
         </div>
         <div id="placed-totals" class="placed-totals" aria-live="polite">
-          <div class="placed-totals-beds" id="placed-totals-beds">Beds: 0</div>
+          <button type="button" class="placed-totals-beds" id="placed-totals-beds" aria-pressed="false" title="Bed total mode: All. Click for Ward/ICU only (exact role match; Triage excluded).">Beds (all): 0</button>
           <div class="placed-totals-uncounted" id="placed-totals-uncounted" title="No matching catalog model for bed capacity (Custom sizes, renamed labels, or unknown vendors). Omitted from the bed total."></div>
           <div class="placed-totals-area">
             <span id="placed-totals-sqft">0 sq ft (0 w/ buffer)</span>
@@ -1019,6 +1051,8 @@ let areaMeasureLayer = null;
 // Drag, select, handles
 let activeObjectDrag = null;
 let snapModeEnabled = false;
+/** Session-only Placed bed total filter: 'all' | 'wardIcu'. Not persisted. */
+let bedsTotalMode = 'all';
 let dragEndedAt = 0;
 let activeRotateDrag = null;
 let selectedObjectId = null;
@@ -3404,6 +3438,11 @@ function formatBedsTotal(minBeds, maxBeds, anyRange) {
   return String(minBeds);
 }
 
+function roleCountsInWardIcuMode(role) {
+  const r = String(role || '');
+  return r === 'Ward' || r === 'ICU';
+}
+
 function updatePlacedTotals() {
   const bedsEl = document.getElementById('placed-totals-beds');
   const uncountedEl = document.getElementById('placed-totals-uncounted');
@@ -3416,6 +3455,7 @@ function updatePlacedTotals() {
   let uncounted = 0;
   let footprintSqFt = 0;
   let bufferedSqFt = 0;
+  const wardIcuOnly = bedsTotalMode === 'wardIcu';
 
   objects.forEach(obj => {
     footprintSqFt += objectAreaSqFt(obj, false);
@@ -3425,13 +3465,24 @@ function updatePlacedTotals() {
       uncounted += 1;
       return;
     }
+    if (wardIcuOnly && !roleCountsInWardIcuMode(obj.role)) return;
     const c = bedContributionFromTent(tent);
     minBeds += c.min;
     maxBeds += c.max;
     if (c.isRange) anyRange = true;
   });
 
-  bedsEl.textContent = `Beds: ${formatBedsTotal(minBeds, maxBeds, anyRange)}`;
+  const modeLabel = wardIcuOnly ? 'Ward/ICU' : 'all';
+  const totalStr = formatBedsTotal(minBeds, maxBeds, anyRange);
+  bedsEl.textContent = `Beds (${modeLabel}): ${totalStr}`;
+  bedsEl.setAttribute('aria-pressed', String(wardIcuOnly));
+  bedsEl.title = wardIcuOnly
+    ? 'Bed total mode: Ward/ICU only (exact role match; Triage excluded). Click for All.'
+    : 'Bed total mode: All. Click for Ward/ICU only (exact role match; Triage excluded).';
+  bedsEl.setAttribute('aria-label', wardIcuOnly
+    ? `Beds Ward/ICU ${totalStr}. Click to show all roles.`
+    : `Beds all ${totalStr}. Click for Ward/ICU only.`);
+
   if (uncountedEl) {
     if (uncounted > 0) {
       uncountedEl.textContent = uncounted === 1
@@ -3444,6 +3495,18 @@ function updatePlacedTotals() {
     }
   }
   sqftEl.textContent = `${footprintSqFt} sq ft (${bufferedSqFt} w/ buffer)`;
+}
+
+function wirePlacedTotalsBedsToggle() {
+  const btn = document.getElementById('placed-totals-beds');
+  if (!btn || btn._psmtBedsModeWired) return;
+  btn._psmtBedsModeWired = true;
+  btn.addEventListener('click', ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    bedsTotalMode = bedsTotalMode === 'all' ? 'wardIcu' : 'all';
+    updatePlacedTotals();
+  });
 }
 
 function wirePlacedTotalsInfo() {
@@ -4415,6 +4478,7 @@ rebuildManageRolesPanel();
 })();
 renderVendorTabs();
 renderTentList();
+wirePlacedTotalsBedsToggle();
 wirePlacedTotalsInfo();
 updatePlacedTotals();
 updateOfflineBanner();
