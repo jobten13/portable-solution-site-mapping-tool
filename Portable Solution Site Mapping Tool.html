@@ -248,6 +248,29 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 }
 .delete-handle-btn:hover { background:#f85149; }
 .delete-handle-btn:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
+/* On-map role label (zoom-gated; rotates with footprint; non-interactive) */
+.role-label-icon {
+  background:none !important;
+  border:none !important;
+}
+.role-label-inner {
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  transform-origin:center center;
+}
+.role-label-text {
+  pointer-events:none;
+  white-space:nowrap;
+  font-size:11px;
+  font-weight:600;
+  color:#f0f6fc;
+  text-shadow:0 1px 2px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.85);
+  letter-spacing:0.02em;
+}
 .warn-text { color:#f78166; font-size:11px; margin-top:6px; }
 
 /* Map */
@@ -963,6 +986,16 @@ let overlapState = { footprintIds: new Set(), bufferIds: new Set() };
 // ─── Map ────────────────────────────────────────────────────────────────────────
 const map = L.map('map').setView([40.7128,-74.0060], 16);
 const mapContainer = map.getContainer();
+// Role labels: above footprint overlayPane (400), below both handles on markerPane (600).
+// Non-interactive pane (pointer-events none). Rotate handle is L.circleMarker — must use
+// markerPane explicitly (default overlayPane 400 would paint under labels).
+map.createPane('roleLabelPane');
+map.getPane('roleLabelPane').style.zIndex = 450;
+map.getPane('roleLabelPane').style.pointerEvents = 'none';
+const ROLE_LABEL_MIN_ZOOM = 20;
+const ROLE_LABEL_MIN_EDGE_PX = 48;
+const ROLE_LABEL_ICON_W = 160;
+const ROLE_LABEL_ICON_H = 40;
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
   attribution: 'Tiles © Esri',
   maxZoom: 21,
@@ -1801,12 +1834,14 @@ function applySnapshot(snapshot) {
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
+    if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
   });
   objects = snapshot.map(o => ({
     ...o,
     latlng: L.latLng(o.latlng.lat, o.latlng.lng),
     layer: null,
-    layerBuffer: null
+    layerBuffer: null,
+    roleLabelLayer: null
   }));
   objectId = objects.length ? Math.max(...objects.map(o => o.id)) : 0;
   objects.forEach(drawObject);
@@ -1868,7 +1903,8 @@ function syncRotateHandle() {
     color: '#ffa657',
     fillColor: '#ffa657',
     fillOpacity: 1,
-    weight: 2
+    weight: 2,
+    pane: 'markerPane'
   }).addTo(map);
   rotateHandleLayer.bindTooltip('Drag to rotate. Hold Shift to snap to 5° increments.', {
     permanent: false,
@@ -2570,7 +2606,8 @@ function buildObjectFromRaw(raw, idx) {
     armWidthFt: toNumber(raw.armWidthFt, undefined),
     intentionalBuffer: !!(raw.intentionalBufferOverlap ?? raw.intentionalBuffer),
     layer: null,
-    layerBuffer: null
+    layerBuffer: null,
+    roleLabelLayer: null
   };
 }
 
@@ -2717,6 +2754,10 @@ map.on('zoomend', () => {
   updateScaleRatio();
   scheduleSaveSession();
   scheduleOverlapSummary();
+  refreshRoleLabelVisibility();
+});
+map.on('zoom', () => {
+  refreshRoleLabelVisibility();
 });
 map.on('mouseup', () => {
   endObjectDrag();
@@ -2742,10 +2783,11 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
     bufferFt,
     vendor,
     role,
+    intentionalBuffer: false,
+    ...extraWithoutRole,
     layer: null,
     layerBuffer: null,
-    intentionalBuffer: false,
-    ...extraWithoutRole
+    roleLabelLayer: null
   };
   objects.push(obj);
   drawObject(obj);
@@ -2759,6 +2801,7 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
 function drawObject(obj) {
   if (obj.layer) { map.removeLayer(obj.layer); obj.layer = null; }
   if (obj.layerBuffer) { map.removeLayer(obj.layerBuffer); obj.layerBuffer = null; }
+  removeRoleLabel(obj);
 
   const s = {
     color: obj.color,
@@ -2848,7 +2891,87 @@ function drawObject(obj) {
   if (obj.layerBuffer) bindDragStart(obj.layerBuffer);
   bindSelect(obj.layer);
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
+  syncRoleLabel(obj);
   if (selectedObjectId === obj.id) syncRotateHandle();
+}
+
+/** Screen px for 1 ft east at latlng (current zoom/projection). */
+function getPxPerFt(latlng) {
+  if (!latlng || typeof map === 'undefined' || !map) return 0;
+  const p0 = map.latLngToLayerPoint(latlng);
+  const [lat1, lng1] = metersToDeg(latlng, FT_TO_M, 0);
+  const p1 = map.latLngToLayerPoint(L.latLng(lat1, lng1));
+  return Math.hypot(p1.x - p0.x, p1.y - p0.y);
+}
+
+function shouldShowRoleLabel(obj) {
+  if (!obj) return false;
+  const role = obj.role;
+  if (!role || role === '—') return false;
+  if (map.getZoom() < ROLE_LABEL_MIN_ZOOM) return false;
+  const wFt = obj.widthM / FT_TO_M;
+  const lFt = obj.shape === 'circle' ? wFt : (obj.lengthM / FT_TO_M);
+  const minEdgeFt = Math.min(wFt, lFt);
+  return minEdgeFt * getPxPerFt(obj.latlng) >= ROLE_LABEL_MIN_EDGE_PX;
+}
+
+function removeRoleLabel(obj) {
+  if (!obj) return;
+  if (obj.roleLabelLayer) {
+    map.removeLayer(obj.roleLabelLayer);
+    obj.roleLabelLayer = null;
+  }
+}
+
+/**
+ * Role text on footprint. CSS rotate uses −angleDeg because polygon angleDeg is
+ * CCW in east/north (screen north-up), while CSS rotate is clockwise-positive.
+ * When length > width, add 90° so text runs along the long axis (fits z20 labels
+ * like "Pharmacy" on GK1935). iconAnchor is the box center → footprint centroid.
+ */
+function buildRoleLabelIcon(obj) {
+  const angle = normalizeAngle(obj.angleDeg || 0);
+  const alongLength = (obj.lengthM || 0) > (obj.widthM || 0);
+  const cssDeg = -(angle + (alongLength ? 90 : 0));
+  const safeRole = escapeHtml(obj.role);
+  const html = `<div class="role-label-inner" style="transform:rotate(${cssDeg}deg)"><span class="role-label-text">${safeRole}</span></div>`;
+  return L.divIcon({
+    html,
+    className: 'role-label-icon',
+    iconSize: [ROLE_LABEL_ICON_W, ROLE_LABEL_ICON_H],
+    iconAnchor: [ROLE_LABEL_ICON_W / 2, ROLE_LABEL_ICON_H / 2]
+  });
+}
+
+function syncRoleLabel(obj) {
+  if (!obj) return;
+  if (!shouldShowRoleLabel(obj)) {
+    removeRoleLabel(obj);
+    return;
+  }
+  const icon = buildRoleLabelIcon(obj);
+  if (obj.roleLabelLayer) {
+    obj.roleLabelLayer.setLatLng(obj.latlng);
+    obj.roleLabelLayer.setIcon(icon);
+    return;
+  }
+  obj.roleLabelLayer = L.marker(obj.latlng, {
+    icon,
+    interactive: false,
+    keyboard: false,
+    pane: 'roleLabelPane'
+  }).addTo(map);
+}
+
+/** Zoom-gate only — create/remove labels without rebuilding footprints. */
+function refreshRoleLabelVisibility() {
+  objects.forEach(obj => {
+    if (!shouldShowRoleLabel(obj)) {
+      removeRoleLabel(obj);
+    } else if (!obj.roleLabelLayer) {
+      syncRoleLabel(obj);
+    }
+  });
 }
 
 function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
@@ -3116,6 +3239,7 @@ function deleteObj(id) {
   pushStateToUndo();
   if (objects[idx].layer) map.removeLayer(objects[idx].layer);
   if (objects[idx].layerBuffer) map.removeLayer(objects[idx].layerBuffer);
+  if (objects[idx].roleLabelLayer) map.removeLayer(objects[idx].roleLabelLayer);
   if (selectedObjectId === id) {
     selectedObjectId = null;
     clearRotateHandle();
@@ -3139,6 +3263,7 @@ function resetPlacedObjects() {
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
+    if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
   });
   objects = [];
   objectId = 0;
