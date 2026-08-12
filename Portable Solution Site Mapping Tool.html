@@ -154,7 +154,7 @@ button.danger:hover { background:#f85149; }
 .sb-section { padding:12px; border-bottom:1px solid #30363d; }
 .sb-section h3 { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#8b949e; margin-bottom:8px; }
 
-/* Vendor Tabs */
+/* Catalog Tabs */
 .vendor-tabs { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
 .vtab {
   padding:4px 8px; font-size:11px; border-radius:4px; cursor:pointer;
@@ -455,9 +455,9 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <div id="sidebar-scroll">
     <div id="measure-readout" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">No measurement.</div>
 
-    <!-- Vendor Tabs -->
+    <!-- Catalog Tabs -->
     <div class="sb-section">
-      <h3>Vendor</h3>
+      <h3>Catalog</h3>
       <div class="vendor-tabs" id="vendor-tabs"></div>
       <div class="tent-list" id="tent-list"></div>
       <!-- INTENTIONAL: extended-catalog toggle is hidden until deliberately revealed (display:none by design).
@@ -668,10 +668,6 @@ const TENT_DB = {
       widthFt:7.667, lengthFt:7.333, shape:"rect",
       provenance: "PSMT-local (no transfer product); geometry per existing TENT_DB / digest (SO-VC8H). Support/connector — no imported bed figure.",
       note:"Vestibule SO-VC8H – 7'8\"×7'4\" footprint (56 sq ft); connects to GK1935 end face; 6' sidewall height" },
-    { id:"ws-generator-70kva", name:"Generator 70 kVA (on trailer)", tier:"standard", structure:"soft-sided",
-      widthFt:6.04, lengthFt:14.12, shape:"rect",
-      provenance: "PSMT-local (no transfer product); geometry per existing TENT_DB / digest (TRLR70US trailer L×W). Support equipment on trailer — structure tagged soft-sided for catalog bucketing only, not a fabric shelter; no imported bed figure. Vendor grouping reflects procurement (purchased under WS), not planning reality — relocation to an equipment grouping is a logged, pending decision.",
-      note:"70 kVA / 56 kW on TRLR70US trailer – 14.12'×6.04' (trailer L×W per MQ Power data sheets); Isuzu Tier 4, 103 gal" },
     { id:"ws-gk2342", name:"GK2342", tier:"extended", structure:"soft-sided",
       widthFt:22.5, lengthFt:41.167, shape:"rect",
       bedCapacity: { value: 17, display: "17", provenance: "PSC - Western Shelter.pdf / data.js" },
@@ -858,6 +854,12 @@ const TENT_DB = {
       bedCapacity: { value: null, display: null, provenance: "data.js — staff/flex space, no patient beds" },
       provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Exterior 11.75'×60'. Transfer wilscot-staff.",
       note:"Staff Unit – 11'9\"×60' (705 sq ft); flex/support, no patient beds. Intended to pair with Patient Unit via central hallway (planner arranges; supports mixed deployments). Elevated structure; ramp entrance required; ramp run is grade-dependent." },
+  ],
+  "Power": [
+    { id:"ws-generator-70kva", name:"Generator 70 kVA (on trailer)", tier:"standard", structure:"soft-sided",
+      widthFt:6.04, lengthFt:14.12, shape:"rect",
+      provenance: "PSMT-local (no transfer product); geometry per existing TENT_DB / digest (TRLR70US trailer L×W). Support equipment on trailer — structure tagged soft-sided for catalog bucketing only, not a fabric shelter; no imported bed figure. Catalog tab Power (pseudo-vendor): serves any vendor's shelters — procurement was under Western Shelter; grouping is planning, not purchasing. Relocated from Western Shelter 2026-08-12 (catalog/card redesign Step 1).",
+      note:"70 kVA / 56 kW on TRLR70US trailer – 14.12'×6.04' (trailer L×W per MQ Power data sheets); Isuzu Tier 4, 103 gal" },
   ]
 };
 
@@ -870,7 +872,8 @@ const VENDOR_COLORS = {
   'HDT': '#d2a8ff',
   'Craftsmen': '#0d9488',
   'FORTS': '#ca8a04',
-  'WillScot': '#c026d3'
+  'WillScot': '#c026d3',
+  'Power': '#4d5866'
 };
 function getVendorColor(vendor) {
   return (vendor && VENDOR_COLORS[vendor]) || selectedColor;
@@ -974,7 +977,7 @@ L.control.scale({ imperial: true, metric: true, maxWidth: 120 }).addTo(map);
   });
 })();
 
-// ─── Build Vendor Tabs (tier-filtered catalog) ──────────────────────────────────
+// ─── Build Catalog Tabs (tier-filtered catalog) ─────────────────────────────────
 let currentVendor = Object.keys(TENT_DB)[0];
 let showExtendedCatalog = false; // session-only; not persisted
 const tabContainer = document.getElementById('vendor-tabs');

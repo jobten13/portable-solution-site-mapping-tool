@@ -378,7 +378,7 @@ Dimensions convert to meters at placement (`× FT_TO_M`).
 
 Maps catalog vendor → default hex. Missing vendor falls back to user swatch via `getVendorColor()`.
 
-Current keys: `BLU-MED`, `Western Shelter`, `DLX`, `ZUMRO`, `HDT`.
+Current keys: `BLU-MED`, `Western Shelter`, `DLX`, `ZUMRO`, `HDT`, `Craftsmen`, `FORTS`, `WillScot`, `Power`.
 
 ### `objects[]` — runtime placed structure (647+)
 
@@ -433,17 +433,21 @@ See `.cursor/rules/project-conventions.mdc`.
 
 ## 7. Vendor catalog
 
-### Current vendors and models (`TENT_DB`, lines 575–627)
+### Current vendors and models (`TENT_DB`)
 
-| Vendor | Models |
+| Vendor | Models (standard-visible; extended omitted here) |
 |--------|--------|
 | **BLU-MED** | 2032.5, 2039, Vestibule |
-| **Western Shelter** | GK1935, GK20, Vestibule, Generator 70 kVA (on trailer) |
+| **Western Shelter** | GK1935, GK20, Vestibule |
 | **DLX** | X-24, Quad (X-HUB), X-32 |
 | **ZUMRO** | Quad Interface, Model 400, Model 600, Interconnect |
 | **HDT** | Base-X 305, Base-X Dome (8D36) |
+| **Craftsmen** | 8-Bed ICU Trailer |
+| **FORTS** | Model 38 |
+| **WillScot** | Patient Unit, Staff Unit |
+| **Power** | Generator 70 kVA (on trailer) — id `ws-generator-70kva`; relocated from Western Shelter 2026-08-12 (planning grouping, not procurement) |
 
-Vendor tabs render from `TENT_DB` keys automatically (737–759).
+Catalog section header is **Catalog** (was Vendor). Tabs render from `TENT_DB` keys automatically.
 
 ### Provenance
 

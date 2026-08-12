@@ -1,6 +1,6 @@
 # Vendor Tent Specs Digest (PoP 3)
 
-**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot) are used for placement and when loading plans. HDT soft-sided standard set: Base-X 305 and Base-X Dome (8D36); extended (hidden) also includes Base-X 505, Quick Halt 402/403, Airbeam 3236A. Hard-sided Craftsmen / FORTS / WillScot added 2026-08-11 (PSC-primary, fidelity unconfirmed). Sixteen extended-tier soft-sided models added 2026-08-11 (catalog import Step 5) — hidden behind fail-closed tier filter; minimum-valid rect bbox; full fidelity deferred.
+**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot, Power) are used for placement and when loading plans. HDT soft-sided standard set: Base-X 305 and Base-X Dome (8D36); extended (hidden) also includes Base-X 505, Quick Halt 402/403, Airbeam 3236A. Hard-sided Craftsmen / FORTS / WillScot added 2026-08-11 (PSC-primary, fidelity unconfirmed). Sixteen extended-tier soft-sided models added 2026-08-11 (catalog import Step 5) — hidden behind fail-closed tier filter; minimum-valid rect bbox; full fidelity deferred. **Power** (pseudo-vendor catalog tab) holds the Generator 70 kVA — relocated from Western Shelter 2026-08-12 (planning grouping, not procurement).
 
 ---
 
@@ -71,7 +71,6 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 | **GK1935 (SW-1935)** | SW-1935.pdf (Spec Sheets) | **18' 7" × 33' 11"** overall; symmetric corner cuts; **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20) | ~570 ft² | cut-corner-rectangle | 18.583 × 33.917, **cornerCutW 5.421**, cornerCutL 5.421 ✓ (symmetric 45° cut; each leg 5.421 ft → 7'8" exterior face) |
 | **GK20** | Instructions - WS_GK20 Set Up.pdf; Western-Shelter-_-Product-Catalog.pdf (no dedicated SW-20 spec sheet) | **18' 7"** across flats; **7' 8"** equal facets; regular octagon (SW-20) | ~286 ft² | octagon | 18.583 × 18.583 ✓ |
 | **Vestibule (SO-VC8H)** | Western Shelter SO-VC8H spec (see Vendor Specs and Manuals); replaces prior misread (6' was sidewall height, not depth) | Footprint **7'8" × 7'4"**; **6'** sidewall height | 56 ft² | rect | **7.667 × 7.333** ✓ |
-| **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ |
 
 **Extended (hidden, tier:`extended`) — minimum-valid rect bbox; fidelity deferred:**
 
@@ -81,6 +80,16 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 | **GK2360** | SW-2360.pdf | **22'8" × 60'1"** bbox; cut-corner class (GK1935 precedent) deferred | ~1362 ft² bbox | rect (cut-corner deferred) | 22.667 × 60.083 ✓ (extended) |
 | **Guardian 2032** | Guardian_2032x3065.pdf + PSC | **20' × 32'6"** plan rect (Quonset elevation) | 650 ft² | rect | 20 × 32.5 ✓ (extended) |
 | **Guardian 3065** | Guardian_2032x3065.pdf + PSC | **30' × 65"**; PSC inch typo (65"/height 15') unresolved | 1950 ft² | rect | 30 × 65 ✓ (extended) |
+
+---
+
+## 4b. Power (equipment / planning grouping)
+
+Pseudo-vendor catalog tab (**not** an OEM shelter vendor). Holds support equipment that serves any vendor's shelters. Spec sheets for the Generator still live in the **Western Shelter & Third Party** reference folder (procurement history); catalog grouping is **planning**, not purchasing.
+
+| Model | Spec source | Spec dimensions | Area | Shape | Tool current |
+|-------|-------------|-----------------|------|-------|--------------|
+| **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ (`TENT_DB` key **Power**; id `ws-generator-70kva` unchanged). Relocated from Western Shelter 2026-08-12. |
 
 ---
 
@@ -139,7 +148,8 @@ All of the following are implemented in the tool.
 5. **ZUMRO Model 600**: 20.4×31 exterior.
 6. **ZUMRO Quad Interface**: Exterior footprint **29.4'×19.5'** (what the tool maps; render ~521 sq ft); interior width **15.7'**; **~454 sq ft interior** floor space (air-beam — inflated beams reduce usable interior below exterior footprint); four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S. Render faithful to exterior footprint; no geometry change.
 7. **HDT**: Base-X 8D36 as cut-corner-rectangle 31×37 (cornerCutW 8.4, cornerCutL 13.2 — diagram-derived, unverified); 6D31 removed (product lineup: 305 and 8D36 only).
-8. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft; Generator 70 kVA on trailer 14.12'×6.04'.
+8. **Western Shelter GK20**: 18'7" across flats, 7'8" equal facets, regular octagon (SW-20); ~286 sq ft.
+8b. **Power — Generator 70 kVA on trailer**: 14.12'×6.04'; catalog tab **Power** (planning grouping; specs from Western Shelter & Third Party folder — procurement history). Relocated from Western Shelter tab 2026-08-12.
 9. **Western Shelter GK1935**: Overall **18'7"×33'11"**; **symmetric** corner cuts (each leg **5.421 ft**); **7'8"** exterior corner face; sheet **7'6"** = interior clear-span (same convention as GK20); **~570 sq ft**.
 10. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
 11. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
@@ -153,7 +163,8 @@ All of the following are implemented in the tool.
 - **BLU-MED**: Instructions & Manuals — TM_20x32.5 BLU-MED XPH Shelter, TM_2039 XPH Shelter, TM_7x8 Vestibule w BTD. Spec Sheets: BLU-MED Weather Load Shelter Specs.pdf (and others).
 - **DLX**: Spec Sheets — Approved for Release X-Series X-24, X-32, X-Hub Shelter Tech Sheet Updated 11_18_24 / 11_19_24.pdf. Extended ASAP18/X-8/X-16/X-24SC/X-40: PSC/data.js only until OEM sheets are added to the pack.
 - **HDT Global**: Spec Sheets — HDT_305shelter_13-13.pdf, HDT_8D36Shelter_11.pdf, HDT_505shelters_06.pdf, HDT_Quick-Halt_TAC_Shelter_08.pdf, HDT_32SeriesAirBeam_17.pdf, Anchor Kits 69KHSA305 and 69KHSA8D36.pdf.
-- **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, SW-2342_Shelter.pdf, SW-2360.pdf, Guardian_2032x3065.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. **SO-VC8H** vestibule footprint (7'8"×7'4") and sidewall height per Western Shelter SO-VC8H spec. Product catalog: Western-Shelter-_-Product-Catalog.pdf.
+- **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, SW-2342_Shelter.pdf, SW-2360.pdf, Guardian_2032x3065.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. **SO-VC8H** vestibule footprint (7'8"×7'4") and sidewall height per Western Shelter SO-VC8H spec. Product catalog: Western-Shelter-_-Product-Catalog.pdf. (Generator trailer/MQ Power sheets live in this folder; catalog tab is **Power**.)
+- **Power (catalog tab):** Generator 70 kVA — same MQ Power / TRLR70US sources as above; grouping is planning (serves any vendor), not procurement.
 - **ZUMRO**: Spec Sheets — Zumro 400 Specs.pdf, Zumro 600 Specs.pdf, Zumro Quad Interface.pdf, Zumro 216.pdf, Zumro 900.pdf, Zumro External Airlock.pdf, UC DAVIS SPEC SHEET PACKAGE 011325.pdf. Interconnect: ZUMRO_Interconnect_Dimensions.md (root), engineering drawing Photo - Zumro Interconnect to Western Shelter.png / ZUMRO Interconnect to WS (1).jpg; footprint 7.17'×6.92' (86"×83"), rect.
 - **Craftsmen / FORTS / WillScot (hard-sided):** No OEM sheets in the reference package as of 2026-08-11 import. Dimensions and notes from **PSC combined catalog** (Vendor Product Catalog Template - Revised Version.pdf) via performer-team transfer (`PSMT Data Transfer.json`); fidelity **unconfirmed**.
 
@@ -176,7 +187,8 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **BLU-MED** | Spec source for 2032.5/2039/Vestibule set to Instructions & Manuals filenames (no TM_*.pdf in Spec Sheets; dimensions from manuals). Tool current: all ✓ (7×8 Vestibule implemented). |
 | **DLX** | Spec filenames set to exact tech sheets in folder (Updated 11_18_24, 11_19_24). Tool current: X-24, X-32, X-HUB all ✓. |
 | **HDT Global** | Spec sheet references updated to **HDT_305shelter_13-13.pdf** and **HDT_8D36Shelter_11.pdf** (folder does not contain _11 for 305 or _10 for 8D36). 6D31 row removed from table (already removed from tool). Tool current: 305 and 8D36 ✓. |
-| **Western Shelter** | Folder name set to **Western Shelter & Third Party**. GK20: source set to Instructions - WS_GK20 Set Up and Product Catalog; tool uses 18'7" across flats, 7'8" equal facets, regular octagon (SW-20; no SW-20.pdf in folder). Generator: trailer data sheet in folder is **TRLR75XF2**; 70 kVA dimensions (14.12'×6.04') noted as TRLR70US from generator/trailer spec. Tool current: all ✓. |
+| **Western Shelter** | Folder name set to **Western Shelter & Third Party**. GK20: source set to Instructions - WS_GK20 Set Up and Product Catalog; tool uses 18'7" across flats, 7'8" equal facets, regular octagon (SW-20; no SW-20.pdf in folder). Generator specs remain in this folder; catalog display/grouping moved to **Power** tab 2026-08-12 (planning vs procurement). Tool current: shelters ✓. |
+| **Power** | Pseudo-vendor catalog tab (not an OEM). Generator 70 kVA: trailer data sheet in Western Shelter & Third Party folder is **TRLR75XF2**; 70 kVA dimensions (14.12'×6.04') noted as TRLR70US from generator/trailer spec. `TENT_DB` key **Power**; id `ws-generator-70kva`. Tool current: ✓. |
 | **ZUMRO** | Tool current: Model 400, 600, Quad Interface (exterior footprint 29.4'×19.5'; ~454 sq ft interior floor to 15.7' interior width), Interconnect ✓. Interconnect dimensions from ZUMRO_Interconnect_Dimensions.md (7.17'×6.92' rect). |
 | **Tables** | “Recommendation” column removed; “Tool current” column now reflects implemented values only, all ✓. |
 | **Source Files Used** | Section rewritten to list actual paths and filenames under Vendor Specs and Manuals. |
