@@ -1,12 +1,12 @@
 # Vendor Tent Specs Digest (PoP 3)
 
-**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot) are used for placement and when loading plans. HDT 6D31 was removed per product lineup; only Base-X 305 and Base-X Dome (8D36) remain for HDT. Hard-sided Craftsmen / FORTS / WillScot added 2026-08-11 (PSC-primary, fidelity unconfirmed).
+**Status: Implemented.** The recommendations below have been applied in the Portable Solution Site Mapping Tool: `TENT_DB` dimensions and shapes match this digest; vendor pre-assigned colors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot) are used for placement and when loading plans. HDT soft-sided standard set: Base-X 305 and Base-X Dome (8D36); extended (hidden) also includes Base-X 505, Quick Halt 402/403, Airbeam 3236A. Hard-sided Craftsmen / FORTS / WillScot added 2026-08-11 (PSC-primary, fidelity unconfirmed). Sixteen extended-tier soft-sided models added 2026-08-11 (catalog import Step 5) — hidden behind fail-closed tier filter; minimum-valid rect bbox; full fidelity deferred.
 
 ---
 
 **Source:** `C:\Users\jason\Desktop\IMPACTS Project\PoP 3\VPC Mapping\Vendor Specs and Manuals`  
-**Folders:** Soft-sided OEM pack — **BLU-MED**, **DLX**, **HDT Global**, **Western Shelter & Third Party**, **ZUMRO**. Hard-sided **Craftsmen**, **FORTS**, **WillScot** (added 2026-08-11) have **no OEM folders** in that pack — PSC combined catalog via performer-team transfer only.  
-**Purpose:** Align Portable Solution Site Mapping Tool `TENT_DB` with manufacturer spec sheets where they exist; hard-sided entries document PSC-primary, unconfirmed footprints until OEM sheets are obtained.
+**Folders:** Soft-sided OEM pack — **BLU-MED**, **DLX**, **HDT Global**, **Western Shelter & Third Party**, **ZUMRO**. Hard-sided **Craftsmen**, **FORTS**, **WillScot** (added 2026-08-11) have **no OEM folders** in that pack — PSC combined catalog via performer-team transfer only. Extended DLX models (ASAP18, X-8, X-16, X-24SC, X-40) are **PSC/data.js-primary** pending OEM sheets in the pack.  
+**Purpose:** Align Portable Solution Site Mapping Tool `TENT_DB` with manufacturer spec sheets where they exist; hard-sided entries document PSC-primary, unconfirmed footprints until OEM sheets are obtained; extended-tier entries are minimum-valid (hidden) until deliberately surfaced.
 
 ---
 
@@ -32,6 +32,16 @@ Tech sheets: “Dimensions (L x W)” in spec table. Spec Sheets: X-Series X-24,
 | **X-32** | X-Series X-32 Shelter Tech Sheet Updated 11_18_24.pdf | **32 × 21.5 ft** (9.8 × 6.6 m) | 688 ft² | 10.25 ft | rect | 32 × 21.5 ✓ |
 | **X-HUB (Quad)** | X-Hub Shelter Tech Sheet Updated 11_19_24.pdf | **22 × 22 ft** (6.7 × 6.7 m) | 484 ft² bbox (spec prints “48 ft²” – typo; 22×22=484); rendered ~482 ft² with 1.0 ft chamfer | 12.5 ft | cut-corner-square | 22 × 22 ✓; **cornerCutW 1.0**, cornerCutL 1.0 — unverified from a primary dimension spec (overall 22'×22' bounding box confirmed; corner chamfer not confirmed from manufacturer spec sheet — verify with DLX). |
 
+**Extended (hidden, tier:`extended`) — minimum-valid rect bbox; fidelity deferred:**
+
+| Model | Spec source | Spec dimensions (W × L in tool) | Area | Shape | Tool current |
+|-------|-------------|----------------------------------|------|-------|--------------|
+| **ASAP18** | PSC / data.js (OEM ASAP-18 sheet missing from pack) | **16 × 18** | 288 ft² | rect | 16 × 18 ✓ (extended) |
+| **X-8** | PSC / data.js (OEM missing) | **21.5 × 8** | 172 ft² | rect | 21.5 × 8 ✓ (extended); connector beds null |
+| **X-16** | PSC / data.js (OEM missing) | **21.5 × 16** | 344 ft² | rect | 21.5 × 16 ✓ (extended) |
+| **X-24SC** | PSC / data.js (OEM Side-Connect missing) | **25.3 × 24** | 607.2 ft² bbox (interior 531) | rect | 25.3 × 24 ✓ (extended) |
+| **X-40** | PSC / data.js (OEM missing) | **21.5 × 40** | 860 ft² | rect | 21.5 × 40 ✓ (extended) |
+
 ---
 
 ## 3. HDT Global
@@ -40,6 +50,15 @@ Tech sheets: “Dimensions (L x W)” in spec table. Spec Sheets: X-Series X-24,
 |-------|-------------|-----------------|------|-------|--------------|
 | **Base-X 305** | HDT_305shelter_13-13.pdf (Spec Sheets) | Outer footprint **20'6" × 25'** (18' interior clear span). Width corrected from interior clear span (18') to outer cover dimension (20'6") per **HDT_305shelter** spec diagram. | 450 ft² | rect | **20.5 × 25** ✓ |
 | **Base-X 8D36** | HDT_8D36Shelter_11.pdf (Spec Sheets) | Interior **31' × 37'** (9.45 × 11.28 m) | 935 ft² spec; rendered ~925 ft² with 8.4/13.2 ft legs | cut-corner-rectangle | 31 × 37 ✓; **cornerCutW 8.4**, cornerCutL 13.2 — unverified from a primary dimension spec (overall 31'×37' bbox confirmed; corner legs derived by pixel-measure from top-down diagram, cross-checked vs sheet area figure — verify with HDT). |
+
+**Extended (hidden, tier:`extended`) — minimum-valid rect bbox; fidelity deferred:**
+
+| Model | Spec source | Spec dimensions | Area | Shape | Tool current |
+|-------|-------------|-----------------|------|-------|--------------|
+| **Base-X 505** | HDT_505shelters_06.pdf; PSC alternate unresolved | Vendor diagram ~**25'7" × 25'7"** outer; PSC alternate 26'×25'×13' unresolved | ~654.5 ft² bbox | rect | 25.583 × 25.583 ✓ (extended) |
+| **Quick Halt 402** | HDT_Quick-Halt_TAC_Shelter_08.pdf | One published set: Interior (W×L) **15' × 12'** / 180 ft²; no separate exterior (unlike 305). Tool order **12 × 15** (smaller-first) | 180 ft² | rect | 12 × 15 ✓ (extended) |
+| **Quick Halt 403** | HDT_Quick-Halt_TAC_Shelter_08.pdf | One published set: Interior (W×L) **15' × 18'** / 270 ft²; no separate exterior (unlike 305). Tool order **15 × 18** | 270 ft² | rect | 15 × 18 ✓ (extended) |
+| **Airbeam 3236A** | HDT_32SeriesAirBeam_17.pdf | Bbox **77'4" × 34'5"**; transfer tapered-end class deferred to rect | ~2662 ft² bbox | rect | 34.417 × 77.333 ✓ (extended) |
 
 Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) – optional for future. Anchor kits: 69KHSA305 and 69KHSA8D36.pdf in Spec Sheets.
 
@@ -54,6 +73,15 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 | **Vestibule (SO-VC8H)** | Western Shelter SO-VC8H spec (see Vendor Specs and Manuals); replaces prior misread (6' was sidewall height, not depth) | Footprint **7'8" × 7'4"**; **6'** sidewall height | 56 ft² | rect | **7.667 × 7.333** ✓ |
 | **Generator 70 kVA (on trailer)** | MQP3Generators, trailer data sheet in folder: DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf | **Trailer TRLR70US** (70 kVA): 169.4" × 72.5" → **14.12' × 6.04'** L×W for mapping. 70 kVA / 56 kW, 103 gal, Isuzu Tier 4. Folder has TRLR75XF2 sheet; TRLR70US dims from generator/trailer spec. | — | rect | 14.12 × 6.04 ✓ |
 
+**Extended (hidden, tier:`extended`) — minimum-valid rect bbox; fidelity deferred:**
+
+| Model | Spec source | Spec dimensions | Area | Shape | Tool current |
+|-------|-------------|-----------------|------|-------|--------------|
+| **GK2342** | SW-2342_Shelter.pdf; PSC alternate 22'8" unresolved | Vendor **22'6" × 41'2"** bbox; cut-corner class (GK1935 precedent 7'8"/7'6") deferred | ~926 ft² bbox | rect (cut-corner deferred) | 22.5 × 41.167 ✓ (extended) |
+| **GK2360** | SW-2360.pdf | **22'8" × 60'1"** bbox; cut-corner class (GK1935 precedent) deferred | ~1362 ft² bbox | rect (cut-corner deferred) | 22.667 × 60.083 ✓ (extended) |
+| **Guardian 2032** | Guardian_2032x3065.pdf + PSC | **20' × 32'6"** plan rect (Quonset elevation) | 650 ft² | rect | 20 × 32.5 ✓ (extended) |
+| **Guardian 3065** | Guardian_2032x3065.pdf + PSC | **30' × 65"**; PSC inch typo (65"/height 15') unresolved | 1950 ft² | rect | 30 × 65 ✓ (extended) |
+
 ---
 
 ## 5. ZUMRO
@@ -64,6 +92,14 @@ Heights (305: eave ~6'7", peak ~10'6"; 8D36: diagram ~7'4" liner, ~14'7" peak) �
 | **Model 600** | Zumro 600 Specs.pdf (Spec Sheets) | Length 31', Exterior width 20.4', Interior 19.3'; heights 9' / 9.7' | 600 ft² | rect | 20.4 × 31 (exterior) ✓ |
 | **Quad Interface** | Zumro Quad Interface.pdf (Spec Sheets) | Exterior footprint **29.4' × 19.5'** (what the tool maps); interior width **15.7'**; four Quad connection faces; side connectors ~**1.9'** E/W, end ~**6.85'** N/S; heights 8.5' / 8' | **~454 ft² interior** floor (air-beam — inflated beams reduce usable interior below exterior footprint); exterior footprint ~521 ft² | plus | 19.5 × 29.4, armWidthFt 15.7 ✓ (exterior footprint; render faithful — no geometry change) |
 | **Interconnect** | ZUMRO_Interconnect_Dimensions.md; engineering drawing (ZUMRO_Interconnect_to_WS / Photo - Zumro Interconnect to Western Shelter.png) | **7.17' × 6.92'** (86" × 83") | rect | 7.17 × 6.92 ✓ |
+
+**Extended (hidden, tier:`extended`) — minimum-valid rect bbox; fidelity deferred. External Airlock ≠ Interconnect.**
+
+| Model | Spec source | Spec dimensions | Area | Shape | Tool current |
+|-------|-------------|-----------------|------|-------|--------------|
+| **Model 216** | Zumro 216.pdf + PSC | Exterior **14.7' × 16'**; UNRESOLVED floor-space 151 vs 216 | 235.2 ft² bbox | rect | 14.7 × 16 ✓ (extended) |
+| **Model 900** | Zumro 900.pdf + PSC | Exterior **32.9' × 30'**; UNRESOLVED PSC 32.9" typo; beds 20–25 vs sheet ≤15 unresolved | 987 ft² | rect | 32.9 × 30 ✓ (extended) |
+| **External Airlock** | Zumro External Airlock.pdf (interior); PSC (exterior inches) | **7.167' × 10.667'** (86"×128"); ≠ Interconnect; marketing 65 sq ft anomaly unresolved | ~76.4 ft² | rect | 7.167 × 10.667 ✓ (extended); beds null |
 
 ---
 
@@ -108,16 +144,17 @@ All of the following are implemented in the tool.
 10. **Western Shelter Vestibule (SO-VC8H)**: Footprint **7'8" × 7'4"** (7.667 × 7.333 ft), **56 sq ft**; **6'** is sidewall height, not footprint depth. Connects to GK1935 end face.
 11. **ZUMRO Interconnect**: Added 7.17'×6.92' rect (footprint from ZUMRO_Interconnect_Dimensions.md / engineering drawing; connects Zumro to Western Shelter).
 12. **Craftsmen / FORTS / WillScot (hard-sided, 2026-08-11 import):** PSC-primary, fidelity **unconfirmed** (no OEM sheet). Craftsmen 8-Bed ICU Trailer mapped **expanded 53'×22.5'** (closed 53'×8.5' reference-only). FORTS Model 38 **18'×20'** base unit; beds **"~2 to 3"** derived. WillScot **Patient** 23.5'×60' beds **6 to 10**; **Staff** 11.75'×60' beds null — two placeable units, pairing intent in notes.
+13. **Extended catalog (2026-08-11 Step 5):** Sixteen soft-sided transfer-only models added as `tier:'extended'` (hidden). All ship as **rect bbox**, fidelity deferred. Includes DLX ASAP18/X-8/X-16/X-24SC/X-40; HDT 505/QH402/QH403/Airbeam 3236A; WS GK2342/GK2360/Guardian 2032/3065; ZUMRO 216/900/External Airlock. GK2342/GK2360 carry GK1935 cut-corner precedent in notes only. Quick Halt footprint = published sheet dims (no separate exterior; 8D36-style precedent); tool order 12×15 / 15×18.
 
 ---
 
 ## Source Files Used (Vendor Specs and Manuals)
 
 - **BLU-MED**: Instructions & Manuals — TM_20x32.5 BLU-MED XPH Shelter, TM_2039 XPH Shelter, TM_7x8 Vestibule w BTD. Spec Sheets: BLU-MED Weather Load Shelter Specs.pdf (and others).
-- **DLX**: Spec Sheets — Approved for Release X-Series X-24, X-32, X-Hub Shelter Tech Sheet Updated 11_18_24 / 11_19_24.pdf.
-- **HDT Global**: Spec Sheets — HDT_305shelter_13-13.pdf, HDT_8D36Shelter_11.pdf, Anchor Kits 69KHSA305 and 69KHSA8D36.pdf.
-- **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. **SO-VC8H** vestibule footprint (7'8"×7'4") and sidewall height per Western Shelter SO-VC8H spec. Product catalog: Western-Shelter-_-Product-Catalog.pdf.
-- **ZUMRO**: Spec Sheets — Zumro 400 Specs.pdf, Zumro 600 Specs.pdf, Zumro Quad Interface.pdf, UC DAVIS SPEC SHEET PACKAGE 011325.pdf. Interconnect: ZUMRO_Interconnect_Dimensions.md (root), engineering drawing Photo - Zumro Interconnect to Western Shelter.png / ZUMRO Interconnect to WS (1).jpg; footprint 7.17'×6.92' (86"×83"), rect.
+- **DLX**: Spec Sheets — Approved for Release X-Series X-24, X-32, X-Hub Shelter Tech Sheet Updated 11_18_24 / 11_19_24.pdf. Extended ASAP18/X-8/X-16/X-24SC/X-40: PSC/data.js only until OEM sheets are added to the pack.
+- **HDT Global**: Spec Sheets — HDT_305shelter_13-13.pdf, HDT_8D36Shelter_11.pdf, HDT_505shelters_06.pdf, HDT_Quick-Halt_TAC_Shelter_08.pdf, HDT_32SeriesAirBeam_17.pdf, Anchor Kits 69KHSA305 and 69KHSA8D36.pdf.
+- **Western Shelter & Third Party**: Spec Sheets — SW-1935.pdf, SW-2342_Shelter.pdf, SW-2360.pdf, Guardian_2032x3065.pdf, DCA70SSJU4F-03-Trailer-Data-Sheet-TRLR75XF2.pdf, MQP3Generators. Instructions — WS_GK1935 Set Up, WS_GK20 Set Up, GK+Vestibule, Vestibule+Entryway. **SO-VC8H** vestibule footprint (7'8"×7'4") and sidewall height per Western Shelter SO-VC8H spec. Product catalog: Western-Shelter-_-Product-Catalog.pdf.
+- **ZUMRO**: Spec Sheets — Zumro 400 Specs.pdf, Zumro 600 Specs.pdf, Zumro Quad Interface.pdf, Zumro 216.pdf, Zumro 900.pdf, Zumro External Airlock.pdf, UC DAVIS SPEC SHEET PACKAGE 011325.pdf. Interconnect: ZUMRO_Interconnect_Dimensions.md (root), engineering drawing Photo - Zumro Interconnect to Western Shelter.png / ZUMRO Interconnect to WS (1).jpg; footprint 7.17'×6.92' (86"×83"), rect.
 - **Craftsmen / FORTS / WillScot (hard-sided):** No OEM sheets in the reference package as of 2026-08-11 import. Dimensions and notes from **PSC combined catalog** (Vendor Product Catalog Template - Revised Version.pdf) via performer-team transfer (`PSMT Data Transfer.json`); fidelity **unconfirmed**.
 
 ---
@@ -144,7 +181,7 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **Tables** | “Recommendation” column removed; “Tool current” column now reflects implemented values only, all ✓. |
 | **Source Files Used** | Section rewritten to list actual paths and filenames under Vendor Specs and Manuals. |
 
-**Spec sheet verification note:** Dimensions in this digest were previously verified against manufacturer docs; PDF content was not re-extracted in this pass. Folder contents were cross-checked so every **soft-sided** tent in `TENT_DB` has a corresponding spec or manual in **Vendor Specs and Manuals**. The four **hard-sided** models (Craftsmen 8-Bed ICU Trailer, FORTS Model 38, WillScot Patient Unit, WillScot Staff Unit) have **no OEM sheet** in that pack — provenance is PSC via another performer team only; fidelity **unconfirmed** as of the 2026-08-11 import.
+**Spec sheet verification note:** Dimensions in this digest were previously verified against manufacturer docs; PDF content was not re-extracted in this pass. Folder contents were cross-checked so every **standard soft-sided** tent in `TENT_DB` has a corresponding spec or manual in **Vendor Specs and Manuals** where cited. **Extended** DLX models (ASAP18, X-8, X-16, X-24SC, X-40) are PSC/data.js-primary until OEM sheets are added. The four **hard-sided** models (Craftsmen 8-Bed ICU Trailer, FORTS Model 38, WillScot Patient Unit, WillScot Staff Unit) have **no OEM sheet** in that pack — provenance is PSC via another performer team only; fidelity **unconfirmed** as of the 2026-08-11 import.
 
 ---
 
@@ -180,3 +217,15 @@ For future tool versions, consider storing **height** (eave/peak) and **area** f
 | **Craftsmen 8-Bed ICU Trailer** | Mapped **expanded 22.5'×53'**; closed 8.5'×53' reference-only; beds **8**. |
 | **FORTS Model 38** | **18'×20'** base unit; beds **"~2 to 3"** derived. |
 | **WillScot Patient / Staff** | Patient **23.5'×60'** beds **6 to 10**; Staff **11.75'×60'** beds null; two placeable units. |
+
+---
+
+**Date:** 2026-08-11  
+**Action:** Sixteen **extended**-tier soft-sided models added to digest + `TENT_DB` (catalog import Step 5). Hidden behind fail-closed filter; all `shape:"rect"` minimum-valid; fidelity deferred. Conflicts recorded unresolved (Zumro 216 floor space; Zumro 900 beds; PSC inch typos; HDT 505 PSC alternate; GK2342 PSC alternate).
+
+| Change | Details |
+|--------|--------|
+| **DLX extended** | ASAP18, X-8, X-16, X-24SC, X-40 — PSC/data.js dims; OEM sheets missing from pack. |
+| **HDT extended** | 505 (~25'7" square); Quick Halt 402 **12×15** / 403 **15×18** (one published dim set); Airbeam 3236A bbox rect (tapered-end deferred). |
+| **WS extended** | GK2342/GK2360 rect bbox + GK1935 cut-corner precedent in notes; Guardian 2032/3065 plan rect. |
+| **ZUMRO extended** | Model 216, Model 900, External Airlock (≠ Interconnect). |
