@@ -150,6 +150,50 @@ button.danger:hover { background:#f85149; }
 #sidebar-placed #obj-list-items {
   flex:1; min-height:0; overflow-y:auto; padding:12px;
 }
+.placed-totals {
+  margin-top:4px;
+  font-size:11px;
+  line-height:1.35;
+  color:#8b949e;
+}
+.placed-totals-beds { color:#e6edf3; }
+.placed-totals-uncounted {
+  display:none;
+  color:#f78166;
+  font-size:10px;
+  margin-top:1px;
+}
+.placed-totals-area {
+  display:flex;
+  align-items:center;
+  gap:4px;
+  margin-top:1px;
+  flex-wrap:wrap;
+}
+.placed-totals-info {
+  flex-shrink:0;
+  margin:0;
+  padding:0 2px;
+  border:none;
+  background:transparent;
+  color:#58a6ff;
+  font-size:11px;
+  line-height:1;
+  cursor:help;
+  border-radius:3px;
+}
+.placed-totals-info:hover,
+.placed-totals-info[aria-expanded="true"] { color:#79c0ff; }
+.placed-totals-info:focus-visible { outline:2px solid #58a6ff; outline-offset:1px; }
+.placed-totals-disclaimer {
+  display:none;
+  width:100%;
+  margin-top:2px;
+  font-size:10px;
+  color:#8b949e;
+  line-height:1.3;
+}
+.placed-totals-disclaimer.is-open { display:block; }
 
 .sb-section { padding:12px; border-bottom:1px solid #30363d; }
 .sb-section h3 { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#8b949e; margin-bottom:8px; }
@@ -623,6 +667,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;">Placed (<span id="obj-count">0</span>)</h3>
           <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
+        </div>
+        <div id="placed-totals" class="placed-totals" aria-live="polite">
+          <div class="placed-totals-beds" id="placed-totals-beds">Beds: 0</div>
+          <div class="placed-totals-uncounted" id="placed-totals-uncounted" title="No matching catalog model for bed capacity (Custom sizes, renamed labels, or unknown vendors). Omitted from the bed total."></div>
+          <div class="placed-totals-area">
+            <span id="placed-totals-sqft">0 sq ft (0 w/ buffer)</span>
+            <button type="button" class="placed-totals-info" id="placed-totals-info" aria-label="Utilities disclaimer" aria-expanded="false">ⓘ</button>
+            <div class="placed-totals-disclaimer" id="placed-totals-disclaimer" hidden>Utilities (water, hygiene, waste) are excluded from footprint totals — account for them separately.</div>
+          </div>
         </div>
         <div id="overlap-warning" class="warn-text" style="display:none;"></div>
       </div>
@@ -3285,6 +3338,7 @@ function updateList() {
   const cnt = objects.length;
   document.getElementById('obj-count').textContent = cnt;
   document.getElementById('tent-count').textContent = cnt;
+  updatePlacedTotals();
   el.textContent = '';
   if (!cnt) {
     const p = document.createElement('p');
@@ -3298,6 +3352,126 @@ function updateList() {
   const fragment = document.createDocumentFragment();
   objects.forEach(o => fragment.appendChild(createObjectListItem(o)));
   el.appendChild(fragment);
+}
+
+/**
+ * Match placed object → TENT_DB record by vendor + label (no schema id on objects).
+ * Custom / Loaded / renamed / unknown → null (bed lookup miss).
+ */
+function resolveCatalogTent(obj) {
+  if (!obj) return null;
+  const vendor = String(obj.vendor || '');
+  if (!vendor || vendor === 'Custom' || vendor === 'Loaded') return null;
+  const list = TENT_DB[vendor];
+  if (!list || !list.length) return null;
+  const want = sanitizeLabel(obj.label || '');
+  return list.find(t => sanitizeLabel(`${vendor} ${t.name}`) === want) || null;
+}
+
+/** Bed min/max contribution from a catalog tent. Null capacity → 0/0, not a range. */
+function bedContributionFromTent(tent) {
+  const bc = tent && tent.bedCapacity;
+  if (!bc || bc.value == null) return { min: 0, max: 0, isRange: false };
+  const v = bc.value;
+  if (typeof v === 'object' && v.min != null && v.max != null) {
+    return { min: Number(v.min) || 0, max: Number(v.max) || 0, isRange: true };
+  }
+  const n = Number(v);
+  if (!Number.isFinite(n)) return { min: 0, max: 0, isRange: false };
+  return { min: n, max: n, isRange: false };
+}
+
+function objectAreaSqFt(obj, withBuffer) {
+  if (!obj) return 0;
+  const bufferM = withBuffer ? Math.max(0, (obj.bufferFt || 0) * FT_TO_M) : 0;
+  let verts = null;
+  if (!withBuffer && obj.layer) {
+    verts = getLayerVertices(obj.layer);
+  } else if (withBuffer && bufferM > 0 && obj.layerBuffer) {
+    verts = getLayerVertices(obj.layerBuffer);
+  }
+  if (!verts || verts.length < 3) {
+    const layer = createShapeLayer(obj, obj.widthM, obj.lengthM, { stroke: false, fill: false, opacity: 0 }, bufferM);
+    verts = getLayerVertices(layer);
+  }
+  if (!verts || verts.length < 3) return 0;
+  const m2 = polygonAreaMeters(verts);
+  return Math.round(m2 / (FT_TO_M * FT_TO_M));
+}
+
+function formatBedsTotal(minBeds, maxBeds, anyRange) {
+  if (anyRange || minBeds !== maxBeds) return `${minBeds} to ${maxBeds}`;
+  return String(minBeds);
+}
+
+function updatePlacedTotals() {
+  const bedsEl = document.getElementById('placed-totals-beds');
+  const uncountedEl = document.getElementById('placed-totals-uncounted');
+  const sqftEl = document.getElementById('placed-totals-sqft');
+  if (!bedsEl || !sqftEl) return;
+
+  let minBeds = 0;
+  let maxBeds = 0;
+  let anyRange = false;
+  let uncounted = 0;
+  let footprintSqFt = 0;
+  let bufferedSqFt = 0;
+
+  objects.forEach(obj => {
+    footprintSqFt += objectAreaSqFt(obj, false);
+    bufferedSqFt += objectAreaSqFt(obj, true);
+    const tent = resolveCatalogTent(obj);
+    if (!tent) {
+      uncounted += 1;
+      return;
+    }
+    const c = bedContributionFromTent(tent);
+    minBeds += c.min;
+    maxBeds += c.max;
+    if (c.isRange) anyRange = true;
+  });
+
+  bedsEl.textContent = `Beds: ${formatBedsTotal(minBeds, maxBeds, anyRange)}`;
+  if (uncountedEl) {
+    if (uncounted > 0) {
+      uncountedEl.textContent = uncounted === 1
+        ? '1 structure not counted'
+        : `${uncounted} structures not counted`;
+      uncountedEl.style.display = 'block';
+    } else {
+      uncountedEl.textContent = '';
+      uncountedEl.style.display = 'none';
+    }
+  }
+  sqftEl.textContent = `${footprintSqFt} sq ft (${bufferedSqFt} w/ buffer)`;
+}
+
+function wirePlacedTotalsInfo() {
+  const btn = document.getElementById('placed-totals-info');
+  const disc = document.getElementById('placed-totals-disclaimer');
+  if (!btn || !disc || btn._psmtWired) return;
+  btn._psmtWired = true;
+  let pinnedByClick = false;
+
+  const setDisclaimerOpen = (open) => {
+    disc.classList.toggle('is-open', open);
+    disc.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+  };
+
+  btn.addEventListener('click', ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    pinnedByClick = !pinnedByClick;
+    setDisclaimerOpen(pinnedByClick);
+  });
+  btn.addEventListener('mouseenter', () => {
+    setDisclaimerOpen(true);
+  });
+  btn.addEventListener('mouseleave', () => {
+    // Click-pinned stays open; hover-only closes on leave.
+    if (!pinnedByClick) setDisclaimerOpen(false);
+  });
 }
 
 /** Scroll the placed-list row for id into view. Does not reorder objects[]. */
@@ -4241,6 +4415,8 @@ rebuildManageRolesPanel();
 })();
 renderVendorTabs();
 renderTentList();
+wirePlacedTotalsInfo();
+updatePlacedTotals();
 updateOfflineBanner();
 updateUndoRedoButtons();
 updateSnapModeUI();
