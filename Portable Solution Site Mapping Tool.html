@@ -6,9 +6,10 @@
 <title>Portable Solution Site Mapping Tool</title>
 <!--
   Portable Solution Site Mapping Tool
-  Version: 1.2.0-dev
-  Last Updated: 2026-08-10
+  Version: 1.3.0-dev
+  Last Updated: 2026-08-12
   Change Log: See README. APP_META.changelog holds current version only.
+    - 1.3.0-dev: Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced.
     - 1.2.0-dev: Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).
     - 1.1.0-dev: Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.
     - 0.8.8: Tooltip/title/aria aligned with current behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, PSMT_Project_Notes, Quickstart synced.
@@ -749,9 +750,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
  */
 const APP_META = {
   name: 'Portable Solution Site Mapping Tool',
-  version: '1.2.0-dev',
-  lastUpdated: '2026-08-10',
+  version: '1.3.0-dev',
+  lastUpdated: '2026-08-12',
   changelog: [
+    { version: '1.3.0-dev', date: '2026-08-12', note: 'Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced.' },
     { version: '1.2.0-dev', date: '2026-08-10', note: 'Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).' },
     { version: '1.1.0-dev', date: '2026-07-07', note: 'Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.' },
     { version: '0.8.8', date: '2026-05-19', note: 'Tooltip/title/aria aligned with v0.8.7 behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, PSMT_Project_Notes, Quickstart synced.' },

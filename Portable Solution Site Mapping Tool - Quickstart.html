@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portable Solution Site Mapping Tool — Quickstart (v1.2.0-dev)</title>
+<title>Portable Solution Site Mapping Tool — Quickstart (v1.3.0-dev)</title>
 <style>
 /* ─── Screen ─── */
 :root {
@@ -173,46 +173,54 @@ footer.doc-foot {
 <article class="doc">
   <header class="doc-head">
     <h1>Portable Solution Site Mapping Tool — Quickstart</h1>
-    <p class="doc-meta"><span class="ver">v1.2.0-dev</span> · August 2026 · One sheet for field operators. Open <strong>Portable Solution Site Mapping Tool.html</strong> in Chrome, Edge, or Safari.</p>
+    <p class="doc-meta"><span class="ver">v1.3.0-dev</span> · August 2026 · One sheet for field operators. Open <strong>Portable Solution Site Mapping Tool.html</strong> in Chrome, Edge, or Safari.</p>
   </header>
 
   <section aria-labelledby="s-open">
     <h2 id="s-open">1. Open &amp; find your site</h2>
-    <p>No install. Network helps for map tiles, address search, and PDF export libraries.</p>
+    <p>Runs directly from the file — nothing to install. Internet connection required.</p>
     <div class="callout">
-      <strong>Fresh start every open:</strong> The map opens empty at the default view. Your last layout is <em>not</em> loaded automatically. After a refresh or new tab, click       <strong>Restore Autosave</strong> (same browser) or <strong>Open Plan</strong> (JSON file).
-    </div>
-    <div class="callout">
-      <strong>Offline:</strong> Enter <kbd>lat, lng</kbd> in search (e.g. <kbd>34.05, -118.25</kbd>) and press <strong>Search</strong>. Layout editing works; tiles may not load.
+      <strong>Fresh start every open:</strong> The map opens empty at the default view. Your last layout is <em>not</em> loaded automatically. After a refresh or new tab, click <strong>Restore Autosave</strong> (same browser) or <strong>Open Plan</strong> (JSON file).
     </div>
     <ol>
-      <li>Search by address/place, or paste coordinates.</li>
-      <li><strong>Setup ▾</strong> — set <strong>Operation Name</strong> (print/PDF) and scale presets if needed.</li>
+      <li>Search by address/place (results prefer the current map area), or paste <kbd>lat, lng</kbd> coordinates.</li>
+      <li>Under <strong>Plan</strong>, set <strong>Scenario Name</strong> — this names your saved plan, PDF, and printout.</li>
       <li>Layer control (top-right): satellite + <strong>Place Labels (Hybrid)</strong> for orientation.</li>
     </ol>
   </section>
 
+  <section aria-labelledby="s-header">
+    <h2 id="s-header">2. Header tools</h2>
+    <ul>
+      <li><strong>Start Here</strong> — short how-to anytime (not a one-time popup).</li>
+      <li><strong>Snap</strong> — ambient align-while-dragging (see Snap section below).</li>
+      <li><strong>Undo / Redo</strong> — up to 50 steps (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd>; Mac: <kbd>Cmd</kbd>+<kbd>Z</kbd>). Cleared on refresh — use Save Plan or Restore Autosave.</li>
+      <li><strong>Measure ▾</strong> — distance or area on the map.</li>
+      <li><strong>Autosaved …</strong> — timestamp for browser backup; <strong>Restore Autosave</strong> loads it (confirms if layout already has structures).</li>
+      <li>Map-floating readout — shows what you're currently doing (placing, measuring, or which structure is selected); when armed to place, includes <strong>✕</strong> to stop.</li>
+    </ul>
+  </section>
+
   <section aria-labelledby="s-place">
-    <h2 id="s-place">2. Place &amp; edit structures</h2>
+    <h2 id="s-place">3. Place &amp; edit structures</h2>
     <ol>
-      <li><strong>Vendor</strong> tab → click a model (enters place mode).</li>
-      <li>Click the map to place. Repeat for more structures.</li>
+      <li><strong>Catalog</strong> tab (nine tabs: eight vendors + <strong>Power</strong>) → click a model (enters place mode). Set role on the card if needed.</li>
+      <li>Click the map to place. Catalog placement <strong>stays armed</strong> — click again for another of the same model. Disarm: readout <strong>✕</strong>, <kbd>Esc</kbd>, re-click the armed card, or click a placed object.</li>
       <li>Click a placed object — drag body to move; <strong>orange handle</strong> to rotate (<kbd>Shift</kbd> = 5° steps).</li>
       <li>Delete: red <strong>✕</strong> on map, <strong>✕</strong> in placed list, or <kbd>Shift</kbd>+click footprint — all ask to confirm.</li>
-      <li><strong>Custom Size</strong> — enter dimensions → <strong>Place Custom</strong> → click map.</li>
+      <li><strong>Custom Size</strong> — width / length, optional <strong>Beds</strong>, optional label → <strong>Place Custom</strong> → click map (places once — click Place Custom again for another).</li>
     </ol>
-    <h3>Attach structures (snap)</h3>
-    <ol>
-      <li>Select the target structure on the map.</li>
-      <li>Check <strong>Snap to selected object</strong> in Label &amp; Style.</li>
-      <li>Pick the add-on model, click near the face to attach (nearest of four faces wins).</li>
-      <li>Snap <strong>unchecks automatically</strong> after a successful attach. Best for rect-to-rect.</li>
-    </ol>
+    <p><strong>Placed</strong> shows running totals: beds (click to toggle <strong>All</strong> / <strong>Ward·ICU</strong>) and sq ft. The <strong>ⓘ</strong> on the Placed header opens the combined caveat: utilities (water, hygiene, waste) are excluded from footprint totals; bed figures are manufacturer recommendations — actual capacity varies with site-specific use.</p>
+  </section>
+
+  <section aria-labelledby="s-snap">
+    <h2 id="s-snap">4. Snap (align structures)</h2>
+    <p>Turn on <strong>Snap</strong> in the header (off by default; click again to turn off). Drag a structure near another and it pulls flush and matches rotation. Hold <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> while dragging to suppress; <kbd>Esc</kbd> also turns Snap off.</p>
   </section>
 
   <section aria-labelledby="s-overlap">
-    <h2 id="s-overlap">3. Spacing &amp; overlaps</h2>
-    <p><strong>Options ▾</strong> — set <strong>clearance buffer</strong> (feet) for dashed setback rings on the <em>next</em> placement, or use presets / Apply Buffer to All.</p>
+    <h2 id="s-overlap">5. Spacing &amp; overlaps</h2>
+    <p><strong>Options ▾</strong> (Label &amp; Style) — set <strong>clearance buffer</strong> (feet) for dashed setback rings on the <em>next</em> placement, or use presets / Apply Buffer to All.</p>
     <table class="quick" aria-label="Overlap colors">
       <thead>
         <tr><th>Signal</th><th>Meaning</th><th>Action</th></tr>
@@ -225,21 +233,12 @@ footer.doc-foot {
     <p>Watch the status bar, sidebar warning under <strong>Placed</strong>, and the map <strong>pill</strong> (top-right). Click the pill to jump to the first flagged structure.</p>
   </section>
 
-  <section aria-labelledby="s-header">
-    <h2 id="s-header">4. Header tools</h2>
-    <ul>
-      <li><strong>Undo / Redo</strong> — up to 50 steps (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd>; Mac: <kbd>Cmd</kbd>+<kbd>Z</kbd>). Cleared on refresh — use Save Plan or Restore Autosave.</li>
-      <li><strong>Measure ▾</strong> — distance or area on the map.</li>
-      <li><strong>Autosaved …</strong> — timestamp for browser backup; <strong>Restore Autosave</strong> loads it (confirms if layout already has structures).</li>
-    </ul>
-  </section>
-
   <section aria-labelledby="s-save">
-    <h2 id="s-save">5. Save, export &amp; print</h2>
+    <h2 id="s-save">6. Save, export &amp; print</h2>
     <ul>
       <li><strong>Save Plan</strong> — portable JSON (archive, email, reopen on any machine).</li>
       <li><strong>Open Plan</strong> — replaces current layout (confirms).</li>
-      <li><strong>Export ▾</strong> — GeoJSON (GIS) or PDF (map snapshot + summary; needs network for libraries).</li>
+      <li><strong>Export ▾</strong> — GeoJSON (GIS) or PDF (map snapshot + summary).</li>
       <li><strong>Print Fit</strong> — frames all structures; enable <em>Print background graphics</em> for satellite imagery.</li>
     </ul>
     <div class="callout callout-warn">
@@ -248,18 +247,17 @@ footer.doc-foot {
   </section>
 
   <section aria-labelledby="s-keys">
-    <h2 id="s-keys">6. Keyboard shortcuts</h2>
+    <h2 id="s-keys">7. Keyboard shortcuts</h2>
     <ul>
-      <li><kbd>/</kbd> — focus search</li>
-      <li><kbd>P</kbd> — place selected tent</li>
-      <li><kbd>Esc</kbd> — return to view mode (or click mode badge)</li>
+      <li><kbd>/</kbd> — puts your cursor in the search box</li>
+      <li><kbd>Esc</kbd> — leave place/measure modes; also turns Snap off</li>
       <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> — undo / redo</li>
     </ul>
-    <p>Hover controls in the app for more hints (<code>title</code> tooltips on buttons, sliders, and map objects).</p>
+    <p><strong>Start Here</strong> (header) reopens the orientation anytime.</p>
   </section>
 
   <footer class="doc-foot">
-    <p class="no-print-url"><strong>App:</strong> Portable Solution Site Mapping Tool.html · <strong>Docs:</strong> README.md, PSMT_Project_Notes.md · <strong>Version:</strong> 1.2.0-dev (2026-08-10)</p>
+    <p class="no-print-url"><strong>App:</strong> Portable Solution Site Mapping Tool.html · <strong>Docs:</strong> README.md, PSMT_Project_Notes.md · <strong>Version:</strong> 1.3.0-dev (2026-08-12)</p>
     <p class="no-print-url">To print this sheet: use File → Print in your browser.</p>
   </footer>
 </article>

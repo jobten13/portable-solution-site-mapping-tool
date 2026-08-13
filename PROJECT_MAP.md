@@ -4,7 +4,9 @@ Orientation document for developers and collaborators. Describes **what this pro
 
 For **how to work on it** (read-only vs. authorized changes, scope discipline, catalog provenance, data-handling rules), see `.cursor/rules/` — especially `behavior.mdc`, `project-conventions.mdc`, and `data-handling.mdc`. This file does not duplicate those rules.
 
-**Current version:** `1.2.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-10` in `Portable Solution Site Mapping Tool.html`).
+**Current version:** `1.3.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-12` in `Portable Solution Site Mapping Tool.html`).
+
+**Note:** Contiguous script line-range maps elsewhere in this file **may lag** the live HTML after recent redesign work — treat them as orientation aids, not authoritative line numbers, until a dedicated remapping pass.
 
 ---
 
@@ -465,11 +467,11 @@ Catalog is not fixed. See `.cursor/rules/project-conventions.mdc` for the proven
 
 ### Locate site
 
-Search address/place or `lat, lng` (2883 `searchLocation`). Coordinates work offline; address search needs network (Nominatim). Setup panel: operation name, search local bias, scale presets. Layer control: satellite / street / hybrid labels.
+Search address/place or `lat, lng` (`searchLocation`). The tool **requires internet** (map tiles, geocoding, CDN libraries); the offline banner warns when connection is lost. Search always prefers the current map area (no Setup panel; prefer-checkbox removed). **Scenario Name** lives under **Plan**. Scale presets were removed (Overhaul item 19 deferred). Layer control: satellite / street / hybrid labels.
 
 ### Place structures (click-then-place)
 
-Select vendor model → auto place mode (862) → click map (1917 handler) → `placeObject`. **Custom Size:** `startCustomPlace` (871), vendor `'Custom'`. **Snap:** checkbox + `getSnapAttachLatLng` (2183); auto-uncheck after success.
+Select catalog model → place mode → click map → `placeObject`. Catalog placement stays armed (continuous); Custom Size is one-shot (`startCustomPlace`, vendor `'Custom'`). **Snap:** header ambient `#btn-snap-mode` + `getSnapAttachLatLng` on drag; Ctrl/Cmd suppress; Esc clears. Legacy `#snap-to-selected` remains in DOM (`display:none`).
 
 ### Adjust placed objects
 
@@ -517,7 +519,7 @@ Header Measure menu (965+ UI; 2550+ on-map handlers). Distance or area. Not pers
 
 ### Plan JSON — `psmt-scenario-v1` (`buildScenarioData`, 1458)
 
-`schema`, `appVersion`, `savedAt`, `map` (center, zoom), `ui` (operationName, preferCurrentMapArea, bufferFt), `objects[]`, `customRoles[]`.
+`schema`, `appVersion`, `savedAt`, `map` (center, zoom), `ui` (operationName, bufferFt), `objects[]` (may include `customBeds` on Custom), `customRoles[]`. Older plans may still carry `preferCurrentMapArea` — ignored on load (search always prefers the current map area).
 
 Does not store: active base layer, undo history, overlap pairs, measure drawings.
 
@@ -538,7 +540,7 @@ Schema not frozen pre-v1 — change deliberately; keep plan and GeoJSON in sync.
 | Autosave | Same browser only |
 | Units | Feet in UI; meters internally; no unit toggle yet |
 | PDF / CORS | `crossOrigin: true` on tiles; capture may fail → text-only PDF |
-| Offline | Editing works; tiles/search may not |
+| Offline | Tool requires internet; offline banner warns when connection is lost |
 | Overlap | Advisory only |
 | Geometry | Layer-space polygon tests; no Turf |
 | `Old/` | Archive only |
