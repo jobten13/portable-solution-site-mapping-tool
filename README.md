@@ -2,7 +2,7 @@
 
 Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**1.3.0-dev**, `lastUpdated` **2026-08-12** in `APP_META`).
 
-**Primary file:** `Portable Solution Site Mapping Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
+**Primary file:** `Portable-Solution-Site-Mapping-Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
 
 ## Current release (1.3.0-dev)
 
@@ -49,8 +49,8 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 
 | File | Purpose |
 |------|---------|
-| `Portable Solution Site Mapping Tool.html` | Main application |
-| `Portable Solution Site Mapping Tool - Quickstart.html` | Field quickstart (sole operator quick reference; open in browser) |
+| `Portable-Solution-Site-Mapping-Tool.html` | Main application |
+| `Portable-Solution-Site-Mapping-Tool-Quickstart.html` | Field quickstart (sole operator quick reference; open in browser) |
 | `VENDOR_SPECS_DIGEST.md` | Spec alignment notes for `TENT_DB` |
 | `PSMT_Project_Notes.md` | Roadmap and backlog notes |
 | `Initial prompt.txt` | Original build prompt |
@@ -115,7 +115,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 ## Versioning
 
-- Version and date live in `APP_META` inside `Portable Solution Site Mapping Tool.html`.
+- Version and date live in `APP_META` inside `Portable-Solution-Site-Mapping-Tool.html`.
 - Same version appears in the bottom-right badge (`vX.Y.Z`).
 - Update this README when bumping `APP_META.version`.
 
@@ -174,7 +174,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 ### 1) Start and locate site
 
-- Open `Portable Solution Site Mapping Tool.html` in Chrome, Edge, or Safari (internet connection required).
+- Open `Portable-Solution-Site-Mapping-Tool.html` in Chrome, Edge, or Safari (internet connection required).
 - Use **Start Here** in the header for a short orientation anytime.
 - Search by address/place or paste `lat, lng`. Address search prefers the current map area automatically.
 - After a browser refresh, use **Restore Autosave** if you had work in progress — the map does not reload your layout automatically.

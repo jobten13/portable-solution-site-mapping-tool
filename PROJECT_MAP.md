@@ -4,7 +4,7 @@ Orientation document for developers and collaborators. Describes **what this pro
 
 For **how to work on it** (read-only vs. authorized changes, scope discipline, catalog provenance, data-handling rules), see `.cursor/rules/` — especially `behavior.mdc`, `project-conventions.mdc`, and `data-handling.mdc`. This file does not duplicate those rules.
 
-**Current version:** `1.3.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-12` in `Portable Solution Site Mapping Tool.html`).
+**Current version:** `1.3.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-12` in `Portable-Solution-Site-Mapping-Tool.html`).
 
 **Note:** Contiguous script line-range maps elsewhere in this file **may lag** the live HTML after recent redesign work — treat them as orientation aids, not authoritative line numbers, until a dedicated remapping pass.
 
@@ -42,11 +42,11 @@ Intended for **hospital use** and **government (USU/DHA-adjacent) hosting**. Lay
 
 | Path | Purpose |
 |------|---------|
-| **`Portable Solution Site Mapping Tool.html`** | The application (~3,246 lines): HTML, CSS, JavaScript |
+| **`Portable-Solution-Site-Mapping-Tool.html`** | The application (~3,246 lines): HTML, CSS, JavaScript |
 | **`README.md`** | Operator + developer reference: features, quick start, overlap behavior, autosave, changelog, backlog |
 | **`PSMT_Project_Notes.md`** | Product roadmap, immediate backlog, architecture notes, doc maintenance |
 | **`VENDOR_SPECS_DIGEST.md`** | Spec alignment audit: manufacturer source for each `TENT_DB` entry |
-| **`Portable Solution Site Mapping Tool - Quickstart.html`** | Condensed field quickstart (sole quickstart source) |
+| **`Portable-Solution-Site-Mapping-Tool-Quickstart.html`** | Condensed field quickstart (sole quickstart source) |
 | **`Initial prompt.txt`** | Original product idea / build prompt |
 | **`PROJECT_MAP.md`** | This document |
 | **`.gitignore`** | Ignores local restore snapshot and vendor PDF bundle (see below) |
@@ -79,7 +79,7 @@ Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; 
 
 ---
 
-## 3. Architecture of `Portable Solution Site Mapping Tool.html`
+## 3. Architecture of `Portable-Solution-Site-Mapping-Tool.html`
 
 ### Whole-file layout
 
@@ -555,7 +555,7 @@ Schema not frozen pre-v1 — change deliberately; keep plan and GeoJSON in sync.
 | **`README.md`** | Release features, operator quick start, overlap, autosave, changelog |
 | **`PSMT_Project_Notes.md`** | Roadmap, backlog, calculator integration plan |
 | **`VENDOR_SPECS_DIGEST.md`** | Spec provenance per model |
-| **`Portable Solution Site Mapping Tool - Quickstart.html`** | Field quickstart |
+| **`Portable-Solution-Site-Mapping-Tool-Quickstart.html`** | Field quickstart |
 | **`.cursor/rules/`** | Agent working agreement and invariants |
 
 When `APP_META.version` changes: update README, Project Notes, Quickstart, in-app changelog (see project-conventions rule).
