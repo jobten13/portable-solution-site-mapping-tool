@@ -4472,10 +4472,6 @@ document.addEventListener('keydown', e => {
     document.getElementById('address-input').focus();
     return;
   }
-  if ((e.key === 'p' || e.key === 'P') && selectedTent) {
-    e.preventDefault();
-    startPlacing();
-  }
   if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
     if (e.shiftKey) redo();
