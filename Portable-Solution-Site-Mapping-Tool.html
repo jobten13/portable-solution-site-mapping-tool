@@ -462,9 +462,12 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   display:none;
   position:fixed;
   left:10px;
-  bottom:8px;
+  right:10px;
+  top:8px;
+  bottom:auto;
   z-index:1250;
   font-size:10px;
+  line-height:1.35;
   color:#0d1117;
   background:rgba(255,255,255,0.9);
   border:1px solid #d0d7de;
@@ -472,6 +475,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   padding:4px 7px;
   font-family:Arial, sans-serif;
 }
+#print-meta .print-meta-line + .print-meta-line { margin-top:2px; }
 
 /* Note */
 .dim-note { font-size:10px; color:#8b949e; margin-top:4px; font-style:italic; }
@@ -539,11 +543,30 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 @media print {
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
+  body { display:flex !important; flex-direction:column !important; }
   #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, #map-state-readout, .psmt-toast, .start-here-modal { display:none !important; }
-  #main { display:block !important; height:100vh !important; }
-  #map { width:100vw !important; height:100vh !important; }
-  .leaflet-control-container { display:none !important; }
-  #print-meta { display:block !important; }
+  #print-meta {
+    display:block !important;
+    position:static !important;
+    order:-1;
+    flex:0 0 auto;
+    left:auto;
+    right:auto;
+    top:auto;
+    bottom:auto;
+    margin:6px 10px;
+  }
+  #main {
+    display:flex !important;
+    flex-direction:column;
+    flex:1 1 auto !important;
+    height:auto !important;
+    min-height:0;
+    overflow:hidden;
+  }
+  #map { flex:1 1 auto; width:100% !important; height:auto !important; min-height:0; }
+  .leaflet-control-zoom,
+  .leaflet-control-layers { display:none !important; }
 }
 </style>
 </head>
@@ -734,11 +757,19 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 </div>
 <div id="version-display" class="version-badge">v—</div>
 <div id="print-meta">
-  Scenario: <span id="print-meta-operation">Untitled</span> |
-  Printed: <span id="print-meta-date">-</span> |
-  Scale: <span id="print-meta-scale">-</span> |
-  Center: <span id="print-meta-center">-</span> |
-  Zones: <span id="print-meta-zones">—</span>
+  <div class="print-meta-line">
+    Scenario: <span id="print-meta-operation">Untitled</span> |
+    Printed: <span id="print-meta-date">-</span> |
+    Scale: <span id="print-meta-scale">-</span> |
+    Center: <span id="print-meta-center">-</span> |
+    Zones: <span id="print-meta-zones">—</span>
+  </div>
+  <div class="print-meta-line">
+    Beds (all): <span id="print-meta-beds-all">0</span> |
+    Beds (Ward/ICU): <span id="print-meta-beds-wardicu">0</span><span id="print-meta-uncounted-wrap" hidden> | <span id="print-meta-uncounted"></span></span> |
+    <span id="print-meta-sqft">0 sq ft (0 w/ buffer)</span> |
+    <span id="print-meta-caveat"></span>
+  </div>
 </div>
 <input type="file" id="scenario-file-input" accept=".json,application/json" style="display:none;" />
 
@@ -2412,6 +2443,14 @@ async function exportPDF(evt) {
     addLine('Scale: ' + scaleText);
     addLine('Zones: ' + zoneSummary);
     y += lineHeight;
+    const totals = computePlacedTotals();
+    addLine('Beds (all): ' + formatBedsTotal(totals.minBedsAll, totals.maxBedsAll, totals.anyRangeAll));
+    addLine('Beds (Ward/ICU): ' + formatBedsTotal(totals.minBedsWardIcu, totals.maxBedsWardIcu, totals.anyRangeWardIcu));
+    const uncountedLine = formatUncountedStructures(totals.uncounted);
+    if (uncountedLine) addLine(uncountedLine);
+    addLine(formatAreaTotal(totals.footprintSqFt, totals.bufferedSqFt));
+    addLine(TOTALS_CAVEAT, 9);
+    y += lineHeight;
     addLine('Objects', 11);
     if (objects.length === 0) {
       addLine('(none)');
@@ -3492,19 +3531,28 @@ function roleCountsInWardIcuMode(role) {
   return r === 'Ward' || r === 'ICU';
 }
 
-function updatePlacedTotals() {
-  const bedsEl = document.getElementById('placed-totals-beds');
-  const uncountedEl = document.getElementById('placed-totals-uncounted');
-  const sqftEl = document.getElementById('placed-totals-sqft');
-  if (!bedsEl || !sqftEl) return;
+const TOTALS_CAVEAT = 'Totals exclude utilities (water, hygiene, waste). Bed figures are manufacturer recommendations; actual capacity varies with site use.';
 
-  let minBeds = 0;
-  let maxBeds = 0;
-  let anyRange = false;
+function formatUncountedStructures(uncounted) {
+  if (uncounted <= 0) return '';
+  return uncounted === 1 ? '1 structure not counted' : `${uncounted} structures not counted`;
+}
+
+function formatAreaTotal(footprintSqFt, bufferedSqFt) {
+  return `${footprintSqFt} sq ft (${bufferedSqFt} w/ buffer)`;
+}
+
+/** Both bed modes + area; independent of bedsTotalMode (sidebar toggle). */
+function computePlacedTotals() {
+  let minBedsAll = 0;
+  let maxBedsAll = 0;
+  let anyRangeAll = false;
+  let minBedsWardIcu = 0;
+  let maxBedsWardIcu = 0;
+  let anyRangeWardIcu = false;
   let uncounted = 0;
   let footprintSqFt = 0;
   let bufferedSqFt = 0;
-  const wardIcuOnly = bedsTotalMode === 'wardIcu';
 
   objects.forEach(obj => {
     footprintSqFt += objectAreaSqFt(obj, false);
@@ -3514,11 +3562,40 @@ function updatePlacedTotals() {
       uncounted += 1;
       return;
     }
-    if (wardIcuOnly && !roleCountsInWardIcuMode(obj.role)) return;
-    minBeds += bed.min;
-    maxBeds += bed.max;
-    if (bed.isRange) anyRange = true;
+    minBedsAll += bed.min;
+    maxBedsAll += bed.max;
+    if (bed.isRange) anyRangeAll = true;
+    if (roleCountsInWardIcuMode(obj.role)) {
+      minBedsWardIcu += bed.min;
+      maxBedsWardIcu += bed.max;
+      if (bed.isRange) anyRangeWardIcu = true;
+    }
   });
+
+  return {
+    minBedsAll,
+    maxBedsAll,
+    anyRangeAll,
+    minBedsWardIcu,
+    maxBedsWardIcu,
+    anyRangeWardIcu,
+    uncounted,
+    footprintSqFt,
+    bufferedSqFt
+  };
+}
+
+function updatePlacedTotals() {
+  const bedsEl = document.getElementById('placed-totals-beds');
+  const uncountedEl = document.getElementById('placed-totals-uncounted');
+  const sqftEl = document.getElementById('placed-totals-sqft');
+  if (!bedsEl || !sqftEl) return;
+
+  const t = computePlacedTotals();
+  const wardIcuOnly = bedsTotalMode === 'wardIcu';
+  const minBeds = wardIcuOnly ? t.minBedsWardIcu : t.minBedsAll;
+  const maxBeds = wardIcuOnly ? t.maxBedsWardIcu : t.maxBedsAll;
+  const anyRange = wardIcuOnly ? t.anyRangeWardIcu : t.anyRangeAll;
 
   const modeLabel = wardIcuOnly ? 'Ward/ICU' : 'all';
   const totalStr = formatBedsTotal(minBeds, maxBeds, anyRange);
@@ -3532,17 +3609,16 @@ function updatePlacedTotals() {
     : `Beds all ${totalStr}. Click for Ward/ICU only.`);
 
   if (uncountedEl) {
-    if (uncounted > 0) {
-      uncountedEl.textContent = uncounted === 1
-        ? '1 structure not counted'
-        : `${uncounted} structures not counted`;
+    const uncountedLine = formatUncountedStructures(t.uncounted);
+    if (uncountedLine) {
+      uncountedEl.textContent = uncountedLine;
       uncountedEl.style.display = 'block';
     } else {
       uncountedEl.textContent = '';
       uncountedEl.style.display = 'none';
     }
   }
-  sqftEl.textContent = `${footprintSqFt} sq ft (${bufferedSqFt} w/ buffer)`;
+  sqftEl.textContent = formatAreaTotal(t.footprintSqFt, t.bufferedSqFt);
 }
 
 function wirePlacedTotalsBedsToggle() {
@@ -4373,6 +4449,23 @@ function updatePrintMeta() {
     `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
   const zonesEl = document.getElementById('print-meta-zones');
   if (zonesEl) zonesEl.textContent = getZoneSummary();
+
+  const totals = computePlacedTotals();
+  const bedsAllEl = document.getElementById('print-meta-beds-all');
+  if (bedsAllEl) bedsAllEl.textContent = formatBedsTotal(totals.minBedsAll, totals.maxBedsAll, totals.anyRangeAll);
+  const bedsWardEl = document.getElementById('print-meta-beds-wardicu');
+  if (bedsWardEl) bedsWardEl.textContent = formatBedsTotal(totals.minBedsWardIcu, totals.maxBedsWardIcu, totals.anyRangeWardIcu);
+  const uncountedWrap = document.getElementById('print-meta-uncounted-wrap');
+  const uncountedEl = document.getElementById('print-meta-uncounted');
+  const uncountedLine = formatUncountedStructures(totals.uncounted);
+  if (uncountedWrap && uncountedEl) {
+    uncountedEl.textContent = uncountedLine;
+    uncountedWrap.hidden = !uncountedLine;
+  }
+  const sqftEl = document.getElementById('print-meta-sqft');
+  if (sqftEl) sqftEl.textContent = formatAreaTotal(totals.footprintSqFt, totals.bufferedSqFt);
+  const caveatEl = document.getElementById('print-meta-caveat');
+  if (caveatEl) caveatEl.textContent = TOTALS_CAVEAT;
 }
 
 function getPlacedBounds() {
