@@ -658,11 +658,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <div class="sb-section">
       <h3>Label & Style</h3>
 
-      <label style="display:none;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#8b949e;" title="Select a placed object first. Next click on the map attaches to the nearest face (length or width end) and matches its rotation. Unchecks automatically after a successful snap.">
-        <input type="checkbox" id="snap-to-selected" onchange="document.getElementById('snap-hint').style.display=this.checked?'block':'none'" aria-label="Snap next placement to selected object" /> Snap to selected object
-      </label>
-      <p class="dim-note" id="snap-hint" style="display:none;">Select a placed object, then pick a tent and click near the face to attach to. New structure matches target rotation. Nearest of four faces wins (two length ends, two width ends). Best for rect-to-rect; other shapes use bounding-box face midpoints. Unchecks automatically after a successful snap.</p>
-
       <label title="Click a swatch to set color for the next placement. Choosing a tent from the catalog still applies the vendor default until you pick a swatch.">Color</label>
       <div class="color-row" id="color-swatches" role="group" aria-label="Color for next placement"></div>
 
@@ -2657,39 +2652,11 @@ map.on('click', e => {
   }
 
   const color = getVendorColor(vendor);
-  let placeLatLng = e.latlng;
-  let placeAngle = angleDeg;
-  let attachedToLabel = null;
-  let attachedFace = null;
-  const snapCheck = document.getElementById('snap-to-selected');
-  if (snapCheck && snapCheck.checked && selectedObjectId != null) {
-    const target = getObjectById(selectedObjectId);
-    if (target && objects.includes(target)) {
-      const result = getSnapAttachLatLng(target, lengthFt * FT_TO_M, widthFt * FT_TO_M, e.latlng);
-      if (result) {
-        placeLatLng = result.latlng;
-        placeAngle = normalizeAngle(target.angleDeg || 0);
-        attachedToLabel = target.label;
-        attachedFace = result.face;
-      }
-    }
-  }
-  placeObject(placeLatLng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, color, opacity, placeAngle, bufferFt, vendor, extra);
-
-  const postMode = attachedToLabel
-    ? `Attached to ${sanitizeLabel(attachedToLabel)} (${attachedFace} face)`
-    : null;
-
-  if (attachedToLabel) {
-    const snapHint = document.getElementById('snap-hint');
-    if (snapCheck) snapCheck.checked = false;
-    if (snapHint) snapHint.style.display = 'none';
-  }
+  placeObject(e.latlng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, color, opacity, angleDeg, bufferFt, vendor, extra);
 
   // Catalog: stay armed for continuous placement. Custom Size: one-shot disarm (unchanged).
   if (customMode) {
     cancelPlacing();
-    if (postMode) setMode(postMode);
   } else if (selectedTent) {
     setMode(`Click to place ${selectedTent.vendor} ${selectedTent.name}`);
   }
