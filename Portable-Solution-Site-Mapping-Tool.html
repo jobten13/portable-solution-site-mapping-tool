@@ -1278,7 +1278,7 @@ function setCardRole(key, role) {
 function formatCardDimsBeds(tent) {
   const dims = dimStr(tent);
   const display = tent && tent.bedCapacity && tent.bedCapacity.display;
-  if (display != null && display !== '') return `${dims} · ${display}`;
+  if (display != null && display !== '') return `${dims} · ${display} beds`;
   return dims;
 }
 
