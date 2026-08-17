@@ -1730,6 +1730,17 @@ function closeStartHereModal() {
   });
 })();
 
+function positionMeasureStripUnderButton(strip, btn) {
+  if (!strip || !btn) return;
+  const rect = btn.getBoundingClientRect();
+  strip.style.top = (rect.bottom + 4) + 'px';
+  const stripW = strip.offsetWidth || 220;
+  const margin = 8;
+  let left = rect.left + rect.width / 2 - stripW / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - stripW - margin));
+  strip.style.left = left + 'px';
+}
+
 function updateMeasureUI() {
   const hasMeasurement = !!measureTempLayer || !!areaMeasureLayer || (measureMode && measureStart !== null) || (areaMeasureMode && areaMeasurePoints.length > 0);
 
@@ -1743,12 +1754,6 @@ function updateMeasureUI() {
   if (strip) {
     if (measureMode || areaMeasureMode) {
       strip.style.display = 'flex';
-      const btn = document.getElementById('btn-measure-menu');
-      if (btn) {
-        const rect = btn.getBoundingClientRect();
-        strip.style.top = (rect.bottom + 4) + 'px';
-        strip.style.left = rect.left + 'px';
-      }
     } else {
       strip.style.display = 'none';
       const rohHide = document.getElementById('measure-readout-header');
@@ -1761,6 +1766,10 @@ function updateMeasureUI() {
 
   const clearHdr = document.getElementById('btn-clear-measure-header');
   if (clearHdr) clearHdr.style.display = hasMeasurement ? 'inline-block' : 'none';
+
+  if (strip && (measureMode || areaMeasureMode)) {
+    positionMeasureStripUnderButton(strip, document.getElementById('btn-measure-menu'));
+  }
 
   const ro = document.getElementById('measure-readout');
   const roh = document.getElementById('measure-readout-header');
@@ -3771,14 +3780,9 @@ function finishAreaMeasure() {
   updateMeasureUI();
   if (areaMeasureLayer) {
     const strip = document.getElementById('measure-strip');
-    const menuBtn = document.getElementById('btn-measure-menu');
     if (strip) {
       strip.style.display = 'flex';
-      if (menuBtn) {
-        const rect = menuBtn.getBoundingClientRect();
-        strip.style.top = (rect.bottom + 4) + 'px';
-        strip.style.left = rect.left + 'px';
-      }
+      positionMeasureStripUnderButton(strip, document.getElementById('btn-measure-menu'));
     }
     const ro = document.getElementById('measure-readout');
     const roh = document.getElementById('measure-readout-header');
