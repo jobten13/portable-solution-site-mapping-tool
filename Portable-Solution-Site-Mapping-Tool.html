@@ -92,10 +92,7 @@ body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; hei
 #address-input:focus { border-color:#58a6ff; }
 #search-results {
   display:none;
-  position:absolute;
-  top:100%;
-  left:0;
-  margin-top:4px;
+  position:fixed;
   min-width:260px;
   max-width:380px;
   z-index:1001;
@@ -549,7 +546,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   }
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
   body { display:flex !important; flex-direction:column !important; }
-  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, #map-state-readout, .psmt-toast, .start-here-modal { display:none !important; }
+  #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, #map-state-readout, .psmt-toast, .start-here-modal, #search-results { display:none !important; }
   #print-meta {
     display:block !important;
     position:static !important;
@@ -587,7 +584,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <input type="text" id="address-input" placeholder="Address or lat, lng..." aria-label="Search address or coordinates" title="Address, place name, or lat, lng — press / to focus. Works offline for coordinates only." />
       <button class="blue" onclick="searchLocation(event)" title="Search by name or coordinates. Requires network unless entering lat, lng directly.">Search</button>
     </div>
-    <select id="search-results" aria-label="Search result matches" title="When several matches exist, the first is centered automatically — pick another here to refine."></select>
   </div>
   <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z or Cmd+Z). Up to 50 steps in this session. Cleared on page refresh — use Restore Autosave or Save Plan.">Undo</button>
   <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
@@ -622,6 +618,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 </div>
 <div id="action-toast" class="psmt-toast" role="status" aria-live="polite"></div>
 <div id="spatial-toast" class="psmt-toast" role="status" aria-live="polite"></div>
+<select id="search-results" aria-label="Search result matches" title="When several matches exist, the first is centered automatically — pick another here to refine."></select>
 <div id="offline-banner" class="offline-banner" role="status" aria-live="polite" style="display:none;" title="No network connection. Address search is unavailable; enter lat, lng in the search box to jump. Placed layouts and editing still work; map tiles may not load.">
   Offline — using local data. Map imagery may not load. Enter <strong>lat, lng</strong> in search to go to a location.
 </div>
@@ -4327,6 +4324,19 @@ function showSearchResults(results) {
   });
   select.value = '0';
   select.classList.add('visible');
+  const header = document.getElementById('header');
+  const bar = document.getElementById('search-bar');
+  if (header) {
+    select.style.top = (header.getBoundingClientRect().bottom + 4) + 'px';
+  }
+  if (bar) {
+    const rect = bar.getBoundingClientRect();
+    const selectW = select.offsetWidth || 260;
+    const margin = 8;
+    let left = rect.left;
+    left = Math.max(margin, Math.min(left, window.innerWidth - selectW - margin));
+    select.style.left = left + 'px';
+  }
 }
 
 function escapeHtml(text) {
