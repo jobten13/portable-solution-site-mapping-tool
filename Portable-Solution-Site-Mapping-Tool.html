@@ -3717,7 +3717,7 @@ function handleMeasureClick(latlng) {
   clearMeasureStartMarker();
   if (measureTempLayer) map.removeLayer(measureTempLayer);
   measureTempLayer = L.polyline([measureStart, latlng], { color: '#ffa657', weight: 2.5, opacity: 0.95 }).addTo(map);
-  measureTempLayer.bindTooltip(`${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`, { permanent: true, direction: 'center' });
+  measureTempLayer.bindTooltip(`${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`, { permanent: true, direction: 'top', offset: [0, -8] });
   document.getElementById('measure-readout').textContent = `Distance: ${meters.toFixed(1)} m / ${feet.toFixed(1)} ft`;
   measureStart = null;
   updateMeasureUI();
@@ -3762,6 +3762,26 @@ function drawAreaMeasureLayer() {
   }).addTo(map);
 }
 
+/** North-boundary latlng for area measure tooltip: max-lat vertex, or midpoint of flat top. */
+function northBoundaryAnchor(latlngs) {
+  if (!latlngs || !latlngs.length) return null;
+  let maxLat = -Infinity;
+  for (let i = 0; i < latlngs.length; i += 1) {
+    if (latlngs[i].lat > maxLat) maxLat = latlngs[i].lat;
+  }
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+  let topCount = 0;
+  for (let i = 0; i < latlngs.length; i += 1) {
+    if (latlngs[i].lat !== maxLat) continue;
+    topCount += 1;
+    if (latlngs[i].lng < minLng) minLng = latlngs[i].lng;
+    if (latlngs[i].lng > maxLng) maxLng = latlngs[i].lng;
+  }
+  if (topCount === 1) return L.latLng(maxLat, minLng);
+  return L.latLng(maxLat, (minLng + maxLng) / 2);
+}
+
 function finishAreaMeasure() {
   if (!areaMeasureMode || areaMeasurePoints.length < 3) {
     showActionToast('Area measure requires at least 3 points', document.getElementById('btn-finish-area-header'));
@@ -3769,8 +3789,10 @@ function finishAreaMeasure() {
   }
   const areaM2 = polygonAreaMeters(areaMeasurePoints);
   const areaFt2 = areaM2 * 10.76391041671;
+  const anchor = northBoundaryAnchor(areaMeasurePoints);
   if (areaMeasureLayer) {
-    areaMeasureLayer.bindTooltip(`${areaM2.toFixed(1)} sq m / ${areaFt2.toFixed(1)} sq ft`, { permanent: true, direction: 'center' });
+    areaMeasureLayer.bindTooltip(`${areaM2.toFixed(1)} sq m / ${areaFt2.toFixed(1)} sq ft`, { permanent: true, direction: 'top', offset: [0, -8] });
+    if (anchor) areaMeasureLayer.openTooltip(anchor);
   }
   document.getElementById('measure-readout').textContent =
     `Area: ${areaM2.toFixed(1)} sq m / ${areaFt2.toFixed(1)} sq ft`;
