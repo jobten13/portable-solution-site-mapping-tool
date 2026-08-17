@@ -86,7 +86,7 @@ Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; 
 | Lines | Block | Contents |
 |-------|-------|----------|
 | 1–55 | `<head>` (partial) | DOCTYPE, meta, title, in-file changelog HTML comment |
-| 56–59 | CDN | Leaflet CSS/JS, jsPDF, html2canvas |
+| 56–59 | CDN | Leaflet CSS/JS |
 | 60–335 | `<style>` | App layout, sidebar, map, print CSS |
 | 336 | | `</head>` |
 | 337–531 | `<body>` UI | Header, sidebar, map, status bar, print meta, hidden file input |
@@ -98,8 +98,6 @@ Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; 
 | Library | CDN version | Role |
 |---------|-------------|------|
 | **Leaflet** | 1.9.4 | Map, tiles, vectors, layer control, scale bar |
-| **jsPDF** | 2.5.1 | PDF export |
-| **html2canvas** | 1.4.1 | Map snapshot for PDF |
 
 **Not used:** Turf.js, frameworks, bundlers, npm. Geometry is hand-rolled.
 
@@ -118,7 +116,7 @@ Placed structures are vector overlays on `map` — not attached to tile layers.
 | Service | When | Data sent |
 |---------|------|-----------|
 | Esri / CARTO tiles | Map display | Tile requests |
-| CDN | First load / PDF | Library fetch |
+| CDN | First load | Library fetch |
 | Nominatim | Address search | User-typed search string |
 
 All layout data stays client-side until download or print.
@@ -148,7 +146,7 @@ Every line in `<script>` is covered below. Ranges are **contiguous**: the end of
 | **964–1075** | Measure UI | Blank + `updateMeasureUI`, menu helpers, toggle/clear measure |
 | **1076–1317** | Drag / undo / handles | Blank + object drag, rotate, undo/redo, handles, buffer presets |
 | **1318–1446** | Labels & roles | Blank + `sanitizeLabel`, custom roles storage/UI, `normalizeColor` |
-| **1447–1694** | Save & export | Blank + `saveScenario`, `buildScenarioData`, GeoJSON, `exportPDF`, helpers |
+| **1447–1694** | Save & export | Blank + `saveScenario`, `buildScenarioData`, GeoJSON |
 | **1695–1885** | Load & autosave | Blank + `loadScenarioPrompt`, `loadScenarioFromData`, `saveSession`, `scheduleSaveSession`, `updateRestoreButtonState`, **`restoreAutosave`**, etc. |
 | **1886–1914** | Plan hydration | Blank + `buildObjectFromRaw` — JSON → runtime object |
 | **1915–2031** | Map events | Blank + `map.on('click'…)`, `mousemove`, `moveend`, `zoomend`, `mouseup` |
@@ -257,10 +255,7 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 | 1448 | `saveScenario` |
 | 1458 | `buildScenarioData` |
 | 1497 | `downloadJsonFile` |
-| 1509 | `exportGeoJSON` |
-| 1550 | `setExportChromeVisible` |
-| 1557 | `waitForTilesIdle` |
-| 1595 | `exportPDF` (async) |
+| 2312 | `exportGeoJSON` |
 | 1696 | `loadScenarioPrompt` |
 | 1703 | `toNumber` |
 | 1708 | `loadScenarioFromData` |
@@ -509,9 +504,8 @@ Header Measure menu (965+ UI; 2550+ on-map handlers). Distance or area. Not pers
 
 | Action | Function | Output |
 |--------|----------|--------|
-| GeoJSON | `exportGeoJSON` (1509) | `FeatureCollection` + metadata |
-| PDF | `exportPDF` (1595) | Map snapshot + summary; text-only fallback |
-| Print Fit | `printFitToPage` (3063) | Browser print |
+| GeoJSON | `exportGeoJSON` (2312) | `FeatureCollection` + metadata |
+| Print | `beforeprint` / `afterprint` + `@page` (Ctrl/Cmd+P) | Browser print of current map view + print strip |
 
 ---
 
@@ -539,7 +533,7 @@ Schema not frozen pre-v1 — change deliberately; keep plan and GeoJSON in sync.
 | Fresh open | v0.8.7+ — no auto-restore on load |
 | Autosave | Same browser only |
 | Units | Feet in UI; meters internally; no unit toggle yet |
-| PDF / CORS | `crossOrigin: true` on tiles; capture may fail → text-only PDF |
+| PDF / CORS | `crossOrigin: true` on tiles retained; no PDF capture path (browser print only) |
 | Offline | Tool requires internet; offline banner warns when connection is lost |
 | Overlap | Advisory only |
 | Geometry | Layer-space polygon tests; no Turf |
@@ -573,4 +567,4 @@ When `APP_META.version` changes: update README, Project Notes, Quickstart, in-ap
 | Autosave write | `saveSession` (1790) |
 | Placement click | `map.on('click')` (1917) |
 | Overlap logic | `updateOverlapSummary` (2773) |
-| Export GeoJSON/PDF | 1509 / 1595 |
+| Export GeoJSON | 2312 |

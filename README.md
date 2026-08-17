@@ -23,7 +23,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 | **Feedback** | Map-floating ongoing-state readout (place / measure / selection); toast confirmations for one-offs |
 | **Measure** | Distance and area (header **Measure ▾**) |
 | **Persistence** | Debounced **autosave** to `localStorage`; **Restore Autosave** (manual); **Save Plan** / **Open Plan** (portable JSON) |
-| **Export** | GeoJSON; **Export PDF** with map snapshot (html2canvas + jsPDF; text-only fallback if capture fails); **Print Fit** |
+| **Export** | GeoJSON; **Print** via Ctrl/Cmd+P (current map view + print strip; enable background graphics for satellite) |
 | **Undo** | Up to 50 steps (place, move, rotate, delete, role, buffer-to-all, clear all) — Ctrl+Z / Ctrl+Y |
 | **Offline** | Banner warns when connection is lost; the tool requires internet to function |
 | **A11y** | Keyboard shortcuts, focus styles, `aria-label` / `title` on controls, overlap pill keyboard support |
@@ -42,7 +42,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 - Watch **Placed** totals (beds + sq ft) and the header **ⓘ** caveat; watch **Overlaps** in the status bar and the map **pill**.
 - Run **Measure ▾** → Distance or Area (Finish Area and Clear appear when relevant).
 - **Undo** / **Redo** in the header (or Ctrl+Z / Ctrl+Y) to step back layout changes.
-- **Autosaved …** and **Restore Autosave** in the header for local backup; **Save Plan** / **Open Plan** under **Plan**; **Export GeoJSON** / **Export PDF** under Export ▾; **Print Fit** for print with metadata.
+- **Autosaved …** and **Restore Autosave** in the header for local backup; **Save Plan** / **Open Plan** under **Plan**; **Export GeoJSON** under Plan; **Ctrl/Cmd+P** to print the current view (metadata strip on paper).
 - Press **Esc** to leave place/measure modes (and to turn Snap off).
 
 ## Project files
@@ -155,11 +155,10 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 - Clearance/setback buffers ✅
 - Two-tier overlap detection (footprint + buffer) ✅
 - Save/load layouts (plan JSON + autosave) ✅
-- GeoJSON and PDF export ✅
+- GeoJSON export ✅
 - Zone/role tagging and custom roles ✅
 - Snap-to-face placement ✅
 - Map overlap pill ✅
-- PDF with map snapshot (v0.8.6+) ✅
 - Catalog import + catalog/card redesign (v1.3.0-dev) ✅
 
 ### Tier 3 — Quality
@@ -182,7 +181,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 ### 2) Set planning context
 
 - Use satellite + **Place Labels (Hybrid)** (layer control, top-right) for real-world siting.
-- Under **Plan**, set **Scenario Name** (Save Plan / PDF / print).
+- Under **Plan**, set **Scenario Name** (Save Plan / print).
 
 ### 3) Place tents/shelters
 
@@ -203,8 +202,8 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 - **Undo** / **Redo** (Ctrl+Z / Ctrl+Y) for in-session mistakes.
 - **Save Plan** for portable backup; **Restore Autosave** for same-browser recovery.
-- **Export ▾** → GeoJSON or PDF.
-- **Print Fit** — enable print background graphics so satellite imagery appears.
+- **Export GeoJSON** — GIS handoff.
+- **Ctrl/Cmd+P** — prints the **current** map view; if the satellite image is missing from the print, enable *Print background graphics* in the browser's print settings.
 
 ### Keyboard shortcuts
 
@@ -216,7 +215,6 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 - Save Plan files frequently; autosave does not sync across devices or browsers.
 - Undo history is lost on refresh — rely on autosave + Restore, or Save Plan.
-- Export PDF's map capture may fall back to text-only if tiles fail to load.
 
 ---
 

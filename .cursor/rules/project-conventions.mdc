@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Portable Solution Site Mapping Tool — project conventions
 
-Single-file HTML app for emergency field-hospital site layout. Leaflet map at true scale; vendor tent catalog; place / drag / rotate / snap; two-tier overlap; save/load; GeoJSON + PDF export. No build step, no framework, no Turf — geometry is hand-rolled.
+Single-file HTML app for emergency field-hospital site layout. Leaflet map at true scale; vendor tent catalog; place / drag / rotate / snap; two-tier overlap; save/load; GeoJSON export. No build step, no framework, no Turf — geometry is hand-rolled.
 
 Program context: this tool supports the IMPACTS project (NDMS Modular/Convertible Capability Pilot, DHA-sponsored, UC Davis–implemented) — planning rapid hospital expansion with soft-sided shelter systems. Vendor dimensions feed real emergency planning, so catalog accuracy is not negotiable.
 

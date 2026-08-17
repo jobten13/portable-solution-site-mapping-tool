@@ -7,9 +7,9 @@
 <!--
   Portable Solution Site Mapping Tool
   Version: 1.3.0-dev
-  Last Updated: 2026-08-12
+  Last Updated: 2026-08-17
   Change Log: See README. APP_META.changelog holds current version only.
-    - 1.3.0-dev: Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced.
+    - 1.3.0-dev: Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.
     - 1.2.0-dev: Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).
     - 1.1.0-dev: Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.
     - 0.8.8: Tooltip/title/aria aligned with current behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, PSMT_Project_Notes, Quickstart synced.
@@ -58,8 +58,6 @@
 -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Segoe UI',sans-serif; background:#0d1117; color:#e6edf3; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
@@ -714,15 +712,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <div class="sb-section">
       <h3>Plan</h3>
       <label>Scenario Name</label>
-      <input type="text" id="operation-name" placeholder="e.g. West Lawn 40-bed layout" aria-label="Scenario name" title="Name for this layout scenario. Used on Save Plan / Open Plan, PDF title, and print footer. Distinguishes what-if layouts for the same site." />
+      <input type="text" id="operation-name" placeholder="e.g. West Lawn 40-bed layout" aria-label="Scenario name" title="Name for this layout scenario. Used on Save Plan / Open Plan, and print footer. Distinguishes what-if layouts for the same site." />
       <button class="blue" onclick="saveScenario()" style="width:100%;margin-top:8px;" title="Download layout as a JSON file to reopen, share, or archive. Use regularly — autosave is browser-only and can be lost if storage is cleared.">Save Plan</button>
       <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Load a saved plan file. If structures are placed, you will be asked to confirm before your layout is replaced.">Open Plan</button>
-      <button type="button" class="ghost" id="export-toggle" style="width:100%;margin-top:4px;text-align:left;font-size:11px;" aria-expanded="false" aria-controls="export-panel" aria-label="Toggle export options (GeoJSON, PDF)" title="Export layout as GeoJSON for GIS tools or a PDF briefing document with map image and zone summary.">Export ▾</button>
-      <div id="export-panel" style="display:none;" role="region" aria-labelledby="export-toggle">
-        <button class="ghost" onclick="exportGeoJSON(event)" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
-        <button class="ghost" onclick="exportPDF(event)" style="width:100%;margin-top:4px;" title="Download a PDF with map snapshot and structure summary. Requires network to load export libraries. Falls back to text-only PDF if map capture fails.">Export PDF</button>
-        <p class="dim-note" style="margin-top:6px;">Requires network connection to load PDF and html2canvas libraries.</p>
-      </div>
+      <button class="ghost" onclick="exportGeoJSON(event)" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
     </div>
 
     </div><!-- /sidebar-scroll -->
@@ -788,9 +781,9 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 const APP_META = {
   name: 'Portable Solution Site Mapping Tool',
   version: '1.3.0-dev',
-  lastUpdated: '2026-08-12',
+  lastUpdated: '2026-08-17',
   changelog: [
-    { version: '1.3.0-dev', date: '2026-08-12', note: 'Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced.' },
+    { version: '1.3.0-dev', date: '2026-08-17', note: 'Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.' },
     { version: '1.2.0-dev', date: '2026-08-10', note: 'Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).' },
     { version: '1.1.0-dev', date: '2026-07-07', note: 'Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.' },
     { version: '0.8.8', date: '2026-05-19', note: 'Tooltip/title/aria aligned with v0.8.7 behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, PSMT_Project_Notes, Quickstart synced.' },
@@ -819,7 +812,6 @@ const FT_TO_M = 0.3048;
 const MAX_LABEL_LENGTH = 80;
 const SESSION_KEY = 'psmt-session';
 const STORAGE_KEY_OPTIONS = 'psmt_options_open';
-const STORAGE_KEY_EXPORT = 'psmt_export_open';
 const CUSTOM_ROLES_KEY = 'psmt-custom-roles';
 const ROLES = ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue'];
 /** Sentinel option value for create-anywhere custom role (not a stored role string). */
@@ -1703,7 +1695,6 @@ function makeCollapsible(panelId, btnId, storageKey, labels) {
   }
 }
 makeCollapsible('style-advanced', 'style-options-toggle', STORAGE_KEY_OPTIONS, { closed: 'Options ▾', open: 'Options ▴' });
-makeCollapsible('export-panel', 'export-toggle', STORAGE_KEY_EXPORT, { closed: 'Export ▾', open: 'Export ▴' });
 
 function isStartHereModalOpen() {
   const modal = document.getElementById('start-here-modal');
@@ -2359,161 +2350,6 @@ function exportGeoJSON(evt) {
   );
   const anchor = (evt && evt.currentTarget) || null;
   showActionToast(`GeoJSON exported (${features.length} feature(s))`, anchor);
-}
-
-function setExportChromeVisible(visible) {
-  ['header', 'sidebar', 'statusbar'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.visibility = visible ? '' : 'hidden';
-  });
-}
-
-function waitForTilesIdle() {
-  return new Promise((resolve) => {
-    if (!map._tilesToLoad || map._tilesToLoad === 0) {
-      resolve();
-      return;
-    }
-    const maxTimer = setTimeout(() => {
-      cleanup();
-      resolve();
-    }, 4000);
-    let debounceTimer = null;
-    function cleanup() {
-      clearTimeout(maxTimer);
-      if (debounceTimer) clearTimeout(debounceTimer);
-      map.off('tileload', onTileLoad);
-      map.off('tileerror', onTileLoad);
-      map.off('idle', onIdle);
-    }
-    function finish() {
-      cleanup();
-      resolve();
-    }
-    function onTileLoad() {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(finish, 150);
-    }
-    function onIdle() {
-      finish();
-    }
-    if (map.listens && map.listens('idle')) {
-      map.once('idle', onIdle);
-    } else {
-      map.on('tileload', onTileLoad);
-      map.on('tileerror', onTileLoad);
-    }
-  });
-}
-
-async function exportPDF(evt) {
-  const pdfAnchor = (evt && evt.currentTarget) || null;
-  if (typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
-    showActionToast('PDF export requires network connection to load libraries.', pdfAnchor);
-    return;
-  }
-  const { jsPDF } = window.jspdf;
-  const h2c = window.html2canvas;
-  const previousCenter = map.getCenter();
-  const previousZoom = map.getZoom();
-  const filename = `psmt-summary-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.pdf`;
-
-  const opEl = document.getElementById('operation-name');
-  const operationName = (opEl && opEl.value.trim()) ? opEl.value.trim() : 'Untitled';
-  const scaleEl = document.getElementById('scale-ratio');
-  const scaleText = (scaleEl && scaleEl.textContent) ? scaleEl.textContent.trim() : '1:?';
-  const timestamp = new Date().toLocaleString();
-  const zoneSummary = getZoneSummary();
-
-  function appendPdfSummary(doc, startY) {
-    const margin = 20;
-    const lineHeight = 6;
-    const pageH = doc.internal.pageSize.getHeight ? doc.internal.pageSize.getHeight() : doc.internal.pageSize.height;
-    const maxY = pageH - 20;
-    let y = startY;
-
-    function addLine(text, fontSize) {
-      if (fontSize) doc.setFontSize(fontSize);
-      if (y > maxY) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.text(String(text), margin, y);
-      y += (fontSize === 14 ? 8 : lineHeight);
-    }
-
-    doc.setFontSize(14);
-    addLine(operationName, 14);
-    doc.setFontSize(10);
-    addLine('Exported: ' + timestamp);
-    addLine('Scale: ' + scaleText);
-    addLine('Zones: ' + zoneSummary);
-    y += lineHeight;
-    const totals = computePlacedTotals();
-    addLine('Beds (all): ' + formatBedsTotal(totals.minBedsAll, totals.maxBedsAll, totals.anyRangeAll));
-    addLine('Beds (Ward/ICU): ' + formatBedsTotal(totals.minBedsWardIcu, totals.maxBedsWardIcu, totals.anyRangeWardIcu));
-    const uncountedLine = formatUncountedStructures(totals.uncounted);
-    if (uncountedLine) addLine(uncountedLine);
-    addLine(formatAreaTotal(totals.footprintSqFt, totals.bufferedSqFt));
-    addLine(TOTALS_CAVEAT, 9);
-    y += lineHeight;
-    addLine('Objects', 11);
-    if (objects.length === 0) {
-      addLine('(none)');
-    } else {
-      objects.forEach((o, i) => {
-        const dims = (o.widthM != null && o.lengthM != null)
-          ? `${(o.widthM * 3.28084).toFixed(1)}×${(o.lengthM * 3.28084).toFixed(1)} ft`
-          : '—';
-        const identity = formatObjectIdentity({ label: o.label || 'Unlabeled', role: o.role });
-        addLine(`${i + 1}. ${identity} — ${dims}`);
-      });
-    }
-    y += lineHeight;
-    addLine('Open the saved plan file in Portable Solution Site Mapping Tool for the interactive map.', 9);
-  }
-
-  try {
-    setExportChromeVisible(false);
-    map.invalidateSize();
-    await waitForTilesIdle();
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    const mapEl = document.getElementById('map');
-    const canvas = await h2c(mapEl, {
-      useCORS: true,
-      allowTaint: false,
-      logging: false,
-      scale: Math.min(2, window.devicePixelRatio || 1)
-    });
-    const doc = new jsPDF();
-    const margin = 10;
-    const pageW = doc.internal.pageSize.getWidth ? doc.internal.pageSize.getWidth() : doc.internal.pageSize.width;
-    const pageH = doc.internal.pageSize.getHeight ? doc.internal.pageSize.getHeight() : doc.internal.pageSize.height;
-    const imgW = pageW - 2 * margin;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    const maxImgH = pageH * 0.55;
-    let drawW = imgW;
-    let drawH = imgH;
-    if (imgH > maxImgH) {
-      drawH = maxImgH;
-      drawW = (canvas.width * drawH) / canvas.height;
-    }
-    const imgX = (pageW - drawW) / 2;
-    doc.addImage(canvas.toDataURL('image/jpeg', 0.85), 'JPEG', imgX, margin, drawW, drawH);
-    appendPdfSummary(doc, margin + drawH + 8);
-    doc.save(filename);
-    showActionToast('PDF exported: ' + filename, pdfAnchor);
-  } catch (err) {
-    console.error(err);
-    const doc = new jsPDF();
-    appendPdfSummary(doc, 20);
-    doc.save(filename);
-    showActionToast('PDF exported without map image (map capture failed).', pdfAnchor);
-  } finally {
-    setExportChromeVisible(true);
-    map.invalidateSize();
-    map.setView(previousCenter, previousZoom);
-  }
 }
 
 function loadScenarioPrompt() {

@@ -22,6 +22,6 @@ If the developer explicitly asks you to filter, group, or shorten a list, you ma
 
 This tool is intended for hospital use and government (USU/DHA-adjacent) hosting.
 
-- Operation names and structure labels are free-text and may contain site-specific or operationally sensitive information. Plan JSON, GeoJSON, and PDF exports can embed real deployment locations and layouts.
+- Operation names and structure labels are free-text and may contain site-specific or operationally sensitive information. Plan JSON and GeoJSON exports can embed real deployment locations and layouts.
 - Do not insert example operation names, real coordinates, facility names, or layout details into code, comments, docs, or test fixtures. Use clearly generic placeholders.
 - All data is client-side until the user downloads or prints. The only outbound calls are map tiles, CDN libraries, and Nominatim geocoding (which sends the typed search string). Do not add new outbound data calls, telemetry, or third-party endpoints without explicit authorization.
