@@ -350,6 +350,8 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 /* Map */
 #map { flex:1; position:relative; transition: box-shadow 0.2s; }
+/* Suppress Chromium AABB focus ring on mouse click (Leaflet tooltip focus listeners); keep keyboard :focus-visible. */
+#map .leaflet-interactive:focus:not(:focus-visible) { outline: none; }
 #map.map-mode-place { box-shadow: inset 0 0 0 2px #3fb950; }
 #map.map-mode-measure { box-shadow: inset 0 0 0 2px #ffa657; }
 .map-coords-overlay {
@@ -1961,6 +1963,7 @@ function applySnapshot(snapshot) {
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
+    clearSelectionUnderlay(o);
     if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
   });
   objects = snapshot.map(o => ({
@@ -1968,6 +1971,7 @@ function applySnapshot(snapshot) {
     latlng: L.latLng(o.latlng.lat, o.latlng.lng),
     layer: null,
     layerBuffer: null,
+    layerSelectionUnderlay: null,
     roleLabelLayer: null
   }));
   objectId = objects.length ? Math.max(...objects.map(o => o.id)) : 0;
@@ -2067,6 +2071,7 @@ function syncRotateHandle() {
 function setSelectedObject(id) {
   selectedObjectId = id;
   syncRotateHandle();
+  scheduleOverlapSummary();
 }
 
 function computeAngleFromCenter(center, target) {
@@ -2592,6 +2597,7 @@ function buildObjectFromRaw(raw, idx) {
     intentionalBuffer: !!(raw.intentionalBufferOverlap ?? raw.intentionalBuffer),
     layer: null,
     layerBuffer: null,
+    layerSelectionUnderlay: null,
     roleLabelLayer: null
   };
   // Additive customBeds: Custom only; missing/invalid → no field (older plans load clean).
@@ -2780,6 +2786,7 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
     ...extraWithoutRole,
     layer: null,
     layerBuffer: null,
+    layerSelectionUnderlay: null,
     roleLabelLayer: null
   };
   objects.push(obj);
@@ -2794,6 +2801,7 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
 function drawObject(obj) {
   if (obj.layer) { map.removeLayer(obj.layer); obj.layer = null; }
   if (obj.layerBuffer) { map.removeLayer(obj.layerBuffer); obj.layerBuffer = null; }
+  clearSelectionUnderlay(obj);
   removeRoleLabel(obj);
 
   const s = {
@@ -2886,6 +2894,8 @@ function drawObject(obj) {
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
   syncRoleLabel(obj);
   if (selectedObjectId === obj.id) syncRotateHandle();
+  // Re-apply overlap/selection strokes after layer rebuild (skip mid-drag; end*Drag schedules).
+  if (!activeObjectDrag && !activeRotateDrag) scheduleOverlapSummary();
 }
 
 /** Screen px for 1 ft east at latlng (current zoom/projection). */
@@ -2914,6 +2924,31 @@ function removeRoleLabel(obj) {
     map.removeLayer(obj.roleLabelLayer);
     obj.roleLabelLayer = null;
   }
+}
+
+/** Selection double-outline underlay (blue outer); removed on deselect / rebuild / delete. */
+function clearSelectionUnderlay(obj) {
+  if (!obj) return;
+  if (obj.layerSelectionUnderlay) {
+    map.removeLayer(obj.layerSelectionUnderlay);
+    obj.layerSelectionUnderlay = null;
+  }
+}
+
+/** Non-interactive blue outer stroke under o.layer; same geometry as footprint. */
+function ensureSelectionUnderlay(obj) {
+  if (!obj || !obj.layer) return;
+  if (obj.layerSelectionUnderlay) return;
+  obj.layerSelectionUnderlay = createShapeLayer(obj, obj.widthM, obj.lengthM, {
+    color: '#58a6ff',
+    weight: 7,
+    opacity: 1,
+    fill: false,
+    fillOpacity: 0,
+    interactive: false
+  }, 0);
+  obj.layerSelectionUnderlay.addTo(map);
+  if (typeof obj.layer.bringToFront === 'function') obj.layer.bringToFront();
 }
 
 /**
@@ -3232,6 +3267,7 @@ function deleteObj(id) {
   pushStateToUndo();
   if (objects[idx].layer) map.removeLayer(objects[idx].layer);
   if (objects[idx].layerBuffer) map.removeLayer(objects[idx].layerBuffer);
+  clearSelectionUnderlay(objects[idx]);
   if (objects[idx].roleLabelLayer) map.removeLayer(objects[idx].roleLabelLayer);
   if (selectedObjectId === id) {
     selectedObjectId = null;
@@ -3256,6 +3292,7 @@ function resetPlacedObjects() {
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
+    clearSelectionUnderlay(o);
     if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
   });
   objects = [];
@@ -4087,16 +4124,25 @@ function updateOverlapSummary() {
     const inF = footprintIds.has(o.id);
     const inB = bufferIds.has(o.id);
     if (inF) {
+      clearSelectionUnderlay(o);
       o.layer.setStyle({ color: '#f85149', weight: 3, opacity: 1 });
       if (o.layerBuffer && o.layerBuffer.setStyle) {
         o.layerBuffer.setStyle(DEFAULT_BUFFER_STROKE);
       }
     } else if (inB) {
+      clearSelectionUnderlay(o);
       o.layer.setStyle({ color: '#ffa657', weight: 2.5, opacity: 0.95 });
       if (o.layerBuffer && o.layerBuffer.setStyle) {
         o.layerBuffer.setStyle({ color: '#ffa657', weight: 2.5, opacity: 0.95, dashArray: '4 4' });
       }
+    } else if (selectedObjectId != null && o.id === selectedObjectId) {
+      ensureSelectionUnderlay(o);
+      o.layer.setStyle({ color: '#ffffff', weight: 3, opacity: 1 });
+      if (o.layerBuffer && o.layerBuffer.setStyle) {
+        o.layerBuffer.setStyle(DEFAULT_BUFFER_STROKE);
+      }
     } else {
+      clearSelectionUnderlay(o);
       o.layer.setStyle({ color: o.color, weight: 1.5, opacity: 0.95 });
       if (o.layerBuffer && o.layerBuffer.setStyle) {
         o.layerBuffer.setStyle(DEFAULT_BUFFER_STROKE);
