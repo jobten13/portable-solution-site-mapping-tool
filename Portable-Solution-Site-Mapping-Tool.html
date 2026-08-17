@@ -542,6 +542,11 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .start-here-close:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
 
 @media print {
+  /* Deterministic print page box: Letter landscape; margins match #print-meta inset rhythm. */
+  @page {
+    size: letter landscape;
+    margin: 6px 10px;
+  }
   html, body { background:#fff !important; height:100% !important; overflow:visible !important; }
   body { display:flex !important; flex-direction:column !important; }
   #header, #offline-banner, #sidebar, #statusbar, #version-display, .map-coords-overlay, #overlap-pill, #map-state-readout, .psmt-toast, .start-here-modal { display:none !important; }
@@ -567,6 +572,8 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   #map { flex:1 1 auto; width:100% !important; height:auto !important; min-height:0; }
   .leaflet-control-zoom,
   .leaflet-control-layers { display:none !important; }
+  .delete-handle-wrap,
+  .delete-handle-btn { display:none !important; }
 }
 </style>
 </head>
@@ -716,7 +723,6 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
         <button class="ghost" onclick="exportPDF(event)" style="width:100%;margin-top:4px;" title="Download a PDF with map snapshot and structure summary. Requires network to load export libraries. Falls back to text-only PDF if map capture fails.">Export PDF</button>
         <p class="dim-note" style="margin-top:6px;">Requires network connection to load PDF and html2canvas libraries.</p>
       </div>
-      <button class="ghost" onclick="printFitToPage(event)" style="width:100%;margin-top:4px;" aria-label="Print fit to page" title="Frame all placed structures and open the print dialog. View restores after printing. Enable print background graphics in browser settings for the satellite image to appear.">Print Fit</button>
     </div>
 
     </div><!-- /sidebar-scroll -->
@@ -4468,51 +4474,41 @@ function updatePrintMeta() {
   if (caveatEl) caveatEl.textContent = TOTALS_CAVEAT;
 }
 
-function getPlacedBounds() {
-  let bounds = null;
-  objects.forEach(o => {
-    const refLayer = o.layerBuffer || o.layer;
-    if (!refLayer || !refLayer.getBounds) return;
-    const layerBounds = refLayer.getBounds();
-    if (!layerBounds || !layerBounds.isValid()) return;
-    bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
-  });
-  return bounds;
-}
+/** Print-path handle restore: do not re-add while print media is still active. */
+let printHandlesRestored = true;
+let printHandleRestoreTimer = null;
 
-function printFitToPage(evt) {
-  const printAnchor = (evt && evt.currentTarget) || null;
-  const previousCenter = map.getCenter();
-  const previousZoom = map.getZoom();
-  const bounds = getPlacedBounds();
-  let restored = false;
-
-  const printAndRestore = () => {
-    updateScaleRatio();
-    updatePrintMeta();
-    const restoreView = () => {
-      if (restored) return;
-      restored = true;
-      map.setView(previousCenter, previousZoom);
-      updateScaleRatio();
-      updatePrintMeta();
-      setMode('View Mode');
-    };
-    window.addEventListener('afterprint', restoreView, { once: true });
-    // Some environments do not fire afterprint reliably; this keeps view recovery safe.
-    setTimeout(restoreView, 2000);
-    window.print();
-  };
-
-  if (bounds && bounds.isValid()) {
-    map.fitBounds(bounds.pad(0.15), { maxZoom: 19 });
-    showActionToast('Print Fit: fitted placed objects to page', printAnchor);
-  } else {
-    showActionToast('Print Fit: no objects found, printing current view', printAnchor);
+function restorePrintHandles() {
+  if (printHandlesRestored) return;
+  if (typeof window.matchMedia === 'function' && window.matchMedia('print').matches) return;
+  printHandlesRestored = true;
+  if (printHandleRestoreTimer != null) {
+    clearTimeout(printHandleRestoreTimer);
+    printHandleRestoreTimer = null;
   }
-
-  setTimeout(printAndRestore, 180);
+  syncRotateHandle();
+  map.invalidateSize();
 }
+
+window.addEventListener('beforeprint', () => {
+  printHandlesRestored = false;
+  if (printHandleRestoreTimer != null) {
+    clearTimeout(printHandleRestoreTimer);
+    printHandleRestoreTimer = null;
+  }
+  map.invalidateSize();
+  updateScaleRatio();
+  updatePrintMeta();
+  clearRotateHandle();
+});
+
+window.addEventListener('afterprint', () => {
+  restorePrintHandles();
+  if (!printHandlesRestored) {
+    if (printHandleRestoreTimer != null) clearTimeout(printHandleRestoreTimer);
+    printHandleRestoreTimer = setTimeout(restorePrintHandles, 2000);
+  }
+});
 
 document.getElementById('address-input').addEventListener('keydown', e => { if (e.key==='Enter') searchLocation(); });
 document.getElementById('search-results').addEventListener('change', e => {
