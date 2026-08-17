@@ -591,7 +591,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   </div>
   <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z or Cmd+Z). Up to 50 steps in this session. Cleared on page refresh — use Restore Autosave or Save Plan.">Undo</button>
   <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
-  <button type="button" class="ghost header-btn" id="btn-snap-mode" aria-pressed="false" aria-label="Snap off. Turn on to pull dragged structures flush to nearby faces and match rotation. Hold Ctrl or Cmd while dragging to suppress. Off by default." title="Snap off (click to turn on). When on, dragging near another structure's face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.">Snap off</button>
+  <button type="button" class="ghost header-btn" id="btn-snap-mode" aria-pressed="false" aria-label="Snap off. Turn on to pull dragged structures flush to nearby faces. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress. Off by default." title="Snap off (click to turn on). When on, dragging near another structure's face pulls flush. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.">Snap off</button>
   <div class="header-tool-slot">
     <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distances or areas on the map. Use before or during placement to check site dimensions.">Measure ▾</button>
     <div id="measure-menu-panel" role="menu" style="display:none;position:fixed;top:0;left:0;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
@@ -1644,11 +1644,11 @@ function updateSnapModeUI() {
   btn.textContent = snapModeEnabled ? 'Snap on' : 'Snap off';
   btn.classList.toggle('snap-mode-on', snapModeEnabled);
   btn.setAttribute('aria-label', snapModeEnabled
-    ? 'Snap on. Dragging near another structure pulls flush and matches rotation. Hold Ctrl or Cmd while dragging to suppress.'
-    : 'Snap off. Turn on to pull dragged structures flush to nearby faces and match rotation. Hold Ctrl or Cmd while dragging to suppress. Off by default.');
+    ? 'Snap on. Dragging near another structure pulls flush. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress.'
+    : 'Snap off. Turn on to pull dragged structures flush to nearby faces. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress. Off by default.');
   btn.title = snapModeEnabled
-    ? 'Snap on. Dragging near another structure\'s face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Esc turns snap off.'
-    : 'Snap off (click to turn on). When on, dragging near another structure\'s face pulls flush and matches its rotation. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.';
+    ? 'Snap on. Dragging near another structure\'s face pulls flush. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress snap. Esc turns snap off.'
+    : 'Snap off (click to turn on). When on, dragging near another structure\'s face pulls flush. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.';
 }
 
 function toggleSnapMode() {
@@ -1860,7 +1860,8 @@ function startObjectDrag(obj, startLatlng) {
     startCenter: L.latLng(obj.latlng.lat, obj.latlng.lng),
     startAngleDeg: normalizeAngle(obj.angleDeg || 0),
     snapAnchorId: null,
-    snapFace: null,
+    snapAnchorAxis: null,
+    snapMoverAxis: null,
     moved: false
   };
   map.dragging.disable();
@@ -1869,7 +1870,7 @@ function startObjectDrag(obj, startLatlng) {
 
 function endObjectDrag() {
   if (!activeObjectDrag) return;
-  const { obj, moved, snapAnchorId, snapFace } = activeObjectDrag;
+  const { obj, moved, snapAnchorId, snapAnchorAxis, snapMoverAxis } = activeObjectDrag;
   activeObjectDrag = null;
   map.dragging.enable();
   mapContainer.style.cursor = '';
@@ -1882,7 +1883,10 @@ function endObjectDrag() {
       if (anchor && objects.includes(anchor)) {
         const faceMid = getNearestFaceMidpointLatLng(anchor, obj.latlng);
         if (faceMid) {
-          showSpatialToast(`Snapped to ${formatObjectIdentity(anchor)} (${snapFace} face)`, faceMid);
+          showSpatialToast(
+            `Snapped to ${formatObjectIdentity(anchor)} — ${snapAnchorAxis}↔${snapMoverAxis}`,
+            faceMid
+          );
         }
       }
     }
@@ -2688,23 +2692,26 @@ map.on('mousemove', e => {
     const drag = activeObjectDrag;
     const obj = drag.obj;
     if (snapModeEnabled && !suppress) {
-      const best = findNearestSnapCandidate(obj, freeLatLng);
+      const best = findNearestSnapCandidate(obj, freeLatLng, drag.startAngleDeg);
       if (best) {
         obj.latlng = best.latlng;
-        obj.angleDeg = normalizeAngle(best.anchor.angleDeg || 0);
+        obj.angleDeg = best.angleDeg;
         drag.snapAnchorId = best.anchor.id;
-        drag.snapFace = best.face;
+        drag.snapAnchorAxis = best.anchorAxis;
+        drag.snapMoverAxis = best.moverAxis;
       } else {
         obj.latlng = freeLatLng;
         obj.angleDeg = drag.startAngleDeg;
         drag.snapAnchorId = null;
-        drag.snapFace = null;
+        drag.snapAnchorAxis = null;
+        drag.snapMoverAxis = null;
       }
     } else {
       obj.latlng = freeLatLng;
       obj.angleDeg = drag.startAngleDeg;
       drag.snapAnchorId = null;
-      drag.snapFace = null;
+      drag.snapAnchorAxis = null;
+      drag.snapMoverAxis = null;
     }
     drawObject(obj);
   }
@@ -3016,34 +3023,56 @@ function snapEngageThresholdM(mover) {
   );
 }
 
-function findNearestSnapCandidate(mover, freeLatLng) {
+/** Quantize relative angle to 0/90/180/270. Exactly 45° rounds up to 90° (JS Math.round). */
+function roundRelativeAngleTo90(relDeg) {
+  const r = ((relDeg % 360) + 360) % 360;
+  return (Math.round(r / 90) % 4) * 90;
+}
+
+/**
+ * Parallel (0/180): same-axis mate. Perpendicular (90/270): cross-axis mate.
+ * Flush half is chosen from mover dims by moverAxis in the caller.
+ */
+function resolveSnapMate(anchorAxis, snappedRel) {
+  const parallel = snappedRel === 0 || snappedRel === 180;
+  if (parallel) return { moverAxis: anchorAxis };
+  return { moverAxis: anchorAxis === 'length' ? 'width' : 'length' };
+}
+
+function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
   const moverLen = mover.lengthM != null ? mover.lengthM : mover.widthM;
   const moverWid = mover.widthM;
   const engageM = snapEngageThresholdM(mover);
   let best = null;
   for (const obj of objects) {
     if (obj.id === mover.id) continue;
-    const result = getSnapAttachLatLng(obj, moverLen, moverWid, freeLatLng);
+    const result = getSnapAttachLatLng(obj, moverLen, moverWid, freeLatLng, intentAngleDeg);
     if (!result) continue;
     const gap = map.distance(freeLatLng, result.latlng);
     if (gap <= engageM && (best === null || gap < best.gap)) {
-      best = { anchor: obj, latlng: result.latlng, face: result.face, gap };
+      best = {
+        anchor: obj,
+        latlng: result.latlng,
+        angleDeg: result.angleDeg,
+        anchorAxis: result.anchorAxis,
+        moverAxis: result.moverAxis,
+        gap
+      };
     }
   }
   return best;
 }
 
-// Given a target object and the new tent's dimensions, return { latlng, face } where
-// latlng is the new tent center and face is 'length' or 'width'.
-// The click point determines which of the target's 4 face midpoints is nearest.
-// Both tents share the target's rotation. Returns null if target has no usable dimensions.
-function getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng) {
+// Nearest of target's 4 bbox face midpoints; flush offset uses mover half for the mated axis.
+// Intent angle (pre-drag) is quantized to nearest 0/90 relative to the anchor — not forced co-rotation.
+// Returns { latlng, angleDeg, anchorAxis, moverAxis }, or null if target has no usable dimensions.
+function getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng, intentAngleDeg) {
   const tHL = (target.lengthM != null ? target.lengthM : target.widthM) / 2;
   const tHW = target.widthM / 2;
   if (!tHL || tHL <= 0 || !tHW || tHW <= 0) return null;
 
-  const angleDeg = normalizeAngle(target.angleDeg || 0);
-  const rad = angleDeg * Math.PI / 180;
+  const anchorAngleDeg = normalizeAngle(target.angleDeg || 0);
+  const rad = anchorAngleDeg * Math.PI / 180;
   const sinA = Math.sin(rad);
   const cosA = Math.cos(rad);
   const center = target.latlng;
@@ -3062,12 +3091,21 @@ function getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng) {
   });
   if (!nearest) return null;
 
-  const newHalf = nearest.axis === 'length' ? newLengthM / 2 : newWidthM / 2;
+  const snappedRel = roundRelativeAngleTo90(
+    normalizeAngle((intentAngleDeg || 0) - anchorAngleDeg)
+  );
+  const { moverAxis } = resolveSnapMate(nearest.axis, snappedRel);
+  const newHalf = moverAxis === 'length' ? newLengthM / 2 : newWidthM / 2;
   const [lat, lng] = nearest.axis === 'length'
     ? metersToDeg(nearest.pt, -newHalf * sinA * nearest.dir, newHalf * cosA * nearest.dir)
     : metersToDeg(nearest.pt, newHalf * cosA * nearest.dir, newHalf * sinA * nearest.dir);
 
-  return { latlng: L.latLng(lat, lng), face: nearest.axis };
+  return {
+    latlng: L.latLng(lat, lng),
+    angleDeg: normalizeAngle(anchorAngleDeg + snappedRel),
+    anchorAxis: nearest.axis,
+    moverAxis
+  };
 }
 
 /** Nearest face midpoint of target to nearLatLng (same face geometry as getSnapAttachLatLng). Toast-only helper. */
