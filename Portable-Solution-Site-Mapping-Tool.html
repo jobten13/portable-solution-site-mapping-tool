@@ -251,6 +251,7 @@ button.danger:hover { background:#f85149; }
   flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   font-size:13px; font-weight:500; color:#e6edf3;
 }
+.tent-subname { font-size:12px; color:#8b949e; margin-top:1px; }
 .tent-dims { font-size:11px; color:#8b949e; margin-top:1px; }
 .catalog-header-row {
   display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;
@@ -1040,7 +1041,7 @@ const TENT_DB = {
       note:"Staff Unit – 11'9\"×60' (705 sq ft); flex/support, no patient beds. Intended to pair with Patient Unit via central hallway (planner arranges; supports mixed deployments). Elevated structure; ramp entrance required; ramp run is grade-dependent." },
   ],
   "Power": [
-    { id:"ws-generator-70kva", name:"Generator 70 kVA (on trailer)", tier:"standard", structure:"soft-sided",
+    { id:"ws-generator-70kva", name:"MQ Power", subname:"70 kVA Generator (on trailer)", tier:"standard", structure:"soft-sided",
       widthFt:6.04, lengthFt:14.12, shape:"rect",
       provenance: "Western Shelter & Third Party folder: MQP3Generators (3-phase bare-unit) + TRLR75XF2 trailer sheet. Catalog footprint 14.12'×6.04' — conservative on-trailer planning figure (trailer-variant variance; larger retained). 56 kW / 103 gal total fuel verified on physical unit 2026-08-18. structure:soft-sided for catalog bucketing only. Power tab (pseudo-vendor); procurement was Western Shelter; grouping is planning. Relocated 2026-08-12.",
       note:"70 kVA / 56 kW on trailer – 14.12'×6.04' (trailer L×W); Isuzu Tier 4, 103 gal" },
@@ -1276,6 +1277,16 @@ function formatCardDimsBeds(tent) {
   return dims;
 }
 
+function catalogPlacementLabel(tent, vendor) {
+  if (tent && tent.subname) return `${tent.name} ${tent.subname}`;
+  return `${vendor} ${tent.name}`;
+}
+
+function catalogCardAccessibleName(tent) {
+  if (tent && tent.subname) return `${tent.name}, ${tent.subname}`;
+  return tent.name;
+}
+
 function fillRoleSelectOptions(selectEl, selectedValue) {
   if (!selectEl) return;
   const roles = getEffectiveRoles();
@@ -1388,7 +1399,7 @@ function createTentCard(tent) {
   card.className = 'tent-item' + (isSelected ? ' selected' : '');
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
-  card.setAttribute('aria-label', `Select tent ${tent.name}, ${formatCardDimsBeds(tent)}`);
+  card.setAttribute('aria-label', `Select tent ${catalogCardAccessibleName(tent)}, ${formatCardDimsBeds(tent)}`);
   if (tent.note) card.title = tent.note;
 
   const line1 = document.createElement('div');
@@ -1401,17 +1412,24 @@ function createTentCard(tent) {
   const roleSelect = document.createElement('select');
   roleSelect.className = 'obj-role-select catalog-role-select';
   roleSelect.dataset.catalogKey = key;
-  roleSelect.setAttribute('aria-label', `Role for ${tent.name} when placing`);
+  roleSelect.setAttribute('aria-label', `Role for ${catalogCardAccessibleName(tent)} when placing`);
   roleSelect.title = 'Role baked into each placement of this model. Remembers last choice this session.';
 
   line1.appendChild(name);
   line1.appendChild(roleSelect);
 
+  card.appendChild(line1);
+  if (tent.subname) {
+    const subname = document.createElement('div');
+    subname.className = 'tent-subname';
+    subname.textContent = tent.subname;
+    card.appendChild(subname);
+  }
+
   const dims = document.createElement('div');
   dims.className = 'tent-dims';
   dims.textContent = formatCardDimsBeds(tent);
 
-  card.appendChild(line1);
   card.appendChild(dims);
 
   wireRoleSelect(roleSelect, {
@@ -1489,7 +1507,7 @@ function startPlacing() {
   customMode = false;
   map.dragging.disable();
   map.getContainer().style.cursor = 'crosshair';
-  setMode(`Click to place ${selectedTent.vendor} ${selectedTent.name}`);
+  setMode(`Click to place ${catalogPlacementLabel(selectedTent, selectedTent.vendor)}`);
 }
 
 function startCustomPlace() {
@@ -2641,7 +2659,7 @@ map.on('click', e => {
     lengthFt = selectedTent.lengthFt;
     shape    = selectedTent.shape;
     vendor   = selectedTent.vendor;
-    label    = `${vendor} ${selectedTent.name}`;
+    label    = catalogPlacementLabel(selectedTent, vendor);
   }
   label = sanitizeLabel(label);
 
@@ -2668,7 +2686,7 @@ map.on('click', e => {
   if (customMode) {
     cancelPlacing();
   } else if (selectedTent) {
-    setMode(`Click to place ${selectedTent.vendor} ${selectedTent.name}`);
+    setMode(`Click to place ${catalogPlacementLabel(selectedTent, selectedTent.vendor)}`);
   }
 });
 
@@ -3353,7 +3371,7 @@ function resolveCatalogTent(obj) {
   const list = TENT_DB[vendor];
   if (!list || !list.length) return null;
   const want = sanitizeLabel(obj.label || '');
-  return list.find(t => sanitizeLabel(`${vendor} ${t.name}`) === want) || null;
+  return list.find(t => sanitizeLabel(catalogPlacementLabel(t, vendor)) === want) || null;
 }
 
 /** Optional Custom Size beds: blank/invalid → null; finite ≥ 0 (incl. 0) → number. */
