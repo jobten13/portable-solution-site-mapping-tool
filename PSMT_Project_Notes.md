@@ -443,6 +443,8 @@ v2.5 packaged as installable offline PWA. Tile caching for expected deployment a
 
   **STATUS:** Design decided. Nothing built. This informs the upcoming item **10b** reorder (sidebar section order) — Setup no longer exists as a section to place; Plan gains a scenario-name field; search bar gains a new checkbox; scale presets remain physically where they are (unmoved) pending item 19.
 
+  (Field later renamed Scenario Name → Plan Name, 2026-08-18.)
+
 - **2026-08-10 — Role/Label consolidation + Vendor-section role relocation (design decided, not yet built).**
 
   Following an extended discussion (including a read-only Cursor design review that raised valid technical objections, addressed below), the developer settled on the following design for role and label handling. Nothing built yet.

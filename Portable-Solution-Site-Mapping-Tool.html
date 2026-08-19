@@ -9,7 +9,7 @@
   Version: 1.3.0-dev
   Last Updated: 2026-08-17
   Change Log: See README. APP_META.changelog holds current version only.
-    - 1.3.0-dev: Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.
+    - 1.3.0-dev: Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (renamed Scenario Name → Plan Name; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.
     - 1.2.0-dev: Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).
     - 1.1.0-dev: Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.
     - 0.8.8: Tooltip/title/aria aligned with current behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, PSMT_Project_Notes, Quickstart synced.
@@ -705,8 +705,8 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <!-- Plan -->
     <div class="sb-section">
       <h3>Plan</h3>
-      <label>Scenario Name</label>
-      <input type="text" id="operation-name" placeholder="e.g. West Lawn 40-bed layout" aria-label="Scenario name" title="Name for this layout scenario. Used on Save Plan / Open Plan, and print footer. Distinguishes what-if layouts for the same site." />
+      <label>Plan Name</label>
+      <input type="text" id="operation-name" placeholder="e.g. West Lawn 40-bed layout" aria-label="Plan name" title="Name for this layout. Used on Save Plan / Open Plan, and print footer. Distinguishes what-if layouts for the same site." />
       <button class="blue" onclick="saveScenario()" style="width:100%;margin-top:8px;" title="Download layout as a JSON file to reopen, share, or archive. Use regularly — autosave is browser-only and can be lost if storage is cleared.">Save Plan</button>
       <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Load a saved plan file. If structures are placed, you will be asked to confirm before your layout is replaced.">Open Plan</button>
       <button class="ghost" onclick="exportGeoJSON(event)" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
@@ -751,7 +751,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 <div id="version-display" class="version-badge">v—</div>
 <div id="print-meta">
   <div class="print-meta-line">
-    Scenario: <span id="print-meta-operation">Untitled</span> |
+    Plan: <span id="print-meta-operation">Untitled</span> |
     Printed: <span id="print-meta-date">-</span> |
     Scale: <span id="print-meta-scale">-</span> |
     Center: <span id="print-meta-center">-</span> |
@@ -777,7 +777,7 @@ const APP_META = {
   version: '1.3.0-dev',
   lastUpdated: '2026-08-17',
   changelog: [
-    { version: '1.3.0-dev', date: '2026-08-17', note: 'Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.' },
+    { version: '1.3.0-dev', date: '2026-08-17', note: 'Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (renamed Scenario Name → Plan Name; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.' },
     { version: '1.2.0-dev', date: '2026-08-10', note: 'Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).' },
     { version: '1.1.0-dev', date: '2026-07-07', note: 'Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.' },
     { version: '0.8.8', date: '2026-05-19', note: 'Tooltip/title/aria aligned with v0.8.7 behavior (fresh open, two-tier overlap, snap auto-uncheck, buffer vs footprint); list delete confirm; README, PSMT_Project_Notes, Quickstart synced.' },
@@ -2260,7 +2260,7 @@ function saveScenario() {
   const scenario = buildScenarioData();
   downloadJsonFile(
     scenario,
-    `psmt-scenario-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.json`,
+    `psmt-plan-${new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16)}.json`,
     'application/json'
   );
 }
@@ -2377,7 +2377,7 @@ function toNumber(value, fallback) {
 function loadScenarioFromData(data, options) {
   options = options || {};
   if (!data || !Array.isArray(data.objects)) {
-    throw new Error('Invalid scenario file format.');
+    throw new Error('Invalid plan file format.');
   }
 
   resetPlacedObjects();
@@ -4464,13 +4464,13 @@ document.getElementById('scenario-file-input').addEventListener('change', e => {
       const data = JSON.parse(String(reader.result || '{}'));
       loadScenarioFromData(data);
     } catch (err) {
-      alert(`NOTICE:\nFailed to load scenario: ${err.message || 'Invalid file.'}`);
+      alert(`NOTICE:\nFailed to load plan: ${err.message || 'Invalid file.'}`);
     } finally {
       e.target.value = '';
     }
   };
   reader.onerror = () => {
-    alert('NOTICE:\nFailed to read scenario file.');
+    alert('NOTICE:\nFailed to read plan file.');
     e.target.value = '';
   };
   reader.readAsText(file);

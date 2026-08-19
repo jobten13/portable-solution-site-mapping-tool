@@ -61,7 +61,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 - **Autosave:** After each change, layout + map view are written to `localStorage` (`psmt-session`) after a 500 ms debounce.
 - **On open:** Default view only; if autosave data exists, the header shows when it was last saved and enables **Restore Autosave**.
 - **Restore Autosave:** Replaces the current layout (confirm if structures are already placed). Use after a refresh or accidental close — not a substitute for **Save Plan** when sharing or archiving.
-- **Save Plan / Open Plan:** Portable JSON including objects, map view, scenario name, custom roles, and `intentionalBufferOverlap` per object.
+- **Save Plan / Open Plan:** Portable JSON including objects, map view, plan name, custom roles, and `intentionalBufferOverlap` per object.
 - **Undo history** is in-memory only; cleared on **Open Plan** and page refresh.
 
 ## Vendor catalog
@@ -123,7 +123,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 | Version | Date       | Notes |
 |---------|------------|-------|
-| 1.3.0-dev | 2026-08-12 | Catalog import (8 vendors + Power; 36/20/16) + catalog/card redesign (cards, sticky roles, continuous placement, on-map role text, Placed totals + Ward/ICU toggle + Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (Scenario Name in Plan; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced. |
+| 1.3.0-dev | 2026-08-12 | Catalog import (8 vendors + Power; 36/20/16) + catalog/card redesign (cards, sticky roles, continuous placement, on-map role text, Placed totals + Ward/ICU toggle + Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (renamed Scenario Name → Plan Name; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced. |
 | 1.2.0-dev | 2026-08-10 | Tier C complete — toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb). |
 | 1.1.0-dev | 2026-07-07 | Object/shape-fidelity audit complete — all five non-rect TENT_DB shapes verified: GK20 (regular octagon), GK1935 (cut-corner-rectangle), ZUMRO Quad (faithful), DLX X-HUB (cut-corner-square), HDT 8D36 (asymmetric cut-corner-rectangle). True-face snap (#6) unblocked. |
 | 0.8.8   | 2026-05-19 | Tooltip/title/aria aligned with current behavior; list delete confirm; README, PSMT_Project_Notes, and Quickstart synced. |
@@ -181,7 +181,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 ### 2) Set planning context
 
 - Use satellite + **Place Labels (Hybrid)** (layer control, top-right) for real-world siting.
-- Under **Plan**, set **Scenario Name** (Save Plan / print).
+- Under **Plan**, set **Plan Name** (Save Plan / print).
 
 ### 3) Place tents/shelters
 

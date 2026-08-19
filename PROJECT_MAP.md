@@ -462,7 +462,7 @@ Catalog is not fixed. See `.cursor/rules/project-conventions.mdc` for the proven
 
 ### Locate site
 
-Search address/place or `lat, lng` (`searchLocation`). The tool **requires internet** (map tiles, geocoding, CDN libraries); the offline banner warns when connection is lost. Search always prefers the current map area (no Setup panel; prefer-checkbox removed). **Scenario Name** lives under **Plan**. Scale presets were removed (Overhaul item 19 deferred). Layer control: satellite / street / hybrid labels.
+Search address/place or `lat, lng` (`searchLocation`). The tool **requires internet** (map tiles, geocoding, CDN libraries); the offline banner warns when connection is lost. Search always prefers the current map area (no Setup panel; prefer-checkbox removed). **Plan Name** lives under **Plan**. Scale presets were removed (Overhaul item 19 deferred). Layer control: satellite / street / hybrid labels.
 
 ### Place structures (click-then-place)
 
