@@ -4312,6 +4312,21 @@ function clearSearchResults() {
   select.classList.remove('visible');
 }
 
+function isSearchResultsVisible() {
+  const select = document.getElementById('search-results');
+  return !!(select && select.classList.contains('visible'));
+}
+
+function closeSearchResultsOnOutsideClick(e) {
+  if (!isSearchResultsVisible()) return;
+  const select = document.getElementById('search-results');
+  const wrap = document.getElementById('search-wrap');
+  const target = e.target;
+  if (select && (select === target || select.contains(target))) return;
+  if (wrap && (wrap === target || wrap.contains(target))) return;
+  clearSearchResults();
+}
+
 function showSearchResults(results) {
   pendingSearchResults = results.slice();
   const select = document.getElementById('search-results');
@@ -4439,6 +4454,7 @@ document.getElementById('search-results').addEventListener('change', e => {
   if (Number.isNaN(idx) || !pendingSearchResults[idx]) return;
   focusSearchResult(pendingSearchResults[idx]);
 });
+document.addEventListener('click', closeSearchResultsOnOutsideClick);
 document.getElementById('scenario-file-input').addEventListener('change', e => {
   const file = e.target.files && e.target.files[0];
   if (!file) return;
@@ -4470,6 +4486,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && isStartHereModalOpen()) {
     e.preventDefault();
     closeStartHereModal();
+    return;
+  }
+  if (e.key === 'Escape' && isSearchResultsVisible()) {
+    e.preventDefault();
+    clearSearchResults();
     return;
   }
   if (isTypingTarget(e.target)) return;
