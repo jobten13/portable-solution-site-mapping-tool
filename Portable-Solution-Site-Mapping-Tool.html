@@ -224,6 +224,11 @@ button.danger:hover { background:#f85149; }
 .placed-totals-disclaimer.is-open { display:block; }
 
 .sb-section { padding:12px; border-bottom:1px solid #30363d; }
+.placed-list-expand-btn {
+  flex-shrink:0;
+  font-size:11px;
+  padding:3px 6px;
+}
 .sb-section h3 { font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:#8b949e; margin-bottom:8px; }
 
 /* Catalog Tabs */
@@ -723,7 +728,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
             <h3 style="font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#8b949e;margin:0;">Placed (<span id="obj-count">0</span>)</h3>
             <button type="button" class="placed-totals-info" id="placed-totals-info" aria-label="Totals disclaimer" aria-expanded="false" title="Totals caveat: utilities excluded; bed figures are manufacturer recommendations.">ⓘ</button>
           </div>
-          <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <button type="button" class="ghost placed-list-expand-btn" id="btn-placed-list-expand" aria-expanded="false" aria-controls="obj-list-items" aria-label="Expand placed list" title="Expand placed list">▾</button>
+            <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
+          </div>
         </div>
         <div class="placed-totals-disclaimer" id="placed-totals-disclaimer" hidden>Utilities (water, hygiene, waste) are excluded from footprint totals — account for them separately. Bed figures are manufacturer recommendations; actual capacity varies with site-specific use.</div>
         <div id="placed-totals" class="placed-totals" aria-live="polite">
@@ -1085,6 +1093,9 @@ let activeObjectDrag = null;
 let snapModeEnabled = false;
 /** Session-only Placed bed total filter: 'all' | 'wardIcu'. Not persisted. */
 let bedsTotalMode = 'all';
+/** Session-only Placed list expand: compact 220px vs ~60% sidebar height. Not persisted. */
+const PLACED_LIST_HEIGHT_COMPACT_PX = 220;
+let placedListExpanded = false;
 let dragEndedAt = 0;
 let activeRotateDrag = null;
 let selectedObjectId = null;
@@ -3569,6 +3580,52 @@ function wirePlacedTotalsInfo() {
   });
 }
 
+function getPlacedListExpandedHeightPx() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return PLACED_LIST_HEIGHT_COMPACT_PX;
+  return Math.round(sidebar.clientHeight * 0.6);
+}
+
+function updatePlacedListExpandUI() {
+  const panel = document.getElementById('sidebar-placed');
+  const btn = document.getElementById('btn-placed-list-expand');
+  if (panel) {
+    panel.style.height = placedListExpanded
+      ? (getPlacedListExpandedHeightPx() + 'px')
+      : '';
+  }
+  if (btn) {
+    btn.textContent = placedListExpanded ? '▴' : '▾';
+    btn.setAttribute('aria-expanded', String(placedListExpanded));
+    const label = placedListExpanded ? 'Collapse placed list' : 'Expand placed list';
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+  }
+}
+
+function togglePlacedListExpand() {
+  placedListExpanded = !placedListExpanded;
+  updatePlacedListExpandUI();
+}
+
+function onPlacedListResize() {
+  if (!placedListExpanded) return;
+  updatePlacedListExpandUI();
+}
+
+function wirePlacedListExpand() {
+  const btn = document.getElementById('btn-placed-list-expand');
+  if (!btn || btn._psmtPlacedExpandWired) return;
+  btn._psmtPlacedExpandWired = true;
+  btn.addEventListener('click', ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    togglePlacedListExpand();
+  });
+  window.addEventListener('resize', onPlacedListResize);
+  updatePlacedListExpandUI();
+}
+
 /** Scroll the placed-list row for id into view. Does not reorder objects[]. */
 function scrollPlacedListToObject(id) {
   const listRoot = document.getElementById('obj-list-items');
@@ -4575,6 +4632,7 @@ renderVendorTabs();
 renderTentList();
 wirePlacedTotalsBedsToggle();
 wirePlacedTotalsInfo();
+wirePlacedListExpand();
 updatePlacedTotals();
 updateOfflineBanner();
 updateUndoRedoButtons();
