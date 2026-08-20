@@ -682,7 +682,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <button class="scale-btn" onclick="applyBufferPreset(5, event)" title="Apply 5 ft clearance buffer — standard spacing for access and airflow.">Std 5 ft</button>
           <button class="scale-btn" onclick="applyBufferPreset(10, event)" title="Apply 10 ft clearance buffer — use for generators or high-traffic corridors.">High 10 ft</button>
         </div>
-        <button class="ghost" onclick="applyBufferToAll(event)" style="width:100%;margin-top:6px;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
+        <div class="inline-controls">
+          <button class="ghost" onclick="applyBufferToSelected(event)" style="flex:1;font-size:12px;" title="Set the current buffer value on the selected structure only. No confirm dialog. Use Undo (Ctrl+Z) to reverse before refreshing the page." aria-label="Apply current clearance buffer to the selected structure">Apply to Selected</button>
+          <button class="ghost" onclick="applyBufferToAll(event)" style="flex:1;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
+        </div>
       </div>
     </div>
 
@@ -2128,6 +2131,29 @@ function applyBufferPreset(ft, evt) {
   showActionToast(`Clearance preset selected: ${ft} ft`, anchor);
 }
 
+function applyBufferToSelected(evt) {
+  const anchor = (evt && evt.currentTarget) || null;
+  const o = getObjectById(selectedObjectId);
+  if (!o) {
+    showActionToast('Select an object first', anchor);
+    return;
+  }
+  const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
+  pushStateToUndo();
+  o.bufferFt = bufferFt;
+  if (bufferFt === 0) o.intentionalBuffer = false;
+  drawObject(o);
+  updateList();
+  scheduleOverlapSummary();
+  showActionToast(
+    bufferFt === 0
+      ? `Buffer removed from ${formatObjectIdentity(o)}`
+      : `Buffer +${bufferFt} ft applied to ${formatObjectIdentity(o)}`,
+    anchor
+  );
+  scheduleSaveSession();
+}
+
 function applyBufferToAll(evt) {
   const anchor = (evt && evt.currentTarget) || null;
   if (!objects.length) {
@@ -2139,6 +2165,7 @@ function applyBufferToAll(evt) {
   pushStateToUndo();
   objects.forEach(o => {
     o.bufferFt = bufferFt;
+    if (bufferFt === 0) o.intentionalBuffer = false;
     drawObject(o);
   });
   updateList();
