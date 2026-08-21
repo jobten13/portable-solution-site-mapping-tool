@@ -1128,7 +1128,6 @@ map.createPane('roleLabelPane');
 map.getPane('roleLabelPane').style.zIndex = 450;
 map.getPane('roleLabelPane').style.pointerEvents = 'none';
 const ROLE_LABEL_MIN_ZOOM = 20;
-const ROLE_LABEL_MIN_EDGE_PX = 48;
 const ROLE_LABEL_ICON_W = 160;
 const ROLE_LABEL_ICON_H = 40;
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -2976,24 +2975,12 @@ function drawObject(obj) {
   if (!activeObjectDrag && !activeRotateDrag) scheduleOverlapSummary();
 }
 
-/** Screen px for 1 ft east at latlng (current zoom/projection). */
-function getPxPerFt(latlng) {
-  if (!latlng || typeof map === 'undefined' || !map) return 0;
-  const p0 = map.latLngToLayerPoint(latlng);
-  const [lat1, lng1] = metersToDeg(latlng, FT_TO_M, 0);
-  const p1 = map.latLngToLayerPoint(L.latLng(lat1, lng1));
-  return Math.hypot(p1.x - p0.x, p1.y - p0.y);
-}
-
 function shouldShowRoleLabel(obj) {
   if (!obj) return false;
   const role = obj.role;
   if (!role || role === '—') return false;
   if (map.getZoom() < ROLE_LABEL_MIN_ZOOM) return false;
-  const wFt = obj.widthM / FT_TO_M;
-  const lFt = obj.shape === 'circle' ? wFt : (obj.lengthM / FT_TO_M);
-  const minEdgeFt = Math.min(wFt, lFt);
-  return minEdgeFt * getPxPerFt(obj.latlng) >= ROLE_LABEL_MIN_EDGE_PX;
+  return true;
 }
 
 function removeRoleLabel(obj) {
