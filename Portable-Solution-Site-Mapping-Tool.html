@@ -283,6 +283,11 @@ input[type=text], input[type=number], select {
   border-radius:6px; color:#e6edf3; font-size:12px; outline:none;
 }
 input:focus, select:focus { border-color:#58a6ff; }
+input.custom-beds-order-warn,
+input.custom-beds-order-warn:focus {
+  border-color:#ffa657;
+  color:#ffa657;
+}
 input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 
 .color-row { display:flex; gap:5px; flex-wrap:wrap; margin-top:4px; }
@@ -703,9 +708,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <input type="number" id="custom-l" value="30" min="1" aria-label="Custom length in feet" title="Length of the custom footprint in feet. North-south dimension at 0° rotation." />
         </div>
       </div>
-      <div style="margin-top:6px;">
-        <label>Beds (optional)</label>
-        <input type="number" id="custom-beds" min="0" step="1" placeholder="—" aria-label="Optional bed count for custom structure" title="Optional patient beds for this custom footprint. Leave blank if none. Blank is omitted from the bed total; 0 counts as zero beds." />
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <div style="flex:1">
+          <label>Beds min</label>
+          <input type="number" id="custom-beds-min" min="0" step="1" placeholder="—" aria-label="Optional bed count for custom structure" title="Optional patient beds for this custom footprint. One number in either field = that count. Both fields = a range (either order). Leave blank if not counted. 0 counts as zero beds." />
+        </div>
+        <div style="flex:1">
+          <label>Beds max (optional)</label>
+          <input type="number" id="custom-beds-max" min="0" step="1" placeholder="—" aria-label="Optional upper bed count for custom structure" title="Optional patient beds for this custom footprint. One number in either field = that count. Both fields = a range (either order). Leave blank if not counted. 0 counts as zero beds." />
+        </div>
       </div>
       <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" title="Label for this custom structure. Appears on the map tooltip and placed list." />
       <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;" title="Place a rectangle with the dimensions above. Click this button then click the map to position it.">Place Custom</button>
@@ -1988,7 +1999,7 @@ function getObjectsSnapshot() {
       armWidthFt: o.armWidthFt,
       intentionalBuffer: !!o.intentionalBuffer
     };
-    if (Number.isFinite(o.customBeds)) snap.customBeds = o.customBeds;
+    if (hasCustomBeds(o.customBeds)) snap.customBeds = o.customBeds;
     return snap;
   });
 }
@@ -2367,7 +2378,7 @@ function buildScenarioData() {
         armWidthFt: o.armWidthFt,
         intentionalBufferOverlap: !!o.intentionalBuffer
       };
-      if (Number.isFinite(o.customBeds)) row.customBeds = o.customBeds;
+      if (hasCustomBeds(o.customBeds)) row.customBeds = o.customBeds;
       return row;
     }),
     customRoles: getEffectiveRoles().filter(r => !ROLES.includes(r))
@@ -2404,7 +2415,7 @@ function exportGeoJSON(evt) {
       opacity: o.opacity,
       intentional_buffer_overlap: !!o.intentionalBuffer
     };
-    if (Number.isFinite(o.customBeds)) feature.properties.custom_beds = o.customBeds;
+    if (hasCustomBeds(o.customBeds)) feature.properties.custom_beds = o.customBeds;
     return feature;
   }).filter(Boolean);
 
@@ -2693,7 +2704,7 @@ function buildObjectFromRaw(raw, idx) {
     layerSelectionUnderlay: null,
     roleLabelLayer: null
   };
-  // Additive customBeds: Custom only; missing/invalid → no field (older plans load clean).
+  // Additive customBeds: Custom only; missing/invalid → omit field.
   if (vendor === 'Custom') {
     const beds = normalizeCustomBeds(raw.customBeds);
     if (beds != null) obj.customBeds = beds;
@@ -2750,8 +2761,21 @@ map.on('click', e => {
   } : {};
   if (customMode) {
     extra.role = '—';
-    const beds = normalizeCustomBeds(document.getElementById('custom-beds').value);
-    if (beds != null) extra.customBeds = beds;
+    const aEl = document.getElementById('custom-beds-min');
+    const bEl = document.getElementById('custom-beds-max');
+    const aRaw = aEl ? aEl.value : '';
+    const bRaw = bEl ? bEl.value : '';
+    const aBlank = aRaw === '';
+    const bBlank = bRaw === '';
+    if (!aBlank && !bBlank) {
+      const a = Number(aRaw);
+      const b = Number(bRaw);
+      const beds = normalizeCustomBeds({ min: Math.min(a, b), max: Math.max(a, b) });
+      if (beds != null) extra.customBeds = beds;
+    } else if (!aBlank || !bBlank) {
+      const beds = normalizeCustomBeds(aBlank ? bRaw : aRaw);
+      if (beds != null) extra.customBeds = beds;
+    }
   } else if (selectedTent && selectedTent._key) {
     extra.role = getCardRole(selectedTent._key);
   } else {
@@ -3440,12 +3464,49 @@ function resolveCatalogTent(obj) {
   return list.find(t => sanitizeLabel(catalogPlacementLabel(t, vendor)) === want) || null;
 }
 
-/** Optional Custom Size beds: blank/invalid → null; finite ≥ 0 (incl. 0) → number. */
+/** Amber border when both Custom beds fields are filled and entry order is inverted. */
+function syncCustomBedsOrderWarning() {
+  const aEl = document.getElementById('custom-beds-min');
+  const bEl = document.getElementById('custom-beds-max');
+  if (!aEl || !bEl) return;
+  const aBlank = aEl.value === '';
+  const bBlank = bEl.value === '';
+  const inverted = !aBlank && !bBlank && Number(bEl.value) < Number(aEl.value);
+  aEl.classList.toggle('custom-beds-order-warn', inverted);
+  bEl.classList.toggle('custom-beds-order-warn', inverted);
+}
+
+function wireCustomBedsOrderWarning() {
+  const aEl = document.getElementById('custom-beds-min');
+  const bEl = document.getElementById('custom-beds-max');
+  if (!aEl || !bEl || aEl._psmtBedsWarnWired) return;
+  aEl._psmtBedsWarnWired = true;
+  aEl.addEventListener('input', syncCustomBedsOrderWarning);
+  bEl.addEventListener('input', syncCustomBedsOrderWarning);
+}
+
+/**
+ * Optional Custom Size beds: blank/invalid → null;
+ * finite ≥ 0 (incl. 0) → number; valid {min,max} → {min,max}.
+ * Ints rounded; requires min ≤ max and min ≥ 0.
+ */
 function normalizeCustomBeds(value) {
   if (value == null || value === '') return null;
+  if (typeof value === 'object') {
+    if (value.min == null || value.min === '' || value.max == null || value.max === '') return null;
+    const min = Math.round(Number(value.min));
+    const max = Math.round(Number(value.max));
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min) return null;
+    return { min, max };
+  }
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.round(n);
+}
+
+/** True when customBeds is a stored number or {min,max} range (incl. 0). */
+function hasCustomBeds(customBeds) {
+  return normalizeCustomBeds(customBeds) != null;
 }
 
 /** Bed min/max contribution from a catalog tent. Null capacity → 0/0, not a range. */
@@ -3464,12 +3525,17 @@ function bedContributionFromTent(tent) {
 /**
  * Resolve bed contribution for totals.
  * hasSource false → uncounted (no catalog match and no customBeds).
- * Custom + finite customBeds (incl. 0) is a source; catalog match (even null beds) is a source.
+ * Custom + customBeds (number or {min,max}, incl. 0) is a source; catalog match (even null beds) is a source.
  */
 function resolveBedContribution(obj) {
-  if (obj && obj.vendor === 'Custom' && Number.isFinite(obj.customBeds)) {
-    const n = Number(obj.customBeds);
-    return { hasSource: true, min: n, max: n, isRange: false };
+  if (obj && obj.vendor === 'Custom') {
+    const beds = normalizeCustomBeds(obj.customBeds);
+    if (beds != null) {
+      if (typeof beds === 'object') {
+        return { hasSource: true, min: beds.min, max: beds.max, isRange: true };
+      }
+      return { hasSource: true, min: beds, max: beds, isRange: false };
+    }
   }
   const tent = resolveCatalogTent(obj);
   if (!tent) return { hasSource: false, min: 0, max: 0, isRange: false };
@@ -4691,6 +4757,7 @@ renderTentList();
 wirePlacedTotalsBedsToggle();
 wirePlacedTotalsInfo();
 wirePlacedListExpand();
+wireCustomBedsOrderWarning();
 updatePlacedTotals();
 updateOfflineBanner();
 updateUndoRedoButtons();
