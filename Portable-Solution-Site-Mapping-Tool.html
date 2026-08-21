@@ -803,6 +803,7 @@ const APP_META = {
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DRAG_SUPPRESS_MS = 250;       // Ignore click shortly after drag (avoid accidental delete)
+const ESC_SUPPRESS_MS = 250;        // Ignore terminal Esc shortly after search-picker dismiss (repeat/double delivery)
 const SNAP_PROXIMITY_K = 0.4;           // engage ∝ max(widthM, lengthM)
 const SNAP_PROXIMITY_FLOOR_M = 0.75;    // minimum engage distance (m)
 const SNAP_PROXIMITY_CEILING_M = 4;     // maximum engage distance (m); was flat default
@@ -1100,6 +1101,7 @@ let bedsTotalMode = 'all';
 const PLACED_LIST_HEIGHT_COMPACT_PX = 220;
 let placedListExpanded = false;
 let dragEndedAt = 0;
+let pickerDismissedAt = 0;
 let activeRotateDrag = null;
 let selectedObjectId = null;
 let rotateHandleLayer = null;
@@ -1995,8 +1997,7 @@ function getObjectsSnapshot() {
 function applySnapshot(snapshot) {
   endObjectDrag();
   endRotateDrag();
-  selectedObjectId = null;
-  clearRotateHandle();
+  clearSelection();
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
@@ -2109,6 +2110,17 @@ function setSelectedObject(id) {
   selectedObjectId = id;
   syncRotateHandle();
   scheduleOverlapSummary();
+}
+
+/** Clear map/list selection chrome. Does not change mode readout — callers own setMode. */
+function clearSelection() {
+  if (selectedObjectId == null) return;
+  const prev = getObjectById(selectedObjectId);
+  selectedObjectId = null;
+  clearRotateHandle();
+  clearSelectionUnderlay(prev);
+  scheduleOverlapSummary();
+  updateList();
 }
 
 function computeAngleFromCenter(center, target) {
@@ -2445,8 +2457,7 @@ function loadScenarioFromData(data, options) {
     objectId = Math.max(objectId, o.id);
     drawObject(o);
   });
-  selectedObjectId = null;
-  clearRotateHandle();
+  clearSelection();
 
   if (data.map && Array.isArray(data.map.center) && data.map.center.length === 2) {
     const lat = toNumber(data.map.center[0], map.getCenter().lat);
@@ -2679,7 +2690,16 @@ map.on('click', e => {
     handleMeasureClick(e.latlng);
     return;
   }
-  if (!placingMode) return;
+  if (!placingMode) {
+    if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+    clearSelection();
+    const readout = document.getElementById('map-state-readout');
+    const labelEl = readout && readout.querySelector('.map-state-readout-text');
+    if (labelEl && String(labelEl.textContent || '').startsWith('Selected ')) {
+      setMode('View Mode');
+    }
+    return;
+  }
 
   let widthFt, lengthFt, shape, label, vendor;
   const opacity = parseInt(document.getElementById('obj-opacity').value) / 100;
@@ -2910,8 +2930,8 @@ function drawObject(obj) {
   const bindSelect = layer => {
     layer.on('click', ev => {
       if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+      L.DomEvent.stop(ev);
       if (placingMode) {
-        L.DomEvent.stop(ev);
         cancelPlacing();
       }
       if (ev.originalEvent && ev.originalEvent.shiftKey) {
@@ -3354,8 +3374,7 @@ function deleteObj(id) {
 function resetPlacedObjects() {
   endObjectDrag();
   endRotateDrag();
-  selectedObjectId = null;
-  clearRotateHandle();
+  clearSelection();
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
@@ -4593,13 +4612,16 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && isSearchResultsVisible()) {
     e.preventDefault();
     clearSearchResults();
+    pickerDismissedAt = Date.now();
     return;
   }
   if (isTypingTarget(e.target)) return;
 
   if (e.key === 'Escape') {
+    if (Date.now() - pickerDismissedAt < ESC_SUPPRESS_MS) return;
     e.preventDefault();
     resetViewMode();
+    clearSelection();
     return;
   }
   if (e.key === '/') {
