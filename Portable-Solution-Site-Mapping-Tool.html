@@ -611,6 +611,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       <button type="button" class="ghost header-btn" id="btn-clear-measure-header" onclick="clearMeasure()" style="display:none;font-size:11px;padding:4px 10px;" title="Remove the current measurement from the map and exit measure mode." aria-label="Clear measurement">Clear</button>
     </div>
   </div>
+  <button type="button" class="ghost header-btn" id="btn-print" aria-label="Print the current map view (Ctrl+P or Cmd+P). Opens the browser print dialog." title="Print the current map view (Ctrl+P or Cmd+P). Opens the browser print dialog.">Print</button>
   <span id="autosave-indicator" title="Autosave status for this browser. Layout is not restored automatically on open — use Restore Autosave when needed.">Not yet saved</span>
   <button type="button" class="ghost header-btn" id="btn-restore-autosave" disabled aria-label="Restore autosaved session" title="Load the last layout auto-saved in this browser (localStorage). The app opens with a fresh map each time — nothing loads until you click here or Open Plan. Confirm if structures are already placed.">Restore Autosave</button>
 </div>
@@ -4806,6 +4807,7 @@ try {
   }
 } catch (e) {}
 document.getElementById('btn-restore-autosave').addEventListener('click', () => { restoreAutosave(); });
+document.getElementById('btn-print').addEventListener('click', () => { window.print(); });
 document.getElementById('zoom-level').textContent = map.getZoom();
 updateScaleRatio();
 updatePrintMeta();
