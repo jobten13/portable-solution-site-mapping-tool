@@ -2442,6 +2442,21 @@ function toNumber(value, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** Union of placed-object layer bounds; null if none are valid. */
+function getPlacedObjectsBounds() {
+  let union = null;
+  for (let i = 0; i < objects.length; i++) {
+    const o = objects[i];
+    const layer = o.layerBuffer || o.layer;
+    if (!layer || typeof layer.getBounds !== 'function') continue;
+    const b = layer.getBounds();
+    if (!b || typeof b.isValid !== 'function' || !b.isValid()) continue;
+    if (!union) union = L.latLngBounds(b.getSouthWest(), b.getNorthEast());
+    else union.extend(b);
+  }
+  return union;
+}
+
 function loadScenarioFromData(data, options) {
   options = options || {};
   if (!data || !Array.isArray(data.objects)) {
@@ -2464,6 +2479,13 @@ function loadScenarioFromData(data, options) {
     const lng = toNumber(data.map.center[1], map.getCenter().lng);
     const zoom = toNumber(data.map.zoom, map.getZoom());
     map.setView([lat, lng], zoom);
+  }
+
+  if (options.fromRestore && objects.length > 0) {
+    const placedBounds = getPlacedObjectsBounds();
+    if (placedBounds && !map.getBounds().intersects(placedBounds)) {
+      map.fitBounds(placedBounds, { maxZoom: 18 });
+    }
   }
 
   if (data.ui) {
