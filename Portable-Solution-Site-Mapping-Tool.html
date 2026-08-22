@@ -3757,17 +3757,7 @@ function scrollPlacedListToObject(id) {
 }
 
 function createObjectListItem(o) {
-  const wFt = (o.widthM / FT_TO_M).toFixed(0);
-  const lFt = (o.lengthM / FT_TO_M).toFixed(0);
-  const dims = o.shape === 'circle' ? `Ø${wFt}'`
-    : o.shape === 'octagon' ? `Oct 18'7"`
-    : o.shape === 'cut-corner-rectangle' ? `${wFt}'×${lFt}' C-crnr`
-    : o.shape === 'cut-corner-square' ? `${wFt}' C-crnr sq`
-    : o.shape === 'plus' ? `${wFt}' Plus`
-    : o.shape === 'ellipse' ? `${wFt}'×${lFt}' ◯`
-    : `${wFt}'×${lFt}'`;
-  const angleText = o.shape === 'circle' ? '' : ` @${Math.round(o.angleDeg || 0)}°`;
-  const bufferText = (o.bufferFt || 0) > 0 ? ` +${o.bufferFt}ft clr` : '';
+  const rowLabel = sanitizeLabel(o.label);
 
   const fpIds = overlapState.footprintIds;
   const bufIds = overlapState.bufferIds;
@@ -3796,14 +3786,9 @@ function createObjectListItem(o) {
 
   const name = document.createElement('div');
   name.className = 'obj-name';
-  name.textContent = formatObjectIdentity(o);
-  name.setAttribute('aria-label', formatObjectIdentity(o));
-
-  const meta = document.createElement('div');
-  meta.style.fontSize = '10px';
-  meta.style.color = '#8b949e';
-  meta.style.whiteSpace = 'nowrap';
-  meta.textContent = `${dims}${angleText}${bufferText}`;
+  name.textContent = rowLabel;
+  name.setAttribute('aria-label', rowLabel);
+  name.title = rowLabel;
 
   const wrap = document.createElement('div');
   wrap.dataset.objId = String(o.id);
@@ -3812,7 +3797,7 @@ function createObjectListItem(o) {
   const roleSelect = document.createElement('select');
   roleSelect.className = 'obj-role-select';
   roleSelect.dataset.objId = String(o.id);
-  roleSelect.setAttribute('aria-label', `Role for ${formatObjectIdentity(o)}`);
+  roleSelect.setAttribute('aria-label', `Role for ${rowLabel}`);
   wireRoleSelect(roleSelect, {
     getSelected: () => String(o.role || '—'),
     onCommit: (role) => {
@@ -3837,7 +3822,6 @@ function createObjectListItem(o) {
 
   row.appendChild(dot);
   row.appendChild(name);
-  row.appendChild(meta);
   row.appendChild(roleSelect);
   row.appendChild(del);
   wrap.appendChild(row);
