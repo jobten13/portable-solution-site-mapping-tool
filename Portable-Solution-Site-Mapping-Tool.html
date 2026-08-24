@@ -1905,13 +1905,25 @@ function clearMeasure() {
 
 function startObjectDrag(obj, startLatlng) {
   if (placingMode || measureMode || areaMeasureMode || activeRotateDrag) return;
-  if (obj.layer && typeof obj.layer.closeTooltip === 'function') obj.layer.closeTooltip();
-  if (obj.layerBuffer && typeof obj.layerBuffer.closeTooltip === 'function') obj.layerBuffer.closeTooltip();
-  pushStateToUndo();
+  // Group drag when grab target is already in a multi-set (S1 collapses non-members first).
+  const movers = (isSelected(obj.id) && selectedIds.length > 1)
+    ? selectedIds.map(id => getObjectById(id)).filter(Boolean)
+    : [obj];
+  movers.forEach(m => {
+    if (m.layer && typeof m.layer.closeTooltip === 'function') m.layer.closeTooltip();
+    if (m.layerBuffer && typeof m.layerBuffer.closeTooltip === 'function') m.layerBuffer.closeTooltip();
+  });
+  pushStateToUndo(); // one snapshot for the whole group gesture
+  const startCenters = {};
+  movers.forEach(m => {
+    startCenters[m.id] = L.latLng(m.latlng.lat, m.latlng.lng);
+  });
   activeObjectDrag = {
     obj,
+    movers,
     startMouse: startLatlng,
-    startCenter: L.latLng(obj.latlng.lat, obj.latlng.lng),
+    startCenter: startCenters[obj.id],
+    startCenters,
     startAngleDeg: normalizeAngle(obj.angleDeg || 0),
     snapAnchorId: null,
     snapAnchorAxis: null,
@@ -1924,7 +1936,8 @@ function startObjectDrag(obj, startLatlng) {
 
 function endObjectDrag() {
   if (!activeObjectDrag) return;
-  const { obj, moved, snapAnchorId, snapAnchorAxis, snapMoverAxis } = activeObjectDrag;
+  const { obj, movers, moved, snapAnchorId, snapAnchorAxis, snapMoverAxis } = activeObjectDrag;
+  const groupN = (movers && movers.length) || 1;
   activeObjectDrag = null;
   map.dragging.enable();
   mapContainer.style.cursor = '';
@@ -1932,7 +1945,9 @@ function endObjectDrag() {
     dragEndedAt = Date.now();
     updateList();
     scheduleOverlapSummary();
-    if (snapAnchorId != null) {
+    if (groupN > 1) {
+      showActionToast(`Moved ${groupN} structures`, document.getElementById('btn-undo'));
+    } else if (snapAnchorId != null) {
       const anchor = getObjectById(snapAnchorId);
       if (anchor && objects.includes(anchor)) {
         const faceMid = getNearestFaceMidpointLatLng(anchor, obj.latlng);
@@ -2905,13 +2920,28 @@ map.on('mousemove', e => {
     if (Math.abs(dLat) > 1e-8 || Math.abs(dLng) > 1e-8) {
       activeObjectDrag.moved = true;
     }
+    const drag = activeObjectDrag;
+    const movers = drag.movers || [drag.obj];
+    // Rigid group translate: same Δ for every member; snap off when N>1.
+    if (movers.length > 1) {
+      movers.forEach(m => {
+        const sc = drag.startCenters[m.id];
+        if (!sc) return;
+        m.latlng = L.latLng(sc.lat + dLat, sc.lng + dLng);
+        // angleDeg untouched — spacing and angles preserved
+        drawObject(m);
+      });
+      drag.snapAnchorId = null;
+      drag.snapAnchorAxis = null;
+      drag.snapMoverAxis = null;
+      return;
+    }
+    const obj = drag.obj;
     const freeLatLng = L.latLng(
-      activeObjectDrag.startCenter.lat + dLat,
-      activeObjectDrag.startCenter.lng + dLng
+      drag.startCenter.lat + dLat,
+      drag.startCenter.lng + dLng
     );
     const suppress = e.originalEvent && (e.originalEvent.ctrlKey || e.originalEvent.metaKey);
-    const drag = activeObjectDrag;
-    const obj = drag.obj;
     if (snapModeEnabled && !suppress) {
       const best = findNearestSnapCandidate(obj, freeLatLng, drag.startAngleDeg);
       if (best) {
@@ -3264,8 +3294,11 @@ function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
   const moverWid = mover.widthM;
   const engageM = snapEngageThresholdM(mover);
   let best = null;
+  // S5: if a multi-set is active, never snap to another selected member as anchor.
+  const excludeSelectedPeers = selectedIds.length > 1;
   for (const obj of objects) {
     if (obj.id === mover.id) continue;
+    if (excludeSelectedPeers && isSelected(obj.id)) continue;
     const result = getSnapAttachLatLng(obj, moverLen, moverWid, freeLatLng, intentAngleDeg);
     if (!result) continue;
     const gap = map.distance(freeLatLng, result.latlng);
