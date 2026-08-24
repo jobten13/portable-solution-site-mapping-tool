@@ -2093,39 +2093,47 @@ function getDeleteHandleLatLng(obj) {
 
 function syncRotateHandle() {
   clearRotateHandle();
-  // N>1: rotate handle deferred to Step 5; ✕ deferred to Step 3. Singleton only this step.
-  if (selectedIds.length !== 1) return;
+  if (!selectedIds.length) return;
   const obj = getObjectById(primaryId);
   if (!obj || !obj.layer) return;
-  const handleLatLng = getRotateHandleLatLng(obj);
-  rotateHandleLayer = L.circleMarker(handleLatLng, {
-    radius: 6,
-    color: '#ffa657',
-    fillColor: '#ffa657',
-    fillOpacity: 1,
-    weight: 2,
-    pane: 'markerPane'
-  }).addTo(map);
-  rotateHandleLayer.bindTooltip('Drag to rotate. Hold Shift to snap to 5° increments.', {
-    permanent: false,
-    direction: 'top',
-    className: 'map-tooltip',
-    offset: MAP_HANDLE_TOOLTIP_OFFSET_TOP
-  });
-  rotateHandleLayer.on('mousedown', ev => {
-    L.DomEvent.stop(ev);
-    startRotateDrag(obj);
-  });
+  // N>1: rotate handle deferred to Step 5. Shared ✕ on primary for group delete (Step 3).
+  if (selectedIds.length === 1) {
+    const handleLatLng = getRotateHandleLatLng(obj);
+    rotateHandleLayer = L.circleMarker(handleLatLng, {
+      radius: 6,
+      color: '#ffa657',
+      fillColor: '#ffa657',
+      fillOpacity: 1,
+      weight: 2,
+      pane: 'markerPane'
+    }).addTo(map);
+    rotateHandleLayer.bindTooltip('Drag to rotate. Hold Shift to snap to 5° increments.', {
+      permanent: false,
+      direction: 'top',
+      className: 'map-tooltip',
+      offset: MAP_HANDLE_TOOLTIP_OFFSET_TOP
+    });
+    rotateHandleLayer.on('mousedown', ev => {
+      L.DomEvent.stop(ev);
+      startRotateDrag(obj);
+    });
+  }
 
+  const n = selectedIds.length;
   const deleteLatLng = getDeleteHandleLatLng(obj);
+  const deleteAria = n === 1 ? 'Delete object' : `Delete ${n} structures`;
+  const deleteTitle = n === 1 ? 'Delete structure (confirm)' : `Delete ${n} structures (confirm)`;
+  const deleteTip = n === 1
+    ? 'Delete this structure (confirm). Use Undo (Ctrl+Z) to restore before refreshing.'
+    : `Delete ${n} structures (confirm). Use Undo (Ctrl+Z) to restore before refreshing.`;
   const deleteIcon = L.divIcon({
-    html: '<button type="button" class="delete-handle-btn" aria-label="Delete object" title="Delete structure (confirm)">\u2715</button>',
+    html: `<button type="button" class="delete-handle-btn" aria-label="${deleteAria}" title="${deleteTitle}">\u2715</button>`,
     className: 'delete-handle-wrap',
     iconSize: [28, 28],
     iconAnchor: [14, 14]
   });
   deleteHandleLayer = L.marker(deleteLatLng, { icon: deleteIcon }).addTo(map);
-  deleteHandleLayer.bindTooltip('Delete this structure (confirm). Use Undo (Ctrl+Z) to restore before refreshing.', {
+  deleteHandleLayer.bindTooltip(deleteTip, {
     permanent: false,
     direction: 'bottom',
     className: 'map-tooltip',
@@ -2133,7 +2141,7 @@ function syncRotateHandle() {
   });
   deleteHandleLayer.on('click', ev => {
     L.DomEvent.stop(ev);
-    if (confirm(`CONFIRM:\nDelete "${formatObjectIdentity(obj)}"?`)) deleteObj(obj.id);
+    confirmAndDeleteSelection();
   });
 }
 
@@ -3129,7 +3137,7 @@ function drawObject(obj) {
   bindSelect(obj.layer);
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
   syncRoleLabel(obj);
-  if (isSelected(obj.id) && selectedIds.length === 1) syncRotateHandle();
+  if (isSelected(obj.id) && obj.id === primaryId) syncRotateHandle();
   // Re-apply overlap/selection strokes after layer rebuild (rAF-coalesced; live during drag/rotate).
   scheduleOverlapSummary();
 }
@@ -3543,6 +3551,54 @@ function deleteObj(id) {
     scheduleSaveSession();
   }
   showActionToast('Object deleted. Use Undo in the header to restore.', document.getElementById('btn-undo'));
+}
+
+/** Confirm then delete current selection: identity dialog + deleteObj for N=1; count dialog + bulk for N≥2. */
+function confirmAndDeleteSelection() {
+  if (!selectedIds.length) return;
+  if (selectedIds.length === 1) {
+    const obj = getObjectById(selectedIds[0]);
+    if (!obj) return;
+    if (!confirm(`CONFIRM:\nDelete "${formatObjectIdentity(obj)}"?`)) return;
+    deleteObj(obj.id);
+    return;
+  }
+  const n = selectedIds.length;
+  if (!confirm(`CONFIRM:\nDelete ${n} structures?`)) return;
+  deleteSelectedBulk();
+}
+
+/**
+ * Bulk-remove the current multi-selection. One undo snapshot (caller confirms first).
+ * clearAll-style: not a deleteObj loop. Does nothing if fewer than 2 selected.
+ */
+function deleteSelectedBulk() {
+  const idSet = new Set(selectedIds);
+  if (idSet.size < 2) return;
+  const n = idSet.size;
+  pushStateToUndo();
+  endObjectDrag();
+  endRotateDrag();
+  objects.forEach(o => {
+    if (!idSet.has(o.id)) return;
+    if (o.layer) map.removeLayer(o.layer);
+    if (o.layerBuffer) map.removeLayer(o.layerBuffer);
+    clearSelectionUnderlay(o);
+    if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
+  });
+  objects = objects.filter(o => !idSet.has(o.id));
+  selectedIds = [];
+  primaryId = null;
+  clearRotateHandle();
+  updateList();
+  scheduleOverlapSummary();
+  applySelectionReadout();
+  if (objects.length === 0) {
+    scheduleSaveSession({ allowEmptyOverwrite: true });
+  } else {
+    scheduleSaveSession();
+  }
+  showActionToast(`Deleted ${n} structures. Use Undo in the header to restore.`, document.getElementById('btn-undo'));
 }
 
 function resetPlacedObjects() {
@@ -4849,6 +4905,11 @@ document.addEventListener('keydown', e => {
     setSelection(objects.map(o => o.id), objects[objects.length - 1].id);
     applySelectionReadout();
     scrollPlacedListToObject(primaryId);
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    confirmAndDeleteSelection();
     return;
   }
   if (e.key === '/') {
