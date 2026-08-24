@@ -2996,8 +2996,8 @@ function drawObject(obj) {
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
   syncRoleLabel(obj);
   if (selectedObjectId === obj.id) syncRotateHandle();
-  // Re-apply overlap/selection strokes after layer rebuild (skip mid-drag; end*Drag schedules).
-  if (!activeObjectDrag && !activeRotateDrag) scheduleOverlapSummary();
+  // Re-apply overlap/selection strokes after layer rebuild (rAF-coalesced; live during drag/rotate).
+  scheduleOverlapSummary();
 }
 
 function shouldShowRoleLabel(obj) {
@@ -4052,10 +4052,11 @@ function latlngToMeters(lat, lng, originLat, originLng) {
   return [x, y];
 }
 
-// Polygon overlap in map layer (pixel) coordinates — matches Leaflet rendering; avoids meter-plane drift from map center.
+// Shared 2D polygon helpers (OVERLAP_EPS in coordinate units of the ring).
+// Buffer tier uses map layer (pixel) rings; footprint tier uses local-meter rings (same frame as snap).
 const OVERLAP_EPS = 1e-4;
-// Footprint tier: reject touching/sub-pixel slivers; real overlaps at typical placement zoom are much larger.
-const FOOTPRINT_MIN_INTERSECTION_AREA_PX2 = 1.0;
+// Footprint tier (m²): reject numerical/touching slivers; real overlaps are much larger.
+const FOOTPRINT_MIN_INTERSECTION_AREA_M2 = 0.01;
 function polygonBounds(ring) {
   let minX = Infinity;
   let maxX = -Infinity;
@@ -4257,7 +4258,7 @@ function polygonIntersectionArea2D(ringA, ringB) {
 function polygonsFootprintOverlap2D(vertsA, vertsB) {
   const area = polygonIntersectionArea2D(vertsA, vertsB);
   if (area === null) return polygonsTouchOrOverlap2D(vertsA, vertsB);
-  return area > FOOTPRINT_MIN_INTERSECTION_AREA_PX2;
+  return area > FOOTPRINT_MIN_INTERSECTION_AREA_M2;
 }
 
 function getLayerPointRing(layer) {
@@ -4270,24 +4271,40 @@ function getLayerPointRing(layer) {
   });
 }
 
+/** Footprint vertices in local meters relative to origin (same tangent plane as snap / latlngToMeters). */
+function getLayerMeterRing(layer, originLat, originLng) {
+  const latlngs = getLayerVertices(layer);
+  if (!latlngs || latlngs.length < 3) return null;
+  return latlngs.map(p => {
+    const ll = p.lat != null ? p : L.latLng(p[0], p[1]);
+    return latlngToMeters(ll.lat, ll.lng, originLat, originLng);
+  });
+}
+
 function updateOverlapSummary() {
   const footprintIds = new Set();
   const bufferIds = new Set();
 
   for (let i = 0; i < objects.length; i += 1) {
     const oi = objects[i];
-    const vi = oi.layer ? getLayerPointRing(oi.layer) : null;
-    if (!vi) continue;
+    if (!oi.layer) continue;
     for (let j = i + 1; j < objects.length; j += 1) {
       const oj = objects[j];
-      const vj = oj.layer ? getLayerPointRing(oj.layer) : null;
-      if (!vj) continue;
-      if (polygonsFootprintOverlap2D(vi, vj)) {
+      if (!oj.layer) continue;
+      // Footprint: meter-space intersection (pair-local origin — same frame as snap).
+      const originLat = (oi.latlng.lat + oj.latlng.lat) / 2;
+      const originLng = (oi.latlng.lng + oj.latlng.lng) / 2;
+      const mi = getLayerMeterRing(oi.layer, originLat, originLng);
+      const mj = getLayerMeterRing(oj.layer, originLat, originLng);
+      if (mi && mj && polygonsFootprintOverlap2D(mi, mj)) {
         footprintIds.add(oi.id);
         footprintIds.add(oj.id);
         continue;
       }
-      // Buffer advisory: any clearance zone vs other footprint, or buffer vs buffer (not only when both have buffers).
+      // Buffer advisory: layer-pixel touch/overlap (unchanged); any clearance zone vs other footprint, or buffer vs buffer.
+      const vi = getLayerPointRing(oi.layer);
+      const vj = getLayerPointRing(oj.layer);
+      if (!vi || !vj) continue;
       const bi = oi.layerBuffer ? getLayerPointRing(oi.layerBuffer) : null;
       const bj = oj.layerBuffer ? getLayerPointRing(oj.layerBuffer) : null;
       const bufferConflict =
