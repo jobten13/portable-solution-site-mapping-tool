@@ -1115,7 +1115,10 @@ let placedListExpanded = false;
 let dragEndedAt = 0;
 let pickerDismissedAt = 0;
 let activeRotateDrag = null;
-let selectedObjectId = null;
+/** Runtime selection set (ordered). Not persisted / not in plan schema. */
+let selectedIds = [];
+/** Last-interacted member — scroll + singleton-handle anchor (S4). */
+let primaryId = null;
 let rotateHandleLayer = null;
 let deleteHandleLayer = null;
 // Undo/redo
@@ -2075,7 +2078,9 @@ function getDeleteHandleLatLng(obj) {
 
 function syncRotateHandle() {
   clearRotateHandle();
-  const obj = getObjectById(selectedObjectId);
+  // N>1: rotate handle deferred to Step 5; ✕ deferred to Step 3. Singleton only this step.
+  if (selectedIds.length !== 1) return;
+  const obj = getObjectById(primaryId);
   if (!obj || !obj.layer) return;
   const handleLatLng = getRotateHandleLatLng(obj);
   rotateHandleLayer = L.circleMarker(handleLatLng, {
@@ -2105,7 +2110,7 @@ function syncRotateHandle() {
     iconAnchor: [14, 14]
   });
   deleteHandleLayer = L.marker(deleteLatLng, { icon: deleteIcon }).addTo(map);
-  deleteHandleLayer.bindTooltip('Delete this structure (confirm). Shift+click the footprint also deletes. Use Undo (Ctrl+Z) to restore before refreshing.', {
+  deleteHandleLayer.bindTooltip('Delete this structure (confirm). Use Undo (Ctrl+Z) to restore before refreshing.', {
     permanent: false,
     direction: 'bottom',
     className: 'map-tooltip',
@@ -2117,21 +2122,101 @@ function syncRotateHandle() {
   });
 }
 
-function setSelectedObject(id) {
-  selectedObjectId = id;
+function selectionIds() {
+  return selectedIds.slice();
+}
+
+function isSelected(id) {
+  return selectedIds.indexOf(id) !== -1;
+}
+
+/** Mode readout per S3: identity (N=1), both names (N=2), count (N≥3). */
+function selectionReadoutText() {
+  const ids = selectedIds;
+  if (ids.length === 0) return null;
+  if (ids.length === 1) {
+    const o = getObjectById(ids[0]);
+    return o ? `Selected ${formatObjectIdentity(o)} — drag to move` : null;
+  }
+  if (ids.length === 2) {
+    const a = getObjectById(ids[0]);
+    const b = getObjectById(ids[1]);
+    if (a && b) return `Selected ${formatObjectIdentity(a)} + ${formatObjectIdentity(b)} — drag to move`;
+    return `Selected 2 structures — drag to move`;
+  }
+  return `Selected ${ids.length} structures — drag to move`;
+}
+
+function applySelectionReadout() {
+  const label = selectionReadoutText();
+  setMode(label || 'View Mode');
+}
+
+/**
+ * Replace selection with ids (order preserved). primary becomes primaryId when in set;
+ * otherwise last member. Does not set mode readout — callers own setMode / applySelectionReadout.
+ */
+function setSelection(ids, primary) {
+  const prev = selectedIds.slice();
+  const next = [];
+  const seen = new Set();
+  (ids || []).forEach(id => {
+    if (id == null || seen.has(id)) return;
+    if (!getObjectById(id)) return;
+    seen.add(id);
+    next.push(id);
+  });
+  selectedIds = next;
+  if (primary != null && seen.has(primary)) primaryId = primary;
+  else primaryId = next.length ? next[next.length - 1] : null;
+  prev.forEach(id => {
+    if (!seen.has(id)) clearSelectionUnderlay(getObjectById(id));
+  });
   syncRotateHandle();
   scheduleOverlapSummary();
+  updateList();
+}
+
+/** Toggle id in/out of the set; last added (or last remaining) becomes primary. */
+function toggleInSelection(id) {
+  if (!getObjectById(id)) return;
+  if (isSelected(id)) {
+    selectedIds = selectedIds.filter(x => x !== id);
+    clearSelectionUnderlay(getObjectById(id));
+    if (primaryId === id) primaryId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null;
+  } else {
+    selectedIds.push(id);
+    primaryId = id;
+  }
+  syncRotateHandle();
+  scheduleOverlapSummary();
+  updateList();
+}
+
+/** Singleton convenience — place / plain-click paths. */
+function setSelectedObject(id) {
+  if (id == null) {
+    clearSelection();
+    return;
+  }
+  setSelection([id], id);
 }
 
 /** Clear map/list selection chrome. Does not change mode readout — callers own setMode. */
 function clearSelection() {
-  if (selectedObjectId == null) return;
-  const prev = getObjectById(selectedObjectId);
-  selectedObjectId = null;
+  if (!selectedIds.length) return;
+  const prev = selectedIds.slice();
+  selectedIds = [];
+  primaryId = null;
   clearRotateHandle();
-  clearSelectionUnderlay(prev);
+  prev.forEach(id => clearSelectionUnderlay(getObjectById(id)));
   scheduleOverlapSummary();
   updateList();
+}
+
+function isMultiSelectModifierEvent(ev) {
+  const oe = ev && (ev.originalEvent || ev);
+  return !!(oe && (oe.shiftKey || oe.ctrlKey || oe.metaKey));
 }
 
 function computeAngleFromCenter(center, target) {
@@ -2156,7 +2241,15 @@ function applyBufferPreset(ft, evt) {
 
 function applyBufferToSelected(evt) {
   const anchor = (evt && evt.currentTarget) || null;
-  const o = getObjectById(selectedObjectId);
+  // Step 1: singleton only (01ac9dc). Multi apply is Step 4.
+  if (selectedIds.length !== 1) {
+    showActionToast(
+      selectedIds.length === 0 ? 'Select an object first' : 'Select a single structure to apply buffer',
+      anchor
+    );
+    return;
+  }
+  const o = getObjectById(primaryId);
   if (!o) {
     showActionToast('Select an object first', anchor);
     return;
@@ -2948,9 +3041,9 @@ function drawObject(obj) {
   const angleInfo = obj.shape === 'circle' ? '' : `<br>Rotation: ${Math.round(obj.angleDeg || 0)}°`;
   const bufferInfo = (obj.bufferFt || 0) > 0 ? `<br>Clearance buffer: +${obj.bufferFt} ft` : '';
   const roleInfo = (obj.role && obj.role !== '—') ? `<br>Role: ${escapeHtml(obj.role)}` : '';
-  const deleteHint = `<br>Shift+click to delete (confirm)`;
+  const selectHint = `<br>Shift or Ctrl/Cmd+click to toggle selection`;
 
-  obj.layer.bindTooltip(`${tip}${roleInfo}${angleInfo}${bufferInfo}${deleteHint}`, {
+  obj.layer.bindTooltip(`${tip}${roleInfo}${angleInfo}${bufferInfo}${selectHint}`, {
     permanent: false,
     sticky: false,
     direction: 'top',
@@ -2962,14 +3055,25 @@ function drawObject(obj) {
     layer.on('mousedown', ev => {
       if (ev.originalEvent && ev.originalEvent.button !== 0) return;
       L.DomEvent.stop(ev);
-      // While armed, hitting a placed object disarms and selects (no stack place on map click).
+      const multi = isMultiSelectModifierEvent(ev);
+      // While armed, hitting a placed object disarms (no stack place on map click).
+      // Multi-toggle is click-only — doing it here would double-fire with bindSelect.
       if (placingMode) {
         cancelPlacing();
+        if (!multi) {
+          setSelectedObject(obj.id);
+          applySelectionReadout();
+          updateList();
+          scrollPlacedListToObject(primaryId);
+        }
+      } else if (!multi && !isSelected(obj.id)) {
+        // S1: plain mousedown on a non-member replaces selection with singleton before drag.
         setSelectedObject(obj.id);
-        setMode(`Selected ${formatObjectIdentity(obj)} — drag to move`);
+        applySelectionReadout();
         updateList();
-        scrollPlacedListToObject(obj.id);
       }
+      // Multi-select modifier: selection-toggle only (click handler). No drag / undo push.
+      if (multi) return;
       startObjectDrag(obj, ev.latlng);
     });
   };
@@ -2980,14 +3084,14 @@ function drawObject(obj) {
       if (placingMode) {
         cancelPlacing();
       }
-      if (ev.originalEvent && ev.originalEvent.shiftKey) {
-        if (confirm(`CONFIRM:\nDelete "${formatObjectIdentity(obj)}"?`)) deleteObj(obj.id);
-        return;
+      if (isMultiSelectModifierEvent(ev)) {
+        toggleInSelection(obj.id);
+      } else {
+        setSelectedObject(obj.id);
       }
-      setSelectedObject(obj.id);
-      setMode(`Selected ${formatObjectIdentity(obj)} — drag to move`);
+      applySelectionReadout();
       updateList();
-      scrollPlacedListToObject(obj.id);
+      scrollPlacedListToObject(primaryId);
     });
   };
   bindDragStart(obj.layer);
@@ -2995,7 +3099,7 @@ function drawObject(obj) {
   bindSelect(obj.layer);
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
   syncRoleLabel(obj);
-  if (selectedObjectId === obj.id) syncRotateHandle();
+  if (isSelected(obj.id) && selectedIds.length === 1) syncRotateHandle();
   // Re-apply overlap/selection strokes after layer rebuild (rAF-coalesced; live during drag/rotate).
   scheduleOverlapSummary();
 }
@@ -3390,9 +3494,12 @@ function deleteObj(id) {
   if (objects[idx].layerBuffer) map.removeLayer(objects[idx].layerBuffer);
   clearSelectionUnderlay(objects[idx]);
   if (objects[idx].roleLabelLayer) map.removeLayer(objects[idx].roleLabelLayer);
-  if (selectedObjectId === id) {
-    selectedObjectId = null;
-    clearRotateHandle();
+  if (isSelected(id)) {
+    selectedIds = selectedIds.filter(x => x !== id);
+    if (primaryId === id) primaryId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null;
+    if (!selectedIds.length) clearRotateHandle();
+    else syncRotateHandle();
+    applySelectionReadout();
   }
   objects.splice(idx, 1);
   updateList();
@@ -3765,7 +3872,7 @@ function createObjectListItem(o) {
   const inBufferOnly = !inFootprintOverlap && bufIds.has(o.id);
 
   const row = document.createElement('div');
-  row.className = 'obj-item' + (o.id === selectedObjectId ? ' active' : '');
+  row.className = 'obj-item' + (isSelected(o.id) ? ' active' : '');
   if (inFootprintOverlap) {
     row.style.borderLeft = '3px solid #f85149';
     row.style.paddingLeft = '5px';
@@ -3773,11 +3880,13 @@ function createObjectListItem(o) {
     row.style.borderLeft = '3px solid #ffa657';
     row.style.paddingLeft = '5px';
   }
-  row.onclick = () => {
-    setSelectedObject(o.id);
+  row.onclick = (ev) => {
+    if (isMultiSelectModifierEvent(ev)) toggleInSelection(o.id);
+    else setSelectedObject(o.id);
     map.panTo(o.latlng);
-    setMode(`Selected ${formatObjectIdentity(o)} — drag to move`);
+    applySelectionReadout();
     updateList();
+    scrollPlacedListToObject(primaryId);
   };
 
   const dot = document.createElement('div');
@@ -4361,7 +4470,7 @@ function updateOverlapSummary() {
       if (o.layerBuffer && o.layerBuffer.setStyle) {
         o.layerBuffer.setStyle({ color: '#ffa657', weight: 2.5, opacity: 0.95, dashArray: '4 4' });
       }
-    } else if (selectedObjectId != null && o.id === selectedObjectId) {
+    } else if (isSelected(o.id)) {
       ensureSelectionUnderlay(o);
       o.layer.setStyle({ color: '#ffffff', weight: 3, opacity: 1 });
       if (o.layerBuffer && o.layerBuffer.setStyle) {
@@ -4699,6 +4808,14 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     resetViewMode();
     clearSelection();
+    return;
+  }
+  if ((e.key === 'a' || e.key === 'A') && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    if (!objects.length) return;
+    setSelection(objects.map(o => o.id), objects[objects.length - 1].id);
+    applySelectionReadout();
+    scrollPlacedListToObject(primaryId);
     return;
   }
   if (e.key === '/') {
