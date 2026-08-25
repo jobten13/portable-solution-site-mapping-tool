@@ -331,6 +331,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 }
 .delete-handle-btn:hover { background:#f85149; }
 .delete-handle-btn:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
+/* Shared rotate handle (singleton + group) — circular-arrow affordance */
+.rotate-handle-wrap { background:none; border:none; }
+.rotate-handle-btn {
+  width:28px; height:28px; border-radius:6px; background:#ffa657; color:#0d1117;
+  border:none; cursor:grab; display:flex; align-items:center; justify-content:center;
+  font-size:16px; line-height:1; padding:0; transition:background 0.15s;
+}
+.rotate-handle-btn:hover { background:#ffb77a; }
+.rotate-handle-btn:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
 /* On-map role label (zoom-gated; rotates with footprint; non-interactive) */
 .role-label-icon {
   background:none !important;
@@ -581,7 +590,9 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   .leaflet-control-zoom,
   .leaflet-control-layers { display:none !important; }
   .delete-handle-wrap,
-  .delete-handle-btn { display:none !important; }
+  .delete-handle-btn,
+  .rotate-handle-wrap,
+  .rotate-handle-btn { display:none !important; }
 }
 </style>
 </head>
@@ -1931,6 +1942,7 @@ function startObjectDrag(obj, startLatlng) {
     moved: false
   };
   map.dragging.disable();
+  if (map.boxZoom) map.boxZoom.disable();
   mapContainer.style.cursor = 'grabbing';
 }
 
@@ -1940,6 +1952,7 @@ function endObjectDrag() {
   const groupN = (movers && movers.length) || 1;
   activeObjectDrag = null;
   map.dragging.enable();
+  if (map.boxZoom) map.boxZoom.enable();
   mapContainer.style.cursor = '';
   if (moved) {
     dragEndedAt = Date.now();
@@ -1961,13 +1974,43 @@ function endObjectDrag() {
     }
     scheduleSaveSession();
   }
+  syncRotateHandle();
 }
 
-function startRotateDrag(obj) {
+function startRotateDrag(obj, startLatlng) {
   if (placingMode || measureMode || areaMeasureMode || activeObjectDrag) return;
-  pushStateToUndo();
-  activeRotateDrag = { obj };
+  // Group rotate when selection is multi and grab target is a member (handle seats on set).
+  const movers = (isSelected(obj.id) && selectedIds.length > 1)
+    ? selectedIds.map(id => getObjectById(id)).filter(Boolean)
+    : [obj];
+  if (!movers.length) return;
+  pushStateToUndo(); // one snapshot for the whole gesture
+  if (movers.length > 1) {
+    const centroid = getMembersCentroid(movers);
+    const startCenters = {};
+    const startAngles = {};
+    movers.forEach(m => {
+      startCenters[m.id] = L.latLng(m.latlng.lat, m.latlng.lng);
+      startAngles[m.id] = normalizeAngle(m.angleDeg || 0);
+    });
+    const mouse0 = startLatlng || centroid;
+    const startHandleSeat = rotateHandleLayer
+      ? L.latLng(rotateHandleLayer.getLatLng().lat, rotateHandleLayer.getLatLng().lng)
+      : getGroupRotateHandleSeatAtRest(movers);
+    activeRotateDrag = {
+      obj,
+      movers,
+      centroid,
+      startCenters,
+      startAngles,
+      startMouseAngle: computeAngleFromCenter(centroid, mouse0),
+      startHandleSeat
+    };
+  } else {
+    activeRotateDrag = { obj, movers };
+  }
   map.dragging.disable();
+  if (map.boxZoom) map.boxZoom.disable();
   mapContainer.style.cursor = 'crosshair';
 }
 
@@ -1976,10 +2019,12 @@ function endRotateDrag() {
   activeRotateDrag = null;
   dragEndedAt = Date.now();
   map.dragging.enable();
+  if (map.boxZoom) map.boxZoom.enable();
   mapContainer.style.cursor = '';
   updateList();
   scheduleOverlapSummary();
   scheduleSaveSession();
+  syncRotateHandle();
 }
 
 function getObjectById(id) {
@@ -2091,36 +2136,126 @@ function getDeleteHandleLatLng(obj) {
   return L.latLng(lat, lng);
 }
 
+/** Equal-weight centroid of member centers (group-rotate pivot; ≠ handle seat). */
+function getMembersCentroid(members) {
+  let lat = 0;
+  let lng = 0;
+  members.forEach(m => {
+    lat += m.latlng.lat;
+    lng += m.latlng.lng;
+  });
+  const n = members.length || 1;
+  return L.latLng(lat / n, lng / n);
+}
+
+/**
+ * Group MOVE only: axis-aligned union AABB seat (geographic north + padding).
+ * Do not use for group rotate — use getGroupRotateHandleSeatAtRest / drag-coupled seat.
+ */
+function getGroupRotateHandleLatLng(members) {
+  let bounds = null;
+  members.forEach(m => {
+    if (!m.layer || typeof m.layer.getBounds !== 'function') return;
+    const b = m.layer.getBounds();
+    if (!b || !b.isValid()) return;
+    bounds = bounds ? bounds.extend(b) : L.latLngBounds(b.getSouthWest(), b.getNorthEast());
+  });
+  if (bounds && bounds.isValid()) {
+    const topMid = L.latLng(bounds.getNorth(), (bounds.getWest() + bounds.getEast()) / 2);
+    const [lat, lng] = metersToDeg(topMid, 0, HANDLE_OUTSIDE_PADDING_M);
+    return L.latLng(lat, lng);
+  }
+  const c = getMembersCentroid(members);
+  let maxHalf = 0;
+  members.forEach(m => {
+    maxHalf = Math.max(maxHalf, Math.max(m.widthM, m.lengthM != null ? m.lengthM : m.widthM) / 2);
+  });
+  const [lat, lng] = metersToDeg(c, 0, maxHalf + HANDLE_OUTSIDE_PADDING_M);
+  return L.latLng(lat, lng);
+}
+
+/** Max distance from centroid to any member footprint corner (meter space). */
+function getGroupMaxCornerRadiusM(members, centroid) {
+  let maxR = 0;
+  members.forEach(m => {
+    const hw = m.widthM / 2;
+    const hh = (m.lengthM != null ? m.lengthM : m.widthM) / 2;
+    const corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]];
+    const rotated = rotateOffsets(corners, m.angleDeg || 0);
+    const [cx, cy] = latlngToMeters(m.latlng.lat, m.latlng.lng, centroid.lat, centroid.lng);
+    rotated.forEach(([dx, dy]) => {
+      maxR = Math.max(maxR, Math.hypot(cx + dx, cy + dy));
+    });
+  });
+  return maxR;
+}
+
+/**
+ * Group rotate at-rest / release seat: centroid + polar offset (orientation-derived).
+ * Bearing from centroid toward primary's rotate-handle direction; radius = max corner extent + padding.
+ */
+function getGroupRotateHandleSeatAtRest(members) {
+  const centroid = getMembersCentroid(members);
+  const primary = getObjectById(primaryId) || members[members.length - 1];
+  let bearingDeg = 0;
+  if (primary && primary.layer) {
+    bearingDeg = computeAngleFromCenter(centroid, getRotateHandleLatLng(primary));
+  }
+  const r = getGroupMaxCornerRadiusM(members, centroid) + HANDLE_OUTSIDE_PADDING_M;
+  const rad = bearingDeg * Math.PI / 180;
+  const [lat, lng] = metersToDeg(centroid, r * Math.sin(rad), r * Math.cos(rad));
+  return L.latLng(lat, lng);
+}
+
+/** Rotate a latlng about a pivot by angleDeg (same convention as rotateOffsets). */
+function rotateLatLngAboutPivot(point, pivot, angleDeg) {
+  if (!angleDeg) return L.latLng(point.lat, point.lng);
+  const [x, y] = latlngToMeters(point.lat, point.lng, pivot.lat, pivot.lng);
+  const rad = angleDeg * Math.PI / 180;
+  const cosA = Math.cos(rad);
+  const sinA = Math.sin(rad);
+  const nx = x * cosA - y * sinA;
+  const ny = x * sinA + y * cosA;
+  const [lat, lng] = metersToDeg(pivot, nx, ny);
+  return L.latLng(lat, lng);
+}
+
+/** Shortest signed delta from→to in degrees, range (−180, 180]. */
+function shortestAngleDelta(fromDeg, toDeg) {
+  return ((toDeg - fromDeg + 540) % 360) - 180;
+}
+
 function syncRotateHandle() {
   clearRotateHandle();
   if (!selectedIds.length) return;
-  const obj = getObjectById(primaryId);
-  if (!obj || !obj.layer) return;
-  // N>1: rotate handle deferred to Step 5. Shared ✕ on primary for group delete (Step 3).
-  if (selectedIds.length === 1) {
-    const handleLatLng = getRotateHandleLatLng(obj);
-    rotateHandleLayer = L.circleMarker(handleLatLng, {
-      radius: 6,
-      color: '#ffa657',
-      fillColor: '#ffa657',
-      fillOpacity: 1,
-      weight: 2,
-      pane: 'markerPane'
-    }).addTo(map);
-    rotateHandleLayer.bindTooltip('Drag to rotate. Hold Shift to snap to 5° increments.', {
-      permanent: false,
-      direction: 'top',
-      className: 'map-tooltip',
-      offset: MAP_HANDLE_TOOLTIP_OFFSET_TOP
-    });
-    rotateHandleLayer.on('mousedown', ev => {
-      L.DomEvent.stop(ev);
-      startRotateDrag(obj);
-    });
-  }
+  const members = selectedIds.map(id => getObjectById(id)).filter(Boolean);
+  if (!members.length) return;
+  const primary = getObjectById(primaryId) || members[members.length - 1];
+  if (!primary || !primary.layer) return;
 
-  const n = selectedIds.length;
-  const deleteLatLng = getDeleteHandleLatLng(obj);
+  const n = members.length;
+  const handleLatLng = n === 1
+    ? getRotateHandleLatLng(primary)
+    : getGroupRotateHandleSeatAtRest(members);
+  const rotateIcon = L.divIcon({
+    html: '<button type="button" class="rotate-handle-btn" aria-label="Rotate" title="Drag to rotate">\u21BB</button>',
+    className: 'rotate-handle-wrap',
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+  rotateHandleLayer = L.marker(handleLatLng, { icon: rotateIcon, interactive: true }).addTo(map);
+  rotateHandleLayer.bindTooltip('Drag to rotate. Hold Shift to snap to 5° increments.', {
+    permanent: false,
+    direction: 'top',
+    className: 'map-tooltip',
+    offset: MAP_HANDLE_TOOLTIP_OFFSET_TOP
+  });
+  rotateHandleLayer.on('mousedown', ev => {
+    L.DomEvent.stop(ev);
+    startRotateDrag(primary, ev.latlng);
+  });
+
+  const deleteLatLng = getDeleteHandleLatLng(primary);
   const deleteAria = n === 1 ? 'Delete object' : `Delete ${n} structures`;
   const deleteTitle = n === 1 ? 'Delete structure (confirm)' : `Delete ${n} structures (confirm)`;
   const deleteTip = n === 1
@@ -2922,12 +3057,38 @@ map.on('mousemove', e => {
   document.getElementById('cursor-pos').textContent =
     `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
   if (activeRotateDrag) {
-    let nextAngle = computeAngleFromCenter(activeRotateDrag.obj.latlng, e.latlng);
+    const drag = activeRotateDrag;
+    const movers = drag.movers || [drag.obj];
+    if (movers.length > 1) {
+      // Rigid group rotate about centroid; Shift quantizes cumulative Δθ from gesture start.
+      let delta = shortestAngleDelta(
+        drag.startMouseAngle,
+        computeAngleFromCenter(drag.centroid, e.latlng)
+      );
+      if (e.originalEvent && e.originalEvent.shiftKey) {
+        delta = Math.round(delta / 5) * 5;
+      }
+      movers.forEach(m => {
+        const sc = drag.startCenters[m.id];
+        if (!sc) return;
+        m.latlng = rotateLatLngAboutPivot(sc, drag.centroid, -delta);
+        m.angleDeg = normalizeAngle(drag.startAngles[m.id] - delta);
+        drawObject(m);
+      });
+      if (rotateHandleLayer) {
+        rotateHandleLayer.setLatLng(
+          rotateLatLngAboutPivot(drag.startHandleSeat, drag.centroid, -delta)
+        );
+      }
+      return;
+    }
+    // Singleton: absolute angle from center (unchanged geometry aside from handle icon).
+    let nextAngle = computeAngleFromCenter(drag.obj.latlng, e.latlng);
     if (e.originalEvent && e.originalEvent.shiftKey) {
       nextAngle = Math.round(nextAngle / 5) * 5;
     }
-    activeRotateDrag.obj.angleDeg = normalizeAngle(-nextAngle);
-    drawObject(activeRotateDrag.obj);
+    drag.obj.angleDeg = normalizeAngle(-nextAngle);
+    drawObject(drag.obj);
     return;
   }
   if (activeObjectDrag) {
@@ -2947,6 +3108,9 @@ map.on('mousemove', e => {
         // angleDeg untouched — spacing and angles preserved
         drawObject(m);
       });
+      if (rotateHandleLayer) {
+        rotateHandleLayer.setLatLng(getGroupRotateHandleSeatAtRest(movers));
+      }
       drag.snapAnchorId = null;
       drag.snapAnchorAxis = null;
       drag.snapMoverAxis = null;
@@ -3037,6 +3201,19 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
   scrollPlacedListToObject(obj.id);
   scheduleOverlapSummary();
   scheduleSaveSession();
+}
+
+/** Multi-member drag/rotate in progress — per-frame setLatLng owns rotate-seat mid-gesture. */
+function isMultiMemberGestureActive() {
+  if (activeObjectDrag) {
+    const movers = activeObjectDrag.movers || (activeObjectDrag.obj ? [activeObjectDrag.obj] : []);
+    return movers.length > 1;
+  }
+  if (activeRotateDrag) {
+    const movers = activeRotateDrag.movers || (activeRotateDrag.obj ? [activeRotateDrag.obj] : []);
+    return movers.length > 1;
+  }
+  return false;
 }
 
 function drawObject(obj) {
@@ -3145,7 +3322,16 @@ function drawObject(obj) {
   bindSelect(obj.layer);
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
   syncRoleLabel(obj);
-  if (isSelected(obj.id) && obj.id === primaryId) syncRotateHandle();
+  if (isSelected(obj.id) && obj.id === primaryId) {
+    if (isMultiMemberGestureActive()) {
+      // ✕ is primary-anchored — lightweight re-seat during multi-member move or rotate.
+      if (deleteHandleLayer) {
+        deleteHandleLayer.setLatLng(getDeleteHandleLatLng(obj));
+      }
+    } else {
+      syncRotateHandle();
+    }
+  }
   // Re-apply overlap/selection strokes after layer rebuild (rAF-coalesced; live during drag/rotate).
   scheduleOverlapSummary();
 }
