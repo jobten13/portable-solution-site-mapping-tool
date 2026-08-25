@@ -1,49 +1,51 @@
 # Portable Solution Site Mapping Tool
 
-Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**1.3.0-dev**, `lastUpdated` **2026-08-12** in `APP_META`).
+Web-based site planning tool for placing field hospital and tent footprints on real-world maps at true scale. Single-file HTML app (v**1.4.0-dev**, `lastUpdated` **2026-08-25** in `APP_META`).
 
 **Primary file:** `Portable-Solution-Site-Mapping-Tool.html` — open in any modern browser. Version badge bottom-right reads from `APP_META.version`.
 
-## Current release (1.3.0-dev)
+## Current release (1.4.0-dev)
 
 | Area | What you get |
 |------|----------------|
 | **Map** | Esri satellite (default), street basemap toggle, hybrid place labels, live zoom/scale (`1:n`), cursor coordinates overlay |
-| **Catalog** | **Nine** tabs — eight vendors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot) plus **Power** (Generator 70 kVA). Spec-based footprints; **20** standard-visible models (**16** extended-hidden in data layer). See [Vendor catalog](#vendor-catalog) |
+| **Catalog** | **Nine** tabs — eight vendors (BLU-MED, Western Shelter, DLX, ZUMRO, HDT, Craftsmen, FORTS, WillScot) plus **Power** (Generator 70 kVA on trailer — MQ Power card identity; planning tab grouping, not procurement). Spec-based footprints; **20** standard-visible models (**16** extended-hidden in data layer). Catalog bed counts show an explicit **beds** unit. See [Vendor catalog](#vendor-catalog) |
 | **Cards / roles** | Two-line catalog cards (model + sticky per-card role); **Custom…** create-anywhere; Catalog **⚙** manages custom roles. Catalog labels are locked (vendor + model). Label & Style is style-only (color, Options) |
 | **Shapes** | Rectangle, octagon, cut-corner rectangle, cut-corner square, plus (hub) — plus **Custom Size** rectangles (`ellipse` supported in drawing code for legacy plans; not in current catalog) |
 | **Placement** | Catalog: click model → click map; **stays armed** for another of the same model. Disarm: readout **✕**, **Esc**, re-click armed card, or click a placed object. **Custom Size** remains one-shot |
-| **On-map role text** | At high zoom (`z ≥ 20`), role-only labels on footprints (min shorter edge ~48px; rotates; runs along long axis). Roleless / "—" = none. Hover tooltip unchanged |
-| **Snap** | Header **Snap** toggle (off by default): while on, dragging near another face pulls flush and matches rotation. Hold **Ctrl/Cmd** to suppress; **Esc** turns Snap off |
-| **Spacing** | Per-object clearance buffer (0–30 ft, presets); dashed ring; **footprint** (red) vs **buffer** (amber) advisories; **Intentional** for accepted buffer-only conflicts |
-| **Overlap UI** | Status bar counts, sidebar warning, map **pill** (click scrolls to first flagged row) |
-| **Placed totals** | Under Placed: bed total (toggle **All** / **Ward·ICU**), uncounted line when needed, `N sq ft (M w/ buffer)`. Header **ⓘ** opens the combined totals caveat (utilities excluded; bed figures are manufacturer recommendations — actual capacity varies with site-specific use) |
-| **Custom Size** | Width / length; optional **Beds**; optional label; Place Custom → click map |
-| **Start Here** | Header button opens a short how-to anytime (not a one-time popup) |
+| **On-map role text** | At high zoom (`z ≥ 20`), role-only labels on footprints when a role is set (rotates; runs along long axis). Roleless / "—" = none. Hover tooltip unchanged |
+| **Selection** | Click to select; **Shift**, **Ctrl**, or **Cmd**+click toggles membership; **Ctrl/Cmd+A** selects all. Selected footprint(s) show a **double-outline** blue underlay. Readout: identity (N=1), both names (N=2), or count (N≥3). **Esc** or empty-map click clears selection (also leaves place/measure modes and turns Snap off) |
+| **Group edit** | **Rigid group move** (N>1): drag any member; spacing preserved; one undo step. **Rigid group rotate**: shared **↻** handle pivots about centroid; Shift = 5° steps; one undo step. **Group delete**: shared map **✕** for N>1 ("Delete N structures?"); **Delete** / **Backspace** key. **List ✕** always deletes **that row's structure only** (identity confirm), even when it is part of a multi-selection |
+| **Snap** | Header **Snap** toggle (off by default): while on, dragging near another face pulls flush; intent angle (pre-drag) quantized to nearest 0°/90° relative to the anchor — not forced co-rotation. Hold **Ctrl/Cmd** while dragging to suppress; **Esc** turns Snap off. **Snap is off during multi-selection moves** (N>1) |
+| **Spacing** | Per-object clearance buffer (0–30 ft, presets); dashed ring; **Apply to Selected** and **Apply to All**; **footprint** (red) vs **buffer** (amber) advisories; **Intentional** for accepted buffer-only conflicts |
+| **Overlap UI** | Status bar counts, sidebar warning, map **pill** (click scrolls to first flagged row). Advisories **recompute live during drag and rotate** |
+| **Placed totals** | Under Placed: bed total (toggle **All** / **Ward·ICU**), uncounted line when needed, `N sq ft (M w/ buffer)`. Header **ⓘ** opens the combined totals caveat (utilities excluded; bed figures are manufacturer recommendations — actual capacity varies with site-specific use). **▾** expands list (220px ↔ ~60% sidebar height, session-only) |
+| **Custom Size** | Width / length; optional **Beds** (single value or min/max range); optional label; Place Custom → click map |
+| **Start Here** | Header button opens a short how-to anytime (not a one-time popup; in-app copy is still a placeholder) |
 | **Feedback** | Map-floating ongoing-state readout (place / measure / selection); toast confirmations for one-offs |
-| **Measure** | Distance and area (header **Measure ▾**) |
-| **Persistence** | Debounced **autosave** to `localStorage`; **Restore Autosave** (manual); **Save Plan** / **Open Plan** (portable JSON) |
-| **Export** | GeoJSON; **Print** via Ctrl/Cmd+P (current map view + print strip; enable background graphics for satellite) |
-| **Undo** | Up to 50 steps (place, move, rotate, delete, role, buffer-to-all, clear all) — Ctrl+Z / Ctrl+Y |
+| **Measure** | Distance and area (header **Measure ▾**); readout strip centered under the button; measurement labels offset off the geometry |
+| **Persistence** | Debounced **autosave** to `localStorage`; **Restore Autosave** (manual; restores saved map view, with fit-to-placed-bounds fallback only when no structure is visible); **Save Plan** / **Open Plan** (portable JSON) |
+| **Export / print** | GeoJSON; header **Print** or **Ctrl/Cmd+P** (current map view + print totals strip; enable background graphics for satellite) |
+| **Undo** | Up to 50 steps (place, move, rotate, delete, role, buffer-to-selected, buffer-to-all, clear all, group move/rotate/delete) — Ctrl+Z / Ctrl+Y |
 | **Offline** | Banner warns when connection is lost; the tool requires internet to function |
 | **A11y** | Keyboard shortcuts, focus styles, `aria-label` / `title` on controls, overlap pill keyboard support |
 
 **Load behavior:** Each open starts at the default map view (NYC area) with an empty layout. Previous work is **not** applied automatically — use **Restore Autosave** or **Open Plan**. Autosave still runs in the background and updates the **Autosaved …** timestamp when valid data exists in this browser.
 
-**Hover hints (v1.3.0-dev):** Control `title` text and map tooltips match current behavior — including fresh-open/autosave, footprint vs buffer overlap, ambient Snap, and delete confirm on map and placed list.
+**Hover hints (v1.4.0-dev):** Control `title` text and map tooltips match current behavior — including fresh-open/autosave, footprint vs buffer overlap, ambient Snap, multi-select, and delete confirm on map and placed list.
 
 ## Quick Start Card
 
 - **Start Here** (header) for a short orientation anytime.
-- Search site (address/place or `lat, lng`). *Most controls show a short **`title`** on hover; the overlap **pill** also has a full explanation via `title` / `aria-label`.*
-- Open a **Catalog** tab; set the role on the card if needed; under **Options ▾** set rotation + **clearance buffer** (feet) as needed. Buffer **> 0** draws the dashed clearance ring and enables **amber (buffer) advisories** when that ring conflicts with another structure.
+- Search site (address/place or `lat, lng` — **press Enter to search**). Results prefer the current map area; when several matches exist, the first is centered and a **picker** appears to refine. *Most controls show a short **`title`** on hover; the overlap **pill** also has a full explanation via `title` / `aria-label`.*
+- Open a **Catalog** tab; set the role on the card if needed; under **Options ▾** set rotation + **clearance buffer** (feet) as needed. Buffer **> 0** draws the dashed clearance ring and enables **amber (buffer) advisories** when that ring conflicts with another structure. Use **Apply to Selected** to set the buffer on placed structure(s).
 - Click a tent model (stays in place mode), then click the map. Place more of the same model, or disarm with readout **✕** / **Esc** / re-click the card.
-- Click a placed object to select it; drag body to move, drag orange handle to rotate, red ✕ to delete (Shift+click also).
+- Click a placed object to select it; **Shift/Ctrl/Cmd+click** to add or remove from the selection; **Ctrl/Cmd+A** to select all. Drag body to move (group moves as a rigid unit when N>1). Drag the **↻** handle to rotate (**Shift** = 5°). Red map **✕** deletes the selection (identity confirm at N=1, count confirm at N≥2). List **✕** deletes that row's structure only.
 - Watch **Placed** totals (beds + sq ft) and the header **ⓘ** caveat; watch **Overlaps** in the status bar and the map **pill**.
 - Run **Measure ▾** → Distance or Area (Finish Area and Clear appear when relevant).
 - **Undo** / **Redo** in the header (or Ctrl+Z / Ctrl+Y) to step back layout changes.
-- **Autosaved …** and **Restore Autosave** in the header for local backup; **Save Plan** / **Open Plan** under **Plan**; **Export GeoJSON** under Plan; **Ctrl/Cmd+P** to print the current view (metadata strip on paper).
-- Press **Esc** to leave place/measure modes (and to turn Snap off).
+- **Autosaved …** and **Restore Autosave** in the header for local backup; **Save Plan** / **Open Plan** under **Plan**; **Export GeoJSON** under Plan; **Print** or **Ctrl/Cmd+P** to print the current view (totals strip on paper).
+- Press **Esc** to leave place/measure modes, clear selection, and turn Snap off.
 
 ## Project files
 
@@ -60,7 +62,7 @@ Web-based site planning tool for placing field hospital and tent footprints on r
 
 - **Autosave:** After each change, layout + map view are written to `localStorage` (`psmt-session`) after a 500 ms debounce.
 - **On open:** Default view only; if autosave data exists, the header shows when it was last saved and enables **Restore Autosave**.
-- **Restore Autosave:** Replaces the current layout (confirm if structures are already placed). Use after a refresh or accidental close — not a substitute for **Save Plan** when sharing or archiving.
+- **Restore Autosave:** Replaces the current layout (confirm if structures are already placed). Restores the saved map center and zoom; if structures exist but none are visible in the viewport, fits to their combined bounds (max zoom 18). Use after a refresh or accidental close — not a substitute for **Save Plan** when sharing or archiving.
 - **Save Plan / Open Plan:** Portable JSON including objects, map view, plan name, custom roles, and `intentionalBufferOverlap` per object.
 - **Undo history** is in-memory only; cleared on **Open Plan** and page refresh.
 
@@ -86,28 +88,29 @@ Dimensions follow `VENDOR_SPECS_DIGEST.md`. Default vendor colors apply on place
 
 ## Tooltips and map hints
 
-Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. Aligned with behavior as of **v1.3.0-dev**.
+Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. Aligned with behavior as of **v1.4.0-dev**.
 
 | Area | What the hint explains |
 |------|-------------------------|
-| **Autosave / Restore** | Fresh open each time; autosave is browser-only; restore is manual |
+| **Autosave / Restore** | Fresh open each time; autosave is browser-only; restore is manual; drift guard on restore |
 | **Undo / Redo** | Up to 50 steps in-session; cleared on refresh — use Restore Autosave or Save Plan |
-| **Clearance buffer** | Amber when clearance conflicts with another **footprint or** clearance ring (not only buffer-to-buffer) |
-| **Overlap pill** | Red = footprint intersect; amber = clearance conflict; **Intentional** in list for amber-only; click pill scrolls to first flagged row |
-| **Snap** | Header toggle; ambient pull-to-face while dragging; Ctrl/Cmd suppress; Esc turns Snap off |
-| **Delete** | Map ✕, list ✕, and Shift+click all **confirm**; Undo restores before refresh |
-| **Search results** | First match auto-centered (results prefer the current map area) |
+| **Clearance buffer** | Amber when clearance conflicts with another **footprint or** clearance ring (not only buffer-to-buffer); Apply to Selected / Apply to All |
+| **Overlap pill** | Red = footprint intersect; amber = clearance conflict; **Intentional** in list for amber-only; click pill scrolls to first flagged row; live during drag/rotate |
+| **Snap** | Header toggle; ambient pull-to-face while dragging; uses rotation-as-intent (0/90 vs anchor); Ctrl/Cmd suppress while dragging; Esc turns Snap off; off for group moves |
+| **Delete** | Map ✕ (singleton identity or group count confirm); list ✕ per-row identity confirm; Delete/Backspace for current selection; Undo restores before refresh |
+| **Search results** | First match auto-centered; multi-match picker when N>1; Esc or outside-click dismisses picker |
 | **Tent catalog** | Catalog tab and tent card `title` show spec notes where available |
-| **Placed footprint** | `sticky: false`; closes on drag; dimensions, role, rotation, buffer; Shift+click delete (confirm) |
-| **Rotate / delete handles** | Drag to rotate (Shift = 5°); delete confirms; Undo before refresh |
+| **Placed footprint** | `sticky: false`; closes on drag; dimensions, role, rotation, buffer; Shift/Ctrl/Cmd+click toggles selection |
+| **Rotate / delete handles** | ↻ drag to rotate (Shift = 5°); map ✕ delete confirms; Undo before refresh |
 | **Placed totals ⓘ** | Combined caveat: utilities (water, hygiene, waste) excluded from footprint totals; bed figures are manufacturer recommendations — actual capacity varies with site-specific use |
 
 ## Overlap and clearance (how it works)
 
-- **Footprint overlap (red):** Solid footprints intersect. Affected objects get a **red** outline on the map, a **red** left border in the placed list, and count toward **footprint** in the status bar. This is independent of clearance buffer.
-- **Buffer / clearance advisory (amber):** When **clearance buffer > 0** on at least one object, the **dashed** ring is tested against the other object’s footprint (and buffer–buffer where both have buffers). If footprints do **not** overlap but clearance still conflicts, those objects get an **amber** outline on the map and an **amber** left border in the list. Counts appear as **buffer** in the status bar (suffix `, N buffer`) and in the sidebar warning line.
+- **Footprint overlap (red):** Solid footprints intersect (positive intersection area in **pair-local meter space** — same frame as snap placement). Affected objects get a **red** outline on the map, a **red** left border in the placed list, and count toward **footprint** in the status bar. This is independent of clearance buffer.
+- **Buffer / clearance advisory (amber):** When **clearance buffer > 0** on at least one object, the **dashed** ring is tested in **layer pixel space** against the other object's footprint (and buffer–buffer where both have buffers). If footprints do **not** overlap but clearance still conflicts, those objects get an **amber** outline on the map and an **amber** left border in the list. Counts appear as **buffer** in the status bar (suffix `, N buffer`) and in the sidebar warning line.
 - **Intentional (buffer only):** Rows that are **amber-only** show an **Intentional** checkbox. Checking it marks that structure so it is omitted from buffer advisories (does **not** change footprint overlap). Stored in plans as `intentionalBufferOverlap` and in undo snapshots as `intentionalBuffer`.
-- **Geometry:** Overlap uses layer coordinates in the map projection (same space as Leaflet draws), including after pan/zoom, and supports non-rectangular footprints (plus, cut-corner rectangle, cut-corner square, ellipse, etc.).
+- **Live advisory:** Overlap counts and styling update during **drag and rotate** gestures (rAF-coalesced), not only on release.
+- **Geometry:** Footprint tier uses meter rings derived from layer geometry; buffer tier uses layer-pixel rings. Supports non-rectangular footprints (plus, cut-corner rectangle, cut-corner square, ellipse, etc.).
 
 ## Reference docs
 
@@ -123,6 +126,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 | Version | Date       | Notes |
 |---------|------------|-------|
+| 1.4.0-dev | 2026-08-25 | Post-1.3.0 ships: search picker + Enter placeholder; Plan naming; MQ Power generator card; placed-list expand + row cleanup; Custom bed ranges; on-map role labels zoom-only; Restore Autosave drift guard; selection exit; Apply to Selected; header Print; overlap meter-space + live advisory; selection underlay; rotation-as-intent snap. Multi-select (#21): toggle selection; rigid group move/rotate/delete; buffer-to-set; Ctrl/Cmd+A; Delete/Backspace; ↻ handle; snap off for groups. README/Quickstart/PROJECT_MAP/Notes synced. |
 | 1.3.0-dev | 2026-08-12 | Catalog import (8 vendors + Power; 36/20/16) + catalog/card redesign (cards, sticky roles, continuous placement, on-map role text, Placed totals + Ward/ICU toggle + Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (renamed Scenario Name → Plan Name; search always map-biased; scale presets removed). README/Quickstart/PROJECT_MAP/Notes synced. |
 | 1.2.0-dev | 2026-08-10 | Tier C complete — toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb). |
 | 1.1.0-dev | 2026-07-07 | Object/shape-fidelity audit complete — all five non-rect TENT_DB shapes verified: GK20 (regular octagon), GK1935 (cut-corner-rectangle), ZUMRO Quad (faithful), DLX X-HUB (cut-corner-square), HDT 8D36 (asymmetric cut-corner-rectangle). True-face snap (#6) unblocked. |
@@ -160,6 +164,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 - Snap-to-face placement ✅
 - Map overlap pill ✅
 - Catalog import + catalog/card redesign (v1.3.0-dev) ✅
+- Multi-select + group move/rotate/delete (v1.4.0-dev) ✅
 
 ### Tier 3 — Quality
 
@@ -168,6 +173,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 - Label sanitization / color normalization ✅
 - In-file constants and structured sections ✅
 - Tooltip and aria copy pass (v0.8.7–0.8.8) ✅
+- Selected footprint highlight (v1.4.0-dev) ✅
 
 ## Field operator quick guide
 
@@ -175,7 +181,7 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 - Open `Portable-Solution-Site-Mapping-Tool.html` in Chrome, Edge, or Safari (internet connection required).
 - Use **Start Here** in the header for a short orientation anytime.
-- Search by address/place or paste `lat, lng`. Address search prefers the current map area automatically.
+- Search by address/place or paste `lat, lng` (press **Enter**). Address search prefers the current map area; use the picker when several matches appear.
 - After a browser refresh, use **Restore Autosave** if you had work in progress — the map does not reload your layout automatically.
 
 ### 2) Set planning context
@@ -187,14 +193,14 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 
 - Open a **Catalog** tab and click a model (green highlight). Set role on the card if needed.
 - Click the map to place. Catalog placement **stays armed** — click again for another of the same model. Disarm with readout **✕**, **Esc**, re-click the armed card, or click a placed object.
-- Drag placed objects on the map; orange handle to rotate (**Shift** = 5°). Turn on header **Snap** to pull flush to a neighbor while dragging (Ctrl/Cmd suppresses).
-- Use **Custom Size** for non-catalog footprints (optional beds + label). Custom place is one-shot.
-- **Label & Style** → **Options ▾** for opacity, starting rotation, and clearance buffer for the *next* placement.
+- Select with click; **Shift/Ctrl/Cmd+click** toggles; **Ctrl/Cmd+A** selects all. Drag to move (groups move together). **↻** handle to rotate (**Shift** = 5°). Turn on header **Snap** to pull flush while dragging singletons (**Ctrl/Cmd** suppresses snap).
+- Use **Custom Size** for non-catalog footprints (optional beds min/max + label). Custom place is one-shot.
+- **Label & Style** → **Options ▾** for opacity, starting rotation, and clearance buffer; **Apply to Selected** updates placed structure(s).
 
 ### 4) Validate fit and spacing
 
-- Watch **Placed** running totals (beds toggle All / Ward·ICU; sq ft). Use the Placed header **ⓘ** for the combined totals caveat (utilities excluded; manufacturer bed figures).
-- Watch **Overlaps** in the status bar and the **map pill** when flagged; click the pill to jump to the first affected row.
+- Watch **Placed** running totals (beds toggle All / Ward·ICU; sq ft). Use the Placed header **ⓘ** for the combined totals caveat (utilities excluded; manufacturer bed figures). Use **▾** to expand the placed list when needed.
+- Watch **Overlaps** in the status bar and the **map pill** when flagged; advisories update while you drag or rotate. Click the pill to jump to the first affected row.
 - Use **Intentional** on amber-only rows when tight buffer placement is deliberate (does not clear red footprint overlap).
 - **Measure ▾** for distance or area checks.
 
@@ -203,18 +209,22 @@ Hover nearly any control for a `title` hint; map objects use Leaflet tooltips. A
 - **Undo** / **Redo** (Ctrl+Z / Ctrl+Y) for in-session mistakes.
 - **Save Plan** for portable backup; **Restore Autosave** for same-browser recovery.
 - **Export GeoJSON** — GIS handoff.
-- **Ctrl/Cmd+P** — prints the **current** map view; if the satellite image is missing from the print, enable *Print background graphics* in the browser's print settings.
+- **Print** or **Ctrl/Cmd+P** — prints the **current** map view with totals strip; if the satellite image is missing from the print, enable *Print background graphics* in the browser's print settings.
 
 ### Keyboard shortcuts
 
-- `Esc` — leave place/measure modes; also turns Snap off.
+- `Esc` — leave place/measure modes; clear selection; turn Snap off.
 - `/` — focus search.
+- `Ctrl/Cmd+A` — select all placed structures.
+- `Delete` / `Backspace` — delete current selection (confirm).
 - `Ctrl+Z` / `Cmd+Z` — Undo; `Ctrl+Y` or `Ctrl+Shift+Z` — Redo.
+- Hold `Ctrl/Cmd` while dragging — suppress Snap.
 
 ### Field tips
 
 - Save Plan files frequently; autosave does not sync across devices or browsers.
 - Undo history is lost on refresh — rely on autosave + Restore, or Save Plan.
+- List **✕** deletes one structure; map **✕** or Delete key follows the current selection (group delete when N≥2).
 
 ---
 
@@ -224,8 +234,7 @@ Prioritized items for future releases. See `PSMT_Project_Notes.md` for the full 
 
 | Priority | Item | Notes |
 |----------|------|-------|
-| High | **Selected object footprint highlight** | Navigation (list ↔ map) largely shipped; visual highlight on the selected footprint still open — field-observed confusion in dense layouts |
-| High | **Capacity tracking (remaining)** | **Shipped:** Placed running totals; All / Ward·ICU bed toggle (exact match; Triage excluded pending clinical input); Custom Size optional beds; manufacturer-spec bed sources with totals caveat ⓘ on the Placed header (`14d6a3c`). **Open (clinical):** whether Triage counts as bed space; whether the Ward/ICU exact-match list needs broadening (e.g. Pre-Op / Post-Op); bed numbers remain manufacturer recommendations vs site-specific use |
+| High | **Capacity tracking (remaining)** | **Shipped:** Placed running totals; All / Ward·ICU bed toggle (exact match; Triage excluded pending clinical input); Custom Size optional beds + ranges; manufacturer-spec bed sources with totals caveat ⓘ on the Placed header (`14d6a3c`). **Open (clinical):** whether Triage counts as bed space; whether the Ward/ICU exact-match list needs broadening (e.g. Pre-Op / Post-Op); bed numbers remain manufacturer recommendations vs site-specific use |
 | Medium | **Layout templates** | Load standard MSF-style starting layouts |
 | Medium | **Access corridors** | Pathways between structures |
 | Medium | **Named zones/sectors** | Grouping beyond role tags |
