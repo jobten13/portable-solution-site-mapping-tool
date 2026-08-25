@@ -689,7 +689,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <button class="scale-btn" onclick="applyBufferPreset(10, event)" title="Apply 10 ft clearance buffer — use for generators or high-traffic corridors.">High 10 ft</button>
         </div>
         <div class="inline-controls">
-          <button class="ghost" onclick="applyBufferToSelected(event)" style="flex:1;font-size:12px;" title="Set the current buffer value on the selected structure only. No confirm dialog. Use Undo (Ctrl+Z) to reverse before refreshing the page." aria-label="Apply current clearance buffer to the selected structure">Apply to Selected</button>
+          <button class="ghost" onclick="applyBufferToSelected(event)" style="flex:1;font-size:12px;" title="Set the current buffer value on every selected structure. No confirm dialog. Use Undo (Ctrl+Z) to reverse before refreshing the page." aria-label="Apply current clearance buffer to the selected structure(s)">Apply to Selected</button>
           <button class="ghost" onclick="applyBufferToAll(event)" style="flex:1;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
         </div>
       </div>
@@ -2264,32 +2264,40 @@ function applyBufferPreset(ft, evt) {
 
 function applyBufferToSelected(evt) {
   const anchor = (evt && evt.currentTarget) || null;
-  // Step 1: singleton only (01ac9dc). Multi apply is Step 4.
-  if (selectedIds.length !== 1) {
-    showActionToast(
-      selectedIds.length === 0 ? 'Select an object first' : 'Select a single structure to apply buffer',
-      anchor
-    );
+  if (!selectedIds.length) {
+    showActionToast('Select an object first', anchor);
     return;
   }
-  const o = getObjectById(primaryId);
-  if (!o) {
+  const targets = selectedIds.map(id => getObjectById(id)).filter(Boolean);
+  if (!targets.length) {
     showActionToast('Select an object first', anchor);
     return;
   }
   const bufferFt = Math.max(0, parseFloat(document.getElementById('obj-buffer').value) || 0);
-  pushStateToUndo();
-  o.bufferFt = bufferFt;
-  if (bufferFt === 0) o.intentionalBuffer = false;
-  drawObject(o);
+  pushStateToUndo(); // one snapshot for the whole selection
+  targets.forEach(o => {
+    o.bufferFt = bufferFt;
+    if (bufferFt === 0) o.intentionalBuffer = false;
+    drawObject(o);
+  });
   updateList();
   scheduleOverlapSummary();
-  showActionToast(
-    bufferFt === 0
-      ? `Buffer removed from ${formatObjectIdentity(o)}`
-      : `Buffer +${bufferFt} ft applied to ${formatObjectIdentity(o)}`,
-    anchor
-  );
+  if (targets.length === 1) {
+    const o = targets[0];
+    showActionToast(
+      bufferFt === 0
+        ? `Buffer removed from ${formatObjectIdentity(o)}`
+        : `Buffer +${bufferFt} ft applied to ${formatObjectIdentity(o)}`,
+      anchor
+    );
+  } else {
+    showActionToast(
+      bufferFt === 0
+        ? `Buffer removed from ${targets.length} structures`
+        : `Buffer applied to ${targets.length} structures`,
+      anchor
+    );
+  }
   scheduleSaveSession();
 }
 
