@@ -1943,6 +1943,7 @@ function startObjectDrag(obj, startLatlng) {
   };
   map.dragging.disable();
   if (map.boxZoom) map.boxZoom.disable();
+  if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
   mapContainer.style.cursor = 'grabbing';
 }
 
@@ -1953,6 +1954,7 @@ function endObjectDrag() {
   activeObjectDrag = null;
   map.dragging.enable();
   if (map.boxZoom) map.boxZoom.enable();
+  if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
   mapContainer.style.cursor = '';
   if (moved) {
     dragEndedAt = Date.now();
@@ -2011,6 +2013,7 @@ function startRotateDrag(obj, startLatlng) {
   }
   map.dragging.disable();
   if (map.boxZoom) map.boxZoom.disable();
+  if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
   mapContainer.style.cursor = 'crosshair';
 }
 
@@ -2020,6 +2023,7 @@ function endRotateDrag() {
   dragEndedAt = Date.now();
   map.dragging.enable();
   if (map.boxZoom) map.boxZoom.enable();
+  if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
   mapContainer.style.cursor = '';
   updateList();
   scheduleOverlapSummary();
@@ -3137,10 +3141,14 @@ map.on('zoomend', () => {
 map.on('zoom', () => {
   refreshRoleLabelVisibility();
 });
-map.on('mouseup', () => {
+function endActiveObjectGestures() {
   endObjectDrag();
   endRotateDrag();
-});
+}
+map.on('mouseup', endActiveObjectGestures);
+window.addEventListener('mouseup', endActiveObjectGestures);
+window.addEventListener('pointerup', endActiveObjectGestures);
+window.addEventListener('pointercancel', endActiveObjectGestures);
 
 // ─── Object Placement & Drawing ──────────────────────────────────────────────────
 function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angleDeg, bufferFt, vendor, extra={}) {
