@@ -224,6 +224,28 @@ button.danger:hover { background:#f85149; }
 .placed-totals-disclaimer.is-open { display:block; }
 
 .sb-section { padding:12px; border-bottom:1px solid #30363d; }
+.sb-section-header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.sb-section-header h3 { flex:1; min-width:0; }
+#sidebar.sidebar-placed-focus .sb-section-header h3 { margin-bottom:0; }
+.sb-section-focus-hint {
+  font-weight:400; text-transform:none; letter-spacing:0;
+  color:#3fb950; font-size:10px;
+}
+#sidebar.sidebar-placed-focus #sidebar-scroll {
+  flex:0 0 auto; overflow-y:visible; min-height:0;
+}
+#sidebar.sidebar-placed-focus #sidebar-placed {
+  flex:1 1 auto; min-height:0; height:auto;
+}
+#sidebar.sidebar-placed-focus .sb-section { padding:6px 12px; }
+#sidebar.sidebar-placed-focus .sb-section-body { display:none; }
+#sidebar.sidebar-placed-focus .sb-section-header {
+  cursor:pointer; border-radius:4px; margin:-2px -4px; padding:2px 4px;
+}
+#sidebar.sidebar-placed-focus .sb-section-header:hover { background:#21262d; }
+#sidebar.sidebar-placed-focus .sb-section-header:focus-visible {
+  outline:2px solid #58a6ff; outline-offset:1px;
+}
 .placed-list-expand-btn {
   flex-shrink:0;
   font-size:11px;
@@ -652,15 +674,16 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
     <div id="measure-readout" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">No measurement.</div>
 
     <!-- Catalog Tabs -->
-    <div class="sb-section">
-      <div class="catalog-header-row">
-        <h3>Catalog</h3>
+    <div class="sb-section" id="sb-section-catalog">
+      <div class="sb-section-header catalog-header-row">
+        <h3>Catalog<span id="catalog-focus-hint" class="sb-section-focus-hint"></span></h3>
         <button type="button" class="catalog-roles-btn" id="btn-catalog-roles" aria-expanded="false" aria-haspopup="true" aria-controls="manage-roles-panel" title="View and remove custom roles. Default roles cannot be removed. Removing a role does not change existing structure assignments." aria-label="Manage custom roles">⚙</button>
       </div>
       <div id="manage-roles-panel" role="region" aria-label="Manage custom roles" style="display:none;position:fixed;top:0;left:0;z-index:1002;min-width:200px;max-width:min(280px, calc(100vw - 16px));background:#21262d;border:1px solid #30363d;border-radius:6px;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
         <div id="manage-roles-list"></div>
         <p class="dim-note" style="margin-top:8px;margin-bottom:0;font-size:10px;">Removed roles stay on existing structures.</p>
       </div>
+      <div class="sb-section-body">
       <div class="vendor-tabs" id="vendor-tabs"></div>
       <div class="tent-list" id="tent-list"></div>
       <!-- INTENTIONAL: extended-catalog toggle is hidden until deliberately revealed (display:none by design).
@@ -672,12 +695,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <input type="checkbox" id="chk-extended-catalog" aria-label="Show extended catalog" /> Show extended catalog
         </label>
       </div>
+      </div>
     </div>
 
     <!-- Properties -->
-    <div class="sb-section">
-      <h3>Label & Style</h3>
-
+    <div class="sb-section" id="sb-section-style">
+      <div class="sb-section-header">
+        <h3>Label &amp; Style</h3>
+      </div>
+      <div class="sb-section-body">
       <label title="Click a swatch to set color for the next placement. Choosing a tent from the catalog still applies the vendor default until you pick a swatch.">Color</label>
       <div class="color-row" id="color-swatches" role="group" aria-label="Color for next placement"></div>
 
@@ -704,11 +730,15 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
           <button class="ghost" onclick="applyBufferToAll(event)" style="flex:1;font-size:12px;" title="Set the current buffer value on every placed structure. Confirm dialog shown. Use Undo (Ctrl+Z) to reverse before refreshing the page.">Apply Buffer to All Placed</button>
         </div>
       </div>
+      </div>
     </div>
 
     <!-- Custom shape -->
-    <div class="sb-section">
-      <h3>Custom Size</h3>
+    <div class="sb-section" id="sb-section-custom">
+      <div class="sb-section-header">
+        <h3>Custom Size</h3>
+      </div>
+      <div class="sb-section-body">
       <p style="font-size:11px;color:#8b949e;margin-bottom:6px;">Enter dimensions, then click the map to place.</p>
       <div style="display:flex;gap:6px;">
         <div style="flex:1">
@@ -732,16 +762,21 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
       </div>
       <input type="text" id="custom-label" placeholder="Label..." style="margin-top:6px;" aria-label="Custom shelter label" title="Label for this custom structure. Appears on the map tooltip and placed list." />
       <button class="blue" onclick="startCustomPlace()" style="width:100%;margin-top:6px;font-size:12px;" title="Place a rectangle with the dimensions above. Click this button then click the map to position it.">Place Custom</button>
+      </div>
     </div>
 
     <!-- Plan -->
-    <div class="sb-section">
-      <h3>Plan</h3>
+    <div class="sb-section" id="sb-section-plan">
+      <div class="sb-section-header">
+        <h3>Plan</h3>
+      </div>
+      <div class="sb-section-body">
       <label>Plan Name</label>
       <input type="text" id="operation-name" placeholder="e.g. West Lawn 40-bed layout" aria-label="Plan name" title="Name for this layout. Used on Save Plan / Open Plan, and print footer. Distinguishes what-if layouts for the same site." />
       <button class="blue" onclick="saveScenario()" style="width:100%;margin-top:8px;" title="Download layout as a JSON file to reopen, share, or archive. Use regularly — autosave is browser-only and can be lost if storage is cleared.">Save Plan</button>
       <button class="ghost" onclick="loadScenarioPrompt()" style="width:100%;margin-top:4px;" title="Load a saved plan file. If structures are placed, you will be asked to confirm before your layout is replaced.">Open Plan</button>
       <button class="ghost" onclick="exportGeoJSON(event)" style="width:100%;margin-top:4px;" title="Download footprints, labels, and zone data as GeoJSON. For handoff to GIS coordinators or logistics teams.">Export GeoJSON</button>
+      </div>
     </div>
 
     </div><!-- /sidebar-scroll -->
@@ -755,7 +790,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
             <button type="button" class="placed-totals-info" id="placed-totals-info" aria-label="Totals disclaimer" aria-expanded="false" title="Totals caveat: utilities excluded; bed figures are manufacturer recommendations.">ⓘ</button>
           </div>
           <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-            <button type="button" class="ghost placed-list-expand-btn" id="btn-placed-list-expand" aria-expanded="false" aria-controls="obj-list-items" aria-label="Expand placed list" title="Expand placed list">▾</button>
+            <button type="button" class="ghost placed-list-expand-btn" id="btn-placed-list-expand" aria-expanded="false" aria-controls="sidebar" aria-label="Focus on placed list" title="Focus on placed list">▾</button>
             <button class="danger" onclick="clearAll(event)" style="font-size:10px;padding:3px 8px;" title="Remove all placed structures. Confirm dialog shown. Use Undo (Ctrl+Z) to restore before refreshing the page.">Clear All</button>
           </div>
         </div>
@@ -1121,9 +1156,10 @@ let activeObjectDrag = null;
 let snapModeEnabled = false;
 /** Session-only Placed bed total filter: 'all' | 'wardIcu'. Not persisted. */
 let bedsTotalMode = 'all';
-/** Session-only Placed list expand: compact 220px vs ~60% sidebar height. Not persisted. */
-const PLACED_LIST_HEIGHT_COMPACT_PX = 220;
-let placedListExpanded = false;
+/** Session-only Placed list focus mode: fold upper sidebar sections; Placed takes flex:1. Not persisted. */
+let placedListFocusMode = false;
+/** Set by initCatalogRolesPopover — closes ⚙ panel when focus engages. */
+let closeManageRolesPanel = null;
 let dragEndedAt = 0;
 let pickerDismissedAt = 0;
 let activeRotateDrag = null;
@@ -1549,6 +1585,7 @@ function startPlacing() {
   map.dragging.disable();
   map.getContainer().style.cursor = 'crosshair';
   setMode(`Click to place ${catalogPlacementLabel(selectedTent, selectedTent.vendor)}`);
+  updateCatalogFocusHint();
 }
 
 function startCustomPlace() {
@@ -1558,6 +1595,7 @@ function startCustomPlace() {
   map.dragging.disable();
   map.getContainer().style.cursor = 'crosshair';
   setMode('Click to place custom shelter');
+  updateCatalogFocusHint();
 }
 
 function cancelPlacing() {
@@ -1569,6 +1607,7 @@ function cancelPlacing() {
   selectedTent = null;
   if (hadSelection) renderTentList();
   setMode('View Mode');
+  updateCatalogFocusHint();
 }
 
 const ACTION_TOAST_DURATION_MS = 2800;
@@ -4074,50 +4113,91 @@ function wirePlacedTotalsInfo() {
   });
 }
 
-function getPlacedListExpandedHeightPx() {
-  const sidebar = document.getElementById('sidebar');
-  if (!sidebar) return PLACED_LIST_HEIGHT_COMPACT_PX;
-  return Math.round(sidebar.clientHeight * 0.6);
+function getCatalogFocusHintText() {
+  if (!placingMode) return '';
+  if (customMode) return ' · Custom armed';
+  if (selectedTent) return ' · ' + catalogPlacementLabel(selectedTent, selectedTent.vendor) + ' armed';
+  return '';
 }
 
-function updatePlacedListExpandUI() {
-  const panel = document.getElementById('sidebar-placed');
+function updateCatalogFocusHint() {
+  const hintEl = document.getElementById('catalog-focus-hint');
+  if (!hintEl) return;
+  hintEl.textContent = placedListFocusMode ? getCatalogFocusHintText() : '';
+}
+
+function syncSidebarFocusHeaderA11y() {
+  document.querySelectorAll('#sidebar-scroll .sb-section-header').forEach(header => {
+    const title = header.querySelector('h3');
+    const name = title ? title.childNodes[0].textContent.trim() : 'Section';
+    if (placedListFocusMode) {
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('role', 'button');
+      header.setAttribute('title', 'Show full sidebar');
+      header.setAttribute('aria-label', name + ' — show full sidebar');
+    } else {
+      header.removeAttribute('tabindex');
+      header.removeAttribute('role');
+      header.removeAttribute('title');
+      header.removeAttribute('aria-label');
+    }
+  });
+}
+
+function updatePlacedListFocusUI() {
+  const sidebar = document.getElementById('sidebar');
   const btn = document.getElementById('btn-placed-list-expand');
-  if (panel) {
-    panel.style.height = placedListExpanded
-      ? (getPlacedListExpandedHeightPx() + 'px')
-      : '';
-  }
+  if (sidebar) sidebar.classList.toggle('sidebar-placed-focus', placedListFocusMode);
+  if (placedListFocusMode && closeManageRolesPanel) closeManageRolesPanel();
+  updateCatalogFocusHint();
+  syncSidebarFocusHeaderA11y();
   if (btn) {
-    btn.textContent = placedListExpanded ? '▴' : '▾';
-    btn.setAttribute('aria-expanded', String(placedListExpanded));
-    const label = placedListExpanded ? 'Collapse placed list' : 'Expand placed list';
+    btn.textContent = placedListFocusMode ? '▴' : '▾';
+    btn.setAttribute('aria-expanded', String(placedListFocusMode));
+    const label = placedListFocusMode ? 'Show full sidebar' : 'Focus on placed list';
     btn.setAttribute('aria-label', label);
     btn.title = label;
   }
 }
 
-function togglePlacedListExpand() {
-  placedListExpanded = !placedListExpanded;
-  updatePlacedListExpandUI();
+function exitPlacedListFocusMode() {
+  if (!placedListFocusMode) return;
+  placedListFocusMode = false;
+  updatePlacedListFocusUI();
 }
 
-function onPlacedListResize() {
-  if (!placedListExpanded) return;
-  updatePlacedListExpandUI();
+function togglePlacedListFocusMode() {
+  placedListFocusMode = !placedListFocusMode;
+  updatePlacedListFocusUI();
 }
 
-function wirePlacedListExpand() {
+function wirePlacedListFocus() {
   const btn = document.getElementById('btn-placed-list-expand');
-  if (!btn || btn._psmtPlacedExpandWired) return;
-  btn._psmtPlacedExpandWired = true;
+  if (!btn || btn._psmtPlacedFocusWired) return;
+  btn._psmtPlacedFocusWired = true;
   btn.addEventListener('click', ev => {
     ev.preventDefault();
     ev.stopPropagation();
-    togglePlacedListExpand();
+    togglePlacedListFocusMode();
   });
-  window.addEventListener('resize', onPlacedListResize);
-  updatePlacedListExpandUI();
+  document.querySelectorAll('#sidebar-scroll .sb-section-header').forEach(header => {
+    header.addEventListener('click', ev => {
+      if (!placedListFocusMode) return;
+      exitPlacedListFocusMode();
+    });
+    header.addEventListener('keydown', ev => {
+      if (!placedListFocusMode) return;
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        exitPlacedListFocusMode();
+      }
+    });
+  });
+  const rolesBtn = document.getElementById('btn-catalog-roles');
+  if (rolesBtn) {
+    rolesBtn.addEventListener('click', ev => ev.stopPropagation());
+  }
+  updatePlacedListFocusUI();
 }
 
 /** Scroll the placed-list row for id into view. Does not reorder objects[]. */
@@ -5123,6 +5203,7 @@ rebuildManageRolesPanel();
     panel.style.display = 'none';
     btn.setAttribute('aria-expanded', 'false');
   }
+  closeManageRolesPanel = closePanel;
   function openPanel() {
     rebuildManageRolesPanel();
     panel.style.display = 'block';
@@ -5145,7 +5226,7 @@ renderVendorTabs();
 renderTentList();
 wirePlacedTotalsBedsToggle();
 wirePlacedTotalsInfo();
-wirePlacedListExpand();
+wirePlacedListFocus();
 wireCustomBedsOrderWarning();
 updatePlacedTotals();
 updateOfflineBanner();
