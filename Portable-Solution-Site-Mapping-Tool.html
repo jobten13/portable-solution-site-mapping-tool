@@ -886,7 +886,9 @@ const MAX_LABEL_LENGTH = 80;
 const SESSION_KEY = 'psmt-session';
 const STORAGE_KEY_OPTIONS = 'psmt_options_open';
 const CUSTOM_ROLES_KEY = 'psmt-custom-roles';
-const ROLES = ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue'];
+const ROLES = ['—', 'Triage', 'Ward', 'ICU', 'Pharmacy', 'Support', 'Morgue', 'Ramp'];
+/** Session-only: catalog model ids that already showed the ramp-required placement toast. */
+const rampRequiredToastShown = new Set();
 /** Sentinel option value for create-anywhere custom role (not a stored role string). */
 const CUSTOM_ROLE_OPTION_VALUE = '__psmt_custom__';
 const CUSTOM_ROLE_OPTION_LABEL = 'Custom…';
@@ -1082,6 +1084,7 @@ const TENT_DB = {
     { id:"craftsmen-8bed-icu", name:"8-Bed ICU Trailer", tier:"standard", structure:"hard-sided",
       widthFt:22.5, lengthFt:53, shape:"rect",
       fidelity:"unconfirmed",
+      rampRequired: true,
       bedCapacity: { value: 8, display: "8", provenance: "PSC combined catalog / data.js" },
       provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Mapped footprint = EXPANDED 53'×22.5' (closed 53'×8.5' reference-only, unusable closed). Transfer craftsmen-8bed-icu.",
       note:"8-Bed ICU Trailer – expanded 53'×22.5' (1192.5 sq ft); closed 53'×8.5' preserved for reference only. Elevated structure; ramp entrance required; ramp run is grade-dependent." },
@@ -1090,6 +1093,7 @@ const TENT_DB = {
     { id:"forts-38", name:"Model 38", tier:"standard", structure:"hard-sided",
       widthFt:18, lengthFt:20, shape:"rect",
       fidelity:"unconfirmed",
+      rampRequired: true,
       bedCapacity: {
         value: { min: 2, max: 3 },
         display: "~2 to 3",
@@ -1103,6 +1107,7 @@ const TENT_DB = {
     { id:"wilscot-patient", name:"Patient Unit", tier:"standard", structure:"hard-sided",
       widthFt:23.5, lengthFt:60, shape:"rect",
       fidelity:"unconfirmed",
+      rampRequired: true,
       bedCapacity: {
         value: { min: 6, max: 10 },
         display: "6 to 10",
@@ -1114,6 +1119,7 @@ const TENT_DB = {
     { id:"wilscot-staff", name:"Staff Unit", tier:"standard", structure:"hard-sided",
       widthFt:11.75, lengthFt:60, shape:"rect",
       fidelity:"unconfirmed",
+      rampRequired: true,
       bedCapacity: { value: null, display: null, provenance: "data.js — staff/flex space, no patient beds" },
       provenance: "Source: PSC, specs provided by another performer team; no OEM sheet or independent corroboration as of import. Exterior 11.75'×60'. Transfer wilscot-staff.",
       note:"Staff Unit – 11'9\"×60' (705 sq ft); flex/support, no patient beds. Intended to pair with Patient Unit via central hallway (planner arranges; supports mixed deployments). Elevated structure; ramp entrance required; ramp run is grade-dependent." },
@@ -1590,6 +1596,8 @@ function cancelPlacing() {
 
 const ACTION_TOAST_DURATION_MS = 2800;
 const SPATIAL_TOAST_DURATION_MS = 2200;
+/** Longer dwell for the ramp-required instructional sentence (~90 chars). */
+const RAMP_REQUIRED_TOAST_DURATION_MS = 5000;
 let toastHideTimer = null;
 
 function clearToasts() {
@@ -1646,8 +1654,8 @@ function showActionToast(message, anchorEl) {
   scheduleToastHide(ACTION_TOAST_DURATION_MS);
 }
 
-/** Transient confirmation at a map lat/lng (container-projected). pointer-events none via CSS. */
-function showSpatialToast(message, latlng) {
+/** Transient confirmation at a map lat/lng (container-projected). pointer-events none via CSS. Optional durationMs overrides SPATIAL_TOAST_DURATION_MS. */
+function showSpatialToast(message, latlng, durationMs) {
   clearToasts();
   const toast = document.getElementById('spatial-toast');
   if (!toast || !latlng || typeof map === 'undefined' || !map) return;
@@ -1659,7 +1667,7 @@ function showSpatialToast(message, latlng) {
   const top = mapRect.top + pt.y - toast.offsetHeight - 10;
   clampToastPosition(toast, left, top);
   requestAnimationFrame(() => { toast.classList.add('psmt-toast-visible'); });
-  scheduleToastHide(SPATIAL_TOAST_DURATION_MS);
+  scheduleToastHide(durationMs != null ? durationMs : SPATIAL_TOAST_DURATION_MS);
 }
 
 function syncMapStateReadout(txt) {
@@ -3040,6 +3048,10 @@ map.on('click', e => {
   const color = getVendorColor(vendor);
   placeObject(e.latlng, label, shape, widthFt * FT_TO_M, lengthFt * FT_TO_M, color, opacity, angleDeg, bufferFt, vendor, extra);
 
+  if (!customMode && selectedTent) {
+    maybeShowRampRequiredToast(selectedTent, e.latlng);
+  }
+
   // Catalog: stay armed for continuous placement. Custom Size: one-shot disarm (unchanged).
   if (customMode) {
     cancelPlacing();
@@ -3916,8 +3928,12 @@ function bedContributionFromTent(tent) {
  * Resolve bed contribution for totals.
  * hasSource false → uncounted (no catalog match and no customBeds).
  * Custom + customBeds (number or {min,max}, incl. 0) is a source; catalog match (even null beds) is a source.
+ * Role Ramp is always a zero-bed source (never uncounted).
  */
 function resolveBedContribution(obj) {
+  if (obj && String(obj.role || '') === 'Ramp') {
+    return { hasSource: true, min: 0, max: 0, isRange: false };
+  }
   if (obj && obj.vendor === 'Custom') {
     const beds = normalizeCustomBeds(obj.customBeds);
     if (beds != null) {
@@ -3931,6 +3947,17 @@ function resolveBedContribution(obj) {
   if (!tent) return { hasSource: false, min: 0, max: 0, isRange: false };
   const c = bedContributionFromTent(tent);
   return { hasSource: true, min: c.min, max: c.max, isRange: c.isRange };
+}
+
+function maybeShowRampRequiredToast(tent, latlng) {
+  if (!tent || !tent.rampRequired || !tent.id) return;
+  if (rampRequiredToastShown.has(tent.id)) return;
+  rampRequiredToastShown.add(tent.id);
+  showSpatialToast(
+    'Elevated unit — place a Custom Size footprint and set role to Ramp for the entrance ramp.',
+    latlng,
+    RAMP_REQUIRED_TOAST_DURATION_MS
+  );
 }
 
 function objectAreaSqFt(obj, withBuffer) {
@@ -4798,8 +4825,16 @@ function updateOverlapSummary() {
       const mi = getLayerMeterRing(oi.layer, originLat, originLng);
       const mj = getLayerMeterRing(oj.layer, originLat, originLng);
       if (mi && mj && polygonsFootprintOverlap2D(mi, mj)) {
-        footprintIds.add(oi.id);
-        footprintIds.add(oj.id);
+        // Exactly one Ramp → file as buffer-tier (amber / Intentional); ramp–ramp and all other pairs stay red.
+        const rampI = String(oi.role || '') === 'Ramp';
+        const rampJ = String(oj.role || '') === 'Ramp';
+        if (rampI !== rampJ) {
+          if (!oi.intentionalBuffer) bufferIds.add(oi.id);
+          if (!oj.intentionalBuffer) bufferIds.add(oj.id);
+        } else {
+          footprintIds.add(oi.id);
+          footprintIds.add(oj.id);
+        }
         continue;
       }
       // Buffer advisory: layer-pixel touch/overlap (unchanged); any clearance zone vs other footprint, or buffer vs buffer.
