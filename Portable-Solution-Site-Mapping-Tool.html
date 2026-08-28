@@ -889,6 +889,8 @@ const ESC_SUPPRESS_MS = 250;        // Ignore terminal Esc shortly after search-
 const SNAP_PROXIMITY_K = 0.4;           // engage ∝ max(widthM, lengthM)
 const SNAP_PROXIMITY_FLOOR_M = 0.75;    // minimum engage distance (m)
 const SNAP_PROXIMITY_CEILING_M = 4;     // maximum engage distance (m); was flat default
+/** Skip degenerate footprint edges (zero-cut collapse); GK1935 chamfers (~2.3 m) stay in. */
+const SNAP_MIN_EDGE_LEN_M = 0.2;
 /** Extra meters beyond half footprint size for rotate/delete handles (keep controls off the tent body). */
 const HANDLE_OUTSIDE_PADDING_M = 14;
 /** Pixel offset for tent info tooltip (direction 'top' → shift further above the shape). */
@@ -2009,8 +2011,7 @@ function startObjectDrag(obj, startLatlng) {
     startCenters,
     startAngleDeg: normalizeAngle(obj.angleDeg || 0),
     snapAnchorId: null,
-    snapAnchorAxis: null,
-    snapMoverAxis: null,
+    snapFaceMid: null,
     moved: false
   };
   map.dragging.disable();
@@ -2021,7 +2022,7 @@ function startObjectDrag(obj, startLatlng) {
 
 function endObjectDrag() {
   if (!activeObjectDrag) return;
-  const { obj, movers, moved, snapAnchorId, snapAnchorAxis, snapMoverAxis } = activeObjectDrag;
+  const { obj, movers, moved, snapAnchorId, snapFaceMid } = activeObjectDrag;
   const groupN = (movers && movers.length) || 1;
   activeObjectDrag = null;
   map.dragging.enable();
@@ -2037,10 +2038,10 @@ function endObjectDrag() {
     } else if (snapAnchorId != null) {
       const anchor = getObjectById(snapAnchorId);
       if (anchor && objects.includes(anchor)) {
-        const faceMid = getNearestFaceMidpointLatLng(anchor, obj.latlng);
+        const faceMid = snapFaceMid || getSnapFaceMidpointLatLng(anchor, obj.latlng);
         if (faceMid) {
           showSpatialToast(
-            `Snapped to ${formatObjectIdentity(anchor)} — ${snapAnchorAxis}↔${snapMoverAxis}`,
+            `Snapped to ${formatObjectIdentity(anchor)}`,
             faceMid
           );
         }
@@ -3215,8 +3216,7 @@ map.on('mousemove', e => {
         rotateHandleLayer.setLatLng(getGroupRotateHandleSeatAtRest(movers));
       }
       drag.snapAnchorId = null;
-      drag.snapAnchorAxis = null;
-      drag.snapMoverAxis = null;
+      drag.snapFaceMid = null;
       return;
     }
     const obj = drag.obj;
@@ -3231,21 +3231,18 @@ map.on('mousemove', e => {
         obj.latlng = best.latlng;
         obj.angleDeg = best.angleDeg;
         drag.snapAnchorId = best.anchor.id;
-        drag.snapAnchorAxis = best.anchorAxis;
-        drag.snapMoverAxis = best.moverAxis;
+        drag.snapFaceMid = best.faceMid;
       } else {
         obj.latlng = freeLatLng;
         obj.angleDeg = drag.startAngleDeg;
         drag.snapAnchorId = null;
-        drag.snapAnchorAxis = null;
-        drag.snapMoverAxis = null;
+        drag.snapFaceMid = null;
       }
     } else {
       obj.latlng = freeLatLng;
       obj.angleDeg = drag.startAngleDeg;
       drag.snapAnchorId = null;
-      drag.snapAnchorAxis = null;
-      drag.snapMoverAxis = null;
+      drag.snapFaceMid = null;
     }
     drawObject(obj);
   }
@@ -4115,11 +4112,133 @@ function roundRelativeAngleTo90(relDeg) {
 /**
  * Parallel (0/180): same-axis mate. Perpendicular (90/270): cross-axis mate.
  * Flush half is chosen from mover dims by moverAxis in the caller.
+ * True-face snap treats every anchor edge as a synthetic 'length' face in faceBearing frame.
  */
 function resolveSnapMate(anchorAxis, snappedRel) {
   const parallel = snappedRel === 0 || snappedRel === 180;
   if (parallel) return { moverAxis: anchorAxis };
   return { moverAxis: anchorAxis === 'length' ? 'width' : 'length' };
+}
+
+/**
+ * CW hull test: edge is outer if no ring vertex lies strictly left of directed A→B.
+ * Excludes plus reentrant (notch) edges; keeps all rect / cut-corner / octagon faces.
+ */
+function isClockwiseHullEdge(ring, edgeIndex, origin) {
+  const n = ring.length;
+  const a = ring[edgeIndex];
+  const b = ring[(edgeIndex + 1) % n];
+  const [ax, ay] = latlngToMeters(a.lat, a.lng, origin.lat, origin.lng);
+  const [bx, by] = latlngToMeters(b.lat, b.lng, origin.lat, origin.lng);
+  const abx = bx - ax;
+  const aby = by - ay;
+  for (let j = 0; j < n; j += 1) {
+    if (j === edgeIndex || j === (edgeIndex + 1) % n) continue;
+    const p = ring[j];
+    const [px, py] = latlngToMeters(p.lat, p.lng, origin.lat, origin.lng);
+    const cross = abx * (py - ay) - aby * (px - ax);
+    if (cross > 1e-6) return false;
+  }
+  return true;
+}
+
+/**
+ * Outer true-edge snap candidates from getFootprintEdgeRing (buffer 0).
+ * Hull filter drops plus inners; SNAP_MIN_EDGE_LEN_M drops degenerate zero-cut edges.
+ */
+function getOuterSnapEdges(obj) {
+  const ring = getFootprintEdgeRing(obj);
+  if (!ring || ring.length < 3) return [];
+  const origin = obj.latlng;
+  const out = [];
+  const n = ring.length;
+  for (let i = 0; i < n; i += 1) {
+    if (!isClockwiseHullEdge(ring, i, origin)) continue;
+    const a = ring[i];
+    const b = ring[(i + 1) % n];
+    const [ax, ay] = latlngToMeters(a.lat, a.lng, origin.lat, origin.lng);
+    const [bx, by] = latlngToMeters(b.lat, b.lng, origin.lat, origin.lng);
+    const abx = bx - ax;
+    const aby = by - ay;
+    const len = Math.hypot(abx, aby);
+    if (len < SNAP_MIN_EDGE_LEN_M) continue;
+    // CW walk: outward = left of tangent.
+    let nx = -aby / len;
+    let ny = abx / len;
+    const mx = (ax + bx) / 2;
+    const my = (ay + by) / 2;
+    if (nx * mx + ny * my < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    // Face bearing = object angleDeg whose north length-face normal equals N (pre-#31 length dir=+1).
+    const faceBearing = normalizeAngle(Math.atan2(-nx, ny) * 180 / Math.PI);
+    const [lat, lng] = metersToDeg(origin, mx, my);
+    out.push({
+      mid: L.latLng(lat, lng),
+      nx,
+      ny,
+      len,
+      faceBearing,
+      edgeIndex: i
+    });
+  }
+  return out;
+}
+
+/**
+ * Flush pose against one outer edge: midpoint attach + auto-rotate.
+ * Axis-aligned edges (∥ object length/width): pre-#31 object-relative intent / angle / half-axis
+ * so rect-to-rect is identical. Angled edges (chamfers, octagon, plus arms): face-relative.
+ */
+function proposeSnapFlushToEdge(edge, newLengthM, newWidthM, intentAngleDeg, anchorAngleDeg) {
+  const A = normalizeAngle(anchorAngleDeg || 0);
+  const rad = A * Math.PI / 180;
+  const sinA = Math.sin(rad);
+  const cosA = Math.cos(rad);
+  // Object frame axes = pre-#31 length-dir=+1 and width-dir=+1 normals.
+  const lenNx = -sinA;
+  const lenNy = cosA;
+  const widNx = cosA;
+  const widNy = sinA;
+  const dLen = edge.nx * lenNx + edge.ny * lenNy;
+  const dWid = edge.nx * widNx + edge.ny * widNy;
+  const AXIS_DOT = 0.999; // cos(~2.5°) — rect/chamfer separator
+
+  if (Math.abs(dLen) >= AXIS_DOT || Math.abs(dWid) >= AXIS_DOT) {
+    const axis = Math.abs(dLen) >= Math.abs(dWid) ? 'length' : 'width';
+    const dir = axis === 'length' ? (dLen >= 0 ? 1 : -1) : (dWid >= 0 ? 1 : -1);
+    const snappedRel = roundRelativeAngleTo90(
+      normalizeAngle((intentAngleDeg || 0) - A)
+    );
+    const { moverAxis } = resolveSnapMate(axis, snappedRel);
+    const newHalf = moverAxis === 'length' ? newLengthM / 2 : newWidthM / 2;
+    const [lat, lng] = axis === 'length'
+      ? metersToDeg(edge.mid, -newHalf * sinA * dir, newHalf * cosA * dir)
+      : metersToDeg(edge.mid, newHalf * cosA * dir, newHalf * sinA * dir);
+    return {
+      latlng: L.latLng(lat, lng),
+      angleDeg: normalizeAngle(A + snappedRel),
+      moverAxis,
+      faceMid: edge.mid,
+      edgeLen: edge.len
+    };
+  }
+
+  // Angled true face: face-relative 0/90 intent; flush along outward normal.
+  const snappedRel = roundRelativeAngleTo90(
+    normalizeAngle((intentAngleDeg || 0) - edge.faceBearing)
+  );
+  const { moverAxis } = resolveSnapMate('length', snappedRel);
+  const newHalf = moverAxis === 'length' ? newLengthM / 2 : newWidthM / 2;
+  const [lat, lng] = metersToDeg(edge.mid, edge.nx * newHalf, edge.ny * newHalf);
+  return {
+    latlng: L.latLng(lat, lng),
+    angleDeg: normalizeAngle(edge.faceBearing + snappedRel),
+    moverAxis,
+    faceMid: edge.mid,
+    edgeLen: edge.len
+  };
 }
 
 function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
@@ -4132,16 +4251,38 @@ function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
   for (const obj of objects) {
     if (obj.id === mover.id) continue;
     if (excludeSelectedPeers && isSelected(obj.id)) continue;
-    const result = getSnapAttachLatLng(obj, moverLen, moverWid, freeLatLng, intentAngleDeg);
-    if (!result) continue;
+    const edges = getOuterSnapEdges(obj);
+    if (!edges.length) continue;
+    // Same face pick as pre-#31: nearest edge midpoint to free center (length tie-break).
+    let nearest = null;
+    let nearestDist = Infinity;
+    for (let e = 0; e < edges.length; e += 1) {
+      const d = freeLatLng.distanceTo(edges[e].mid);
+      if (
+        d < nearestDist - 1e-9 ||
+        (Math.abs(d - nearestDist) <= 1e-9 && (!nearest || edges[e].len > nearest.len))
+      ) {
+        nearestDist = d;
+        nearest = edges[e];
+      }
+    }
+    if (!nearest) continue;
+    const result = proposeSnapFlushToEdge(
+      nearest, moverLen, moverWid, intentAngleDeg, obj.angleDeg || 0
+    );
     const gap = map.distance(freeLatLng, result.latlng);
-    if (gap <= engageM && (best === null || gap < best.gap)) {
+    if (gap > engageM) continue;
+    const better =
+      !best ||
+      gap < best.gap - 1e-9 ||
+      (Math.abs(gap - best.gap) <= 1e-9 && result.edgeLen > best.edgeLen);
+    if (better) {
       best = {
         anchor: obj,
         latlng: result.latlng,
         angleDeg: result.angleDeg,
-        anchorAxis: result.anchorAxis,
-        moverAxis: result.moverAxis,
+        faceMid: result.faceMid,
+        edgeLen: result.edgeLen,
         gap
       };
     }
@@ -4149,75 +4290,20 @@ function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
   return best;
 }
 
-// Nearest of target's 4 bbox face midpoints; flush offset uses mover half for the mated axis.
-// Intent angle (pre-drag) is quantized to nearest 0/90 relative to the anchor — not forced co-rotation.
-// Returns { latlng, angleDeg, anchorAxis, moverAxis }, or null if target has no usable dimensions.
-function getSnapAttachLatLng(target, newLengthM, newWidthM, clickLatlng, intentAngleDeg) {
-  const tHL = (target.lengthM != null ? target.lengthM : target.widthM) / 2;
-  const tHW = target.widthM / 2;
-  if (!tHL || tHL <= 0 || !tHW || tHW <= 0) return null;
-
-  const anchorAngleDeg = normalizeAngle(target.angleDeg || 0);
-  const rad = anchorAngleDeg * Math.PI / 180;
-  const sinA = Math.sin(rad);
-  const cosA = Math.cos(rad);
-  const center = target.latlng;
-
-  const faces = [
-    { pt: L.latLng(metersToDeg(center, -tHL * sinA, tHL * cosA)), axis: 'length', dir: 1 },
-    { pt: L.latLng(metersToDeg(center, tHL * sinA, -tHL * cosA)), axis: 'length', dir: -1 },
-    { pt: L.latLng(metersToDeg(center, -tHW * cosA, -tHW * sinA)), axis: 'width', dir: -1 },
-    { pt: L.latLng(metersToDeg(center, tHW * cosA, tHW * sinA)), axis: 'width', dir: 1 },
-  ];
-
-  let nearest = null, nearestDist = Infinity;
-  faces.forEach(f => {
-    const d = clickLatlng.distanceTo(f.pt);
-    if (d < nearestDist) { nearestDist = d; nearest = f; }
-  });
-  if (!nearest) return null;
-
-  const snappedRel = roundRelativeAngleTo90(
-    normalizeAngle((intentAngleDeg || 0) - anchorAngleDeg)
-  );
-  const { moverAxis } = resolveSnapMate(nearest.axis, snappedRel);
-  const newHalf = moverAxis === 'length' ? newLengthM / 2 : newWidthM / 2;
-  const [lat, lng] = nearest.axis === 'length'
-    ? metersToDeg(nearest.pt, -newHalf * sinA * nearest.dir, newHalf * cosA * nearest.dir)
-    : metersToDeg(nearest.pt, newHalf * cosA * nearest.dir, newHalf * sinA * nearest.dir);
-
-  return {
-    latlng: L.latLng(lat, lng),
-    angleDeg: normalizeAngle(anchorAngleDeg + snappedRel),
-    anchorAxis: nearest.axis,
-    moverAxis
-  };
-}
-
-/** Nearest face midpoint of target to nearLatLng (same face geometry as getSnapAttachLatLng). Toast-only helper. */
-function getNearestFaceMidpointLatLng(target, nearLatLng) {
-  const tHL = (target.lengthM != null ? target.lengthM : target.widthM) / 2;
-  const tHW = target.widthM / 2;
-  if (!tHL || tHL <= 0 || !tHW || tHW <= 0 || !nearLatLng) return null;
-
-  const angleDeg = normalizeAngle(target.angleDeg || 0);
-  const rad = angleDeg * Math.PI / 180;
-  const sinA = Math.sin(rad);
-  const cosA = Math.cos(rad);
-  const center = target.latlng;
-
-  const faces = [
-    L.latLng(metersToDeg(center, -tHL * sinA, tHL * cosA)),
-    L.latLng(metersToDeg(center, tHL * sinA, -tHL * cosA)),
-    L.latLng(metersToDeg(center, -tHW * cosA, -tHW * sinA)),
-    L.latLng(metersToDeg(center, tHW * cosA, tHW * sinA)),
-  ];
-
-  let nearest = null, nearestDist = Infinity;
-  faces.forEach(pt => {
-    const d = nearLatLng.distanceTo(pt);
-    if (d < nearestDist) { nearestDist = d; nearest = pt; }
-  });
+/** Toast / fallback: nearest outer-edge midpoint of target to nearLatLng. */
+function getSnapFaceMidpointLatLng(target, nearLatLng) {
+  if (!target || !nearLatLng) return null;
+  const edges = getOuterSnapEdges(target);
+  if (!edges.length) return null;
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (let i = 0; i < edges.length; i += 1) {
+    const d = nearLatLng.distanceTo(edges[i].mid);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearest = edges[i].mid;
+    }
+  }
   return nearest;
 }
 
