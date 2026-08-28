@@ -393,6 +393,19 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 #map .leaflet-interactive:focus:not(:focus-visible) { outline: none; }
 #map.map-mode-place { box-shadow: inset 0 0 0 2px #3fb950; }
 #map.map-mode-measure { box-shadow: inset 0 0 0 2px #ffa657; }
+#map.map-mode-door { box-shadow: inset 0 0 0 2px #79c0ff; }
+.opening-delete-icon {
+  background:none !important;
+  border:none !important;
+}
+.opening-delete-btn {
+  width:20px; height:20px; border-radius:50%;
+  background:#f85149; color:#fff; border:1px solid #0d1117;
+  font-size:11px; line-height:1; padding:0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.opening-delete-btn:hover { background:#ff7b72; }
+.opening-delete-btn:focus-visible { outline:2px solid #58a6ff; outline-offset:2px; }
 .map-coords-overlay {
   position:absolute; bottom:8px; right:10px; z-index:1000;
   font-size:10px; color:#8b949e; background:rgba(13,17,23,0.85);
@@ -621,7 +634,9 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   .delete-handle-wrap,
   .delete-handle-btn,
   .rotate-handle-wrap,
-  .rotate-handle-btn { display:none !important; }
+  .rotate-handle-btn,
+  .opening-delete-icon,
+  .opening-delete-btn { display:none !important; }
 }
 </style>
 </head>
@@ -639,6 +654,7 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <button type="button" class="ghost header-btn" id="btn-undo" onclick="undo()" aria-label="Undo" title="Undo last action (Ctrl+Z or Cmd+Z). Up to 50 steps in this session. Cleared on page refresh — use Restore Autosave or Save Plan.">Undo</button>
   <button type="button" class="ghost header-btn" id="btn-redo" onclick="redo()" aria-label="Redo" title="Redo last undone action (Ctrl+Y, Ctrl+Shift+Z, or Cmd+Shift+Z).">Redo</button>
   <button type="button" class="ghost header-btn" id="btn-snap-mode" aria-pressed="false" aria-label="Snap off. Turn on to pull dragged structures flush to nearby faces. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress. Off by default." title="Snap off (click to turn on). When on, dragging near another structure's face pulls flush. Orientation follows your rotation, squared to the nearest 90°. Hold Ctrl or Cmd while dragging to suppress snap. Off by default; Esc turns snap off.">Snap off</button>
+  <button type="button" class="ghost header-btn" id="btn-door-mode" aria-pressed="false" aria-label="Door mode off. Turn on to place entry marks on footprint edges." title="Door mode off (click to turn on). When on, click near a footprint edge to place an entry mark. Drag a mark along the wall to adjust; Delete or ✕ removes a selected mark. Esc exits. Continuous — keep clicking.">Door</button>
   <div class="header-tool-slot">
     <button type="button" class="ghost header-btn" id="btn-measure-menu" aria-expanded="false" aria-haspopup="true" aria-controls="measure-menu-panel" title="Measure distances or areas on the map. Use before or during placement to check site dimensions.">Measure ▾</button>
     <div id="measure-menu-panel" role="menu" style="display:none;position:fixed;top:0;left:0;z-index:1002;min-width:188px;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,0.45);">
@@ -1154,6 +1170,8 @@ let selectedColor = COLORS[0];
 let selectedTent = null;
 let placingMode = false;
 let customMode = false;
+/** Door/entry mark placement mode — exclusive with place/measure like the rest of the mode family. */
+let doorMode = false;
 let objects = [];
 let objectId = 0;
 // Measure
@@ -1198,6 +1216,12 @@ let overlapPillCycleIndex = 0;
 let overlapPillCycleKey = '';
 /** 'hidden' | 'amber' | 'red' — drives finite pulse on appear / amber→red escalation only. */
 let overlapPillTierState = 'hidden';
+/** Selected door mark: { objId, index } or null. Not persisted. */
+let selectedOpening = null;
+/** In-progress door-mark drag; one undo push at gesture start. */
+let activeOpeningDrag = null;
+/** beforeprint forces door marks visible regardless of zoom gate. */
+let printForceDoorMarks = false;
 
 // ─── Map ────────────────────────────────────────────────────────────────────────
 const map = L.map('map').setView([40.7128,-74.0060], 16);
@@ -1207,7 +1231,18 @@ const mapContainer = map.getContainer();
 map.createPane('roleLabelPane');
 map.getPane('roleLabelPane').style.zIndex = 450;
 map.getPane('roleLabelPane').style.pointerEvents = 'none';
+// Door marks: above footprints, below role labels; interactive hits must reach marks.
+map.createPane('openingPane');
+map.getPane('openingPane').style.zIndex = 440;
 const ROLE_LABEL_MIN_ZOOM = 20;
+/** On-screen door marks (print always shows via printForceDoorMarks). */
+const DOOR_MARK_MIN_ZOOM = 18;
+/** Max distance (m) from click to nearest true edge to seat a mark. */
+const DOOR_PLACE_THRESHOLD_M = 3;
+/** Target wall-break length (m); shortened on chamfers via EDGE_FRAC. */
+const DOOR_MARK_TARGET_M = 1.25;
+const DOOR_MARK_EDGE_FRAC = 0.45;
+const DOOR_MARK_HIT_WEIGHT = 14;
 const ROLE_LABEL_ICON_W = 160;
 const ROLE_LABEL_ICON_H = 40;
 const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -1563,6 +1598,7 @@ COLORS.forEach(c => {
 // ─── Place from selected tent ────────────────────────────────────────────────────
 function startPlacing() {
   if (!selectedTent) { alert('NOTICE:\nSelect a tent model first.'); return; }
+  if (doorMode) cancelDoorMode({ keepModeText: true });
   if (measureMode || areaMeasureMode) clearMeasure();
   placingMode = true;
   customMode = false;
@@ -1573,6 +1609,7 @@ function startPlacing() {
 }
 
 function startCustomPlace() {
+  if (doorMode) cancelDoorMode({ keepModeText: true });
   if (measureMode || areaMeasureMode) clearMeasure();
   placingMode = true;
   customMode = true;
@@ -1675,10 +1712,12 @@ function syncMapStateReadout(txt) {
   if (!readout) return;
   const msg = String(txt || '');
   const isPlaceArmed = msg.startsWith('Click to place');
+  const isDoorArmed = msg === 'Door Mode';
   const isOngoing =
     msg === 'Measure Mode' ||
     msg === 'Area Measure Mode' ||
     isPlaceArmed ||
+    isDoorArmed ||
     msg.startsWith('Selected ');
   readout.textContent = '';
   if (!isOngoing) {
@@ -1687,19 +1726,22 @@ function syncMapStateReadout(txt) {
   }
   const label = document.createElement('span');
   label.className = 'map-state-readout-text';
-  label.textContent = isPlaceArmed ? `${msg} — ✕ or Esc to stop` : msg;
+  label.textContent = (isPlaceArmed || isDoorArmed) ? `${msg} — ✕ or Esc to stop` : msg;
   readout.appendChild(label);
-  if (isPlaceArmed) {
+  if (isPlaceArmed || isDoorArmed) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'map-state-disarm';
-    btn.setAttribute('aria-label', 'Cancel placement');
-    btn.title = 'Cancel placement (stay in View Mode). Esc, re-click the armed catalog card, or click a placed structure also cancel.';
+    btn.setAttribute('aria-label', isDoorArmed ? 'Exit Door mode' : 'Cancel placement');
+    btn.title = isDoorArmed
+      ? 'Exit Door mode (stay in View Mode). Esc also exits.'
+      : 'Cancel placement (stay in View Mode). Esc, re-click the armed catalog card, or click a placed structure also cancel.';
     btn.textContent = '✕';
     btn.addEventListener('click', ev => {
       ev.preventDefault();
       ev.stopPropagation();
-      cancelPlacing();
+      if (isDoorArmed) cancelDoorMode();
+      else cancelPlacing();
     });
     readout.appendChild(btn);
   }
@@ -1708,11 +1750,12 @@ function syncMapStateReadout(txt) {
 
 function setMode(txt) {
   const mapEl = document.getElementById('map');
-  if (mapEl) mapEl.classList.remove('map-mode-place', 'map-mode-measure');
+  if (mapEl) mapEl.classList.remove('map-mode-place', 'map-mode-measure', 'map-mode-door');
   if (mapEl) {
     if (txt !== 'View Mode') {
       if (txt.startsWith('Click to place')) mapEl.classList.add('map-mode-place');
       else if (txt.indexOf('Measure') !== -1) mapEl.classList.add('map-mode-measure');
+      else if (txt.indexOf('Door') !== -1) mapEl.classList.add('map-mode-door');
     }
   }
   syncMapStateReadout(txt);
@@ -1739,12 +1782,14 @@ function toggleSnapMode() {
 
 function resetViewMode() {
   cancelPlacing();
+  cancelDoorMode({ keepModeText: true });
   measureMode = false;
   areaMeasureMode = false;
   snapModeEnabled = false;
   updateSnapModeUI();
   endObjectDrag();
   endRotateDrag();
+  endOpeningDrag();
   setMode('View Mode');
   clearMeasureStartMarker();
   updateMeasureUI();
@@ -1878,6 +1923,7 @@ function measureMenuPickArea(ev) {
 
 function toggleMeasureMode() {
   if (placingMode) cancelPlacing();
+  if (doorMode) cancelDoorMode({ keepModeText: true });
   areaMeasureMode = false;
   areaMeasurePoints = [];
   if (areaMeasureLayer) {
@@ -1898,6 +1944,7 @@ function toggleMeasureMode() {
 
 function toggleAreaMeasureMode() {
   if (placingMode) cancelPlacing();
+  if (doorMode) cancelDoorMode({ keepModeText: true });
   measureMode = false;
   measureStart = null;
   clearMeasureStartMarker();
@@ -1934,13 +1981,13 @@ function clearMeasure() {
     areaMeasureLayer = null;
   }
   document.getElementById('measure-readout').textContent = 'No measurement.';
-  setMode('View Mode');
-  map.getContainer().style.cursor = '';
+  if (!doorMode && !placingMode) setMode('View Mode');
+  if (!doorMode && !placingMode) map.getContainer().style.cursor = '';
   updateMeasureUI();
 }
 
 function startObjectDrag(obj, startLatlng) {
-  if (placingMode || measureMode || areaMeasureMode || activeRotateDrag) return;
+  if (placingMode || measureMode || areaMeasureMode || doorMode || activeRotateDrag || activeOpeningDrag) return;
   // Group drag when grab target is already in a multi-set (S1 collapses non-members first).
   const movers = (isSelected(obj.id) && selectedIds.length > 1)
     ? selectedIds.map(id => getObjectById(id)).filter(Boolean)
@@ -2005,7 +2052,7 @@ function endObjectDrag() {
 }
 
 function startRotateDrag(obj, startLatlng) {
-  if (placingMode || measureMode || areaMeasureMode || activeObjectDrag) return;
+  if (placingMode || measureMode || areaMeasureMode || doorMode || activeObjectDrag || activeOpeningDrag) return;
   // Group rotate when selection is multi and grab target is a member (handle seats on set).
   const movers = (isSelected(obj.id) && selectedIds.length > 1)
     ? selectedIds.map(id => getObjectById(id)).filter(Boolean)
@@ -2093,6 +2140,8 @@ function getObjectsSnapshot() {
       intentionalBuffer: !!o.intentionalBuffer
     };
     if (hasCustomBeds(o.customBeds)) snap.customBeds = o.customBeds;
+    const openings = cloneOpeningsForSnapshot(o);
+    if (openings) snap.openings = openings;
     return snap;
   });
 }
@@ -2100,21 +2149,35 @@ function getObjectsSnapshot() {
 function applySnapshot(snapshot) {
   endObjectDrag();
   endRotateDrag();
+  endOpeningDrag();
   clearSelection();
+  clearSelectedOpening();
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
     clearSelectionUnderlay(o);
     if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
+    clearOpeningLayers(o);
+    clearRampHatchLayer(o);
   });
-  objects = snapshot.map(o => ({
-    ...o,
-    latlng: L.latLng(o.latlng.lat, o.latlng.lng),
-    layer: null,
-    layerBuffer: null,
-    layerSelectionUnderlay: null,
-    roleLabelLayer: null
-  }));
+  objects = snapshot.map(o => {
+    const row = {
+      ...o,
+      latlng: L.latLng(o.latlng.lat, o.latlng.lng),
+      layer: null,
+      layerBuffer: null,
+      layerSelectionUnderlay: null,
+      roleLabelLayer: null,
+      layerRampHatch: null,
+      openingLayers: []
+    };
+    if (Array.isArray(o.openings) && o.openings.length) {
+      row.openings = o.openings.map(op => ({ edge: op.edge | 0, t: Math.max(0, Math.min(1, Number(op.t) || 0)) }));
+    } else {
+      delete row.openings;
+    }
+    return row;
+  });
   objectId = objects.length ? Math.max(...objects.map(o => o.id)) : 0;
   objects.forEach(drawObject);
   updateList();
@@ -2642,6 +2705,8 @@ function buildScenarioData() {
         intentionalBufferOverlap: !!o.intentionalBuffer
       };
       if (hasCustomBeds(o.customBeds)) row.customBeds = o.customBeds;
+      const openings = cloneOpeningsForSnapshot(o);
+      if (openings) row.openings = openings;
       return row;
     }),
     customRoles: getEffectiveRoles().filter(r => !ROLES.includes(r))
@@ -2679,6 +2744,8 @@ function exportGeoJSON(evt) {
       intentional_buffer_overlap: !!o.intentionalBuffer
     };
     if (hasCustomBeds(o.customBeds)) feature.properties.custom_beds = o.customBeds;
+    const openings = cloneOpeningsForSnapshot(o);
+    if (openings) feature.properties.openings = openings;
     return feature;
   }).filter(Boolean);
 
@@ -2965,12 +3032,22 @@ function buildObjectFromRaw(raw, idx) {
     layer: null,
     layerBuffer: null,
     layerSelectionUnderlay: null,
-    roleLabelLayer: null
+    roleLabelLayer: null,
+    layerRampHatch: null,
+    openingLayers: []
   };
   // Additive customBeds: Custom only; missing/invalid → omit field.
   if (vendor === 'Custom') {
     const beds = normalizeCustomBeds(raw.customBeds);
     if (beds != null) obj.customBeds = beds;
+  }
+  if (Array.isArray(raw.openings) && raw.openings.length) {
+    const ops = [];
+    raw.openings.forEach(op => {
+      const n = normalizeOpeningEntry(op);
+      if (n) ops.push(n);
+    });
+    if (ops.length) obj.openings = ops;
   }
   return obj;
 }
@@ -2985,9 +3062,15 @@ map.on('click', e => {
     handleMeasureClick(e.latlng);
     return;
   }
+  if (doorMode) {
+    if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+    placeOpeningAtLatLng(e.latlng);
+    return;
+  }
   if (!placingMode) {
     if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
     clearSelection();
+    clearSelectedOpening();
     const readout = document.getElementById('map-state-readout');
     const labelEl = readout && readout.querySelector('.map-state-readout-text');
     if (labelEl && String(labelEl.textContent || '').startsWith('Selected ')) {
@@ -3063,6 +3146,19 @@ map.on('click', e => {
 map.on('mousemove', e => {
   document.getElementById('cursor-pos').textContent =
     `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+  if (activeOpeningDrag) {
+    const drag = activeOpeningDrag;
+    const ring = getFootprintEdgeRing(drag.obj);
+    if (!ring || !Array.isArray(drag.obj.openings)) return;
+    const hit = projectOntoBoundary(ring, e.latlng);
+    if (!hit) return;
+    const op = drag.obj.openings[drag.index];
+    if (!op) return;
+    op.edge = hit.edge;
+    op.t = hit.t;
+    syncOpeningLayers(drag.obj);
+    return;
+  }
   if (activeRotateDrag) {
     const drag = activeRotateDrag;
     const movers = drag.movers || [drag.obj];
@@ -3166,11 +3262,19 @@ map.on('zoomend', () => {
   scheduleSaveSession();
   scheduleOverlapSummary();
   refreshRoleLabelVisibility();
+  refreshOpeningVisibility();
+  refreshRampHatches();
 });
 map.on('zoom', () => {
   refreshRoleLabelVisibility();
+  refreshOpeningVisibility();
 });
 function endActiveObjectGestures() {
+  if (activeOpeningDrag) {
+    dragEndedAt = Date.now();
+    scheduleSaveSession();
+  }
+  endOpeningDrag();
   endObjectDrag();
   endRotateDrag();
 }
@@ -3203,8 +3307,11 @@ function placeObject(latlng, label, shape, widthM, lengthM, color, opacity, angl
     layer: null,
     layerBuffer: null,
     layerSelectionUnderlay: null,
-    roleLabelLayer: null
+    roleLabelLayer: null,
+    layerRampHatch: null,
+    openingLayers: []
   };
+  if (!Array.isArray(obj.openings) || !obj.openings.length) delete obj.openings;
   objects.push(obj);
   drawObject(obj);
   setSelectedObject(obj.id);
@@ -3232,6 +3339,8 @@ function drawObject(obj) {
   if (obj.layerBuffer) { map.removeLayer(obj.layerBuffer); obj.layerBuffer = null; }
   clearSelectionUnderlay(obj);
   removeRoleLabel(obj);
+  clearOpeningLayers(obj);
+  clearRampHatchLayer(obj);
 
   const s = {
     color: obj.color,
@@ -3285,9 +3394,14 @@ function drawObject(obj) {
     offset: MAP_OBJ_TOOLTIP_OFFSET
   });
   obj.layer.addTo(map);
+  syncRampHatch(obj);
   const bindDragStart = layer => {
     layer.on('mousedown', ev => {
       if (ev.originalEvent && ev.originalEvent.button !== 0) return;
+      if (doorMode || activeOpeningDrag) {
+        L.DomEvent.stop(ev);
+        return;
+      }
       L.DomEvent.stop(ev);
       const multi = isMultiSelectModifierEvent(ev);
       // While armed, hitting a placed object disarms (no stack place on map click).
@@ -3313,6 +3427,16 @@ function drawObject(obj) {
   };
   const bindSelect = layer => {
     layer.on('click', ev => {
+      if (activeOpeningDrag) {
+        L.DomEvent.stop(ev);
+        return;
+      }
+      if (doorMode) {
+        L.DomEvent.stop(ev);
+        if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+        placeOpeningAtLatLng(ev.latlng);
+        return;
+      }
       if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
       L.DomEvent.stop(ev);
       if (placingMode) {
@@ -3323,6 +3447,7 @@ function drawObject(obj) {
       } else {
         setSelectedObject(obj.id);
       }
+      clearSelectedOpening();
       applySelectionReadout();
       updateList();
       scrollPlacedListToObject(primaryId);
@@ -3333,6 +3458,7 @@ function drawObject(obj) {
   bindSelect(obj.layer);
   if (obj.layerBuffer) bindSelect(obj.layerBuffer);
   syncRoleLabel(obj);
+  syncOpeningLayers(obj);
   if (isSelected(obj.id) && obj.id === primaryId) {
     if (isMultiMemberGestureActive()) {
       // ✕ is primary-anchored — lightweight re-seat during multi-member move or rotate.
@@ -3351,6 +3477,8 @@ function shouldShowRoleLabel(obj) {
   if (!obj) return false;
   const role = obj.role;
   if (!role || role === '—') return false;
+  // Hatch carries Ramp identity; centroid role text stacks illegibly under host structures.
+  if (role === 'Ramp') return false;
   if (map.getZoom() < ROLE_LABEL_MIN_ZOOM) return false;
   return true;
 }
@@ -3467,6 +3595,498 @@ function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
     return createGeoEllipse(obj.latlng, widthBuffered, lengthBuffered, obj.angleDeg || 0, style);
   }
   return createGeoRect(obj.latlng, widthBuffered, lengthBuffered, obj.angleDeg || 0, style);
+}
+
+// ─── Door marks + footprint edge rings (#29 Build 2) ───────────────────────────
+/** Local-meter vertex offsets (buffer 0) matching createShapeLayer / createGeo* order. */
+function getFootprintLocalOffsets(obj) {
+  if (!obj) return null;
+  const widthM = obj.widthM;
+  const lengthM = obj.lengthM != null ? obj.lengthM : obj.widthM;
+  if (!(widthM > 0) || !(lengthM > 0)) return null;
+  if (obj.shape === 'circle') {
+    const r = widthM / 2;
+    const offsets = [];
+    for (let i = 0; i < 36; i += 1) {
+      const t = (i / 36) * 2 * Math.PI;
+      // Match getLayerVertices(L.Circle): dx=east sin, dy=north cos.
+      offsets.push([r * Math.sin(t), r * Math.cos(t)]);
+    }
+    return offsets;
+  }
+  if (obj.shape === 'octagon') {
+    const hw = widthM / 2;
+    const t = widthM / (2 + Math.sqrt(2));
+    return [
+      [t - hw, hw],
+      [hw - t, hw],
+      [hw, hw - t],
+      [hw, -hw + t],
+      [hw - t, -hw],
+      [t - hw, -hw],
+      [-hw, -hw + t],
+      [-hw, hw - t]
+    ];
+  }
+  if (obj.shape === 'cut-corner-rectangle' || obj.shape === 'cut-corner-square') {
+    const hw = widthM / 2;
+    const hl = lengthM / 2;
+    const cw = (obj.cornerCutW || 0) * FT_TO_M;
+    const cl = (obj.cornerCutL || 0) * FT_TO_M;
+    return [
+      [-hw + cw, hl],
+      [hw - cw, hl],
+      [hw, hl - cl],
+      [hw, -hl + cl],
+      [hw - cw, -hl],
+      [-hw + cw, -hl],
+      [-hw, -hl + cl],
+      [-hw, hl - cl]
+    ];
+  }
+  if (obj.shape === 'plus') {
+    const hw = widthM / 2;
+    const hl = lengthM / 2;
+    const armWidthBase = obj.armWidthFt ? obj.armWidthFt * FT_TO_M : widthM * 0.7;
+    const aw = armWidthBase / 2;
+    return [
+      [-aw, hl],
+      [aw, hl],
+      [aw, aw],
+      [hw, aw],
+      [hw, -aw],
+      [aw, -aw],
+      [aw, -hl],
+      [-aw, -hl],
+      [-aw, -aw],
+      [-hw, -aw],
+      [-hw, aw],
+      [-aw, aw]
+    ];
+  }
+  if (obj.shape === 'ellipse') {
+    const hw = widthM / 2;
+    const hl = lengthM / 2;
+    const offsets = [];
+    for (let i = 0; i < 36; i += 1) {
+      const t = (i / 36) * 2 * Math.PI;
+      offsets.push([hw * Math.cos(t), hl * Math.sin(t)]);
+    }
+    return offsets;
+  }
+  // rect / Custom / unknown → rectangle
+  const hw = widthM / 2;
+  const hh = lengthM / 2;
+  return [
+    [-hw, hh],
+    [hw, hh],
+    [hw, -hh],
+    [-hw, -hh]
+  ];
+}
+
+/** Closed footprint vertex ring in latlng (same construction as footprint layer, buffer 0). */
+function getFootprintEdgeRing(obj) {
+  const offsets = getFootprintLocalOffsets(obj);
+  if (!offsets || offsets.length < 2) return null;
+  return rotateOffsets(offsets, obj.angleDeg || 0).map(([dx, dy]) => {
+    const [lat, lng] = metersToDeg(obj.latlng, dx, dy);
+    return L.latLng(lat, lng);
+  });
+}
+
+/**
+ * Closest point on the closed ring polyline. Segment clamp transfers across vertices
+ * (adjacent edge wins past a corner — no sticky corner clamp).
+ */
+function projectOntoBoundary(ring, latlng) {
+  if (!ring || ring.length < 2 || !latlng) return null;
+  const origin = ring[0];
+  const [px, py] = latlngToMeters(latlng.lat, latlng.lng, origin.lat, origin.lng);
+  let best = null;
+  const n = ring.length;
+  for (let i = 0; i < n; i += 1) {
+    const a = ring[i];
+    const b = ring[(i + 1) % n];
+    const [ax, ay] = latlngToMeters(a.lat, a.lng, origin.lat, origin.lng);
+    const [bx, by] = latlngToMeters(b.lat, b.lng, origin.lat, origin.lng);
+    const abx = bx - ax;
+    const aby = by - ay;
+    const abLen2 = abx * abx + aby * aby;
+    let t = 0;
+    if (abLen2 > 1e-12) {
+      t = ((px - ax) * abx + (py - ay) * aby) / abLen2;
+    }
+    const tClamp = Math.max(0, Math.min(1, t));
+    const qx = ax + abx * tClamp;
+    const qy = ay + aby * tClamp;
+    const distM = Math.hypot(px - qx, py - qy);
+    if (!best || distM < best.distM) {
+      best = { edge: i, t: tClamp, distM, x: qx, y: qy };
+    }
+  }
+  const [lat, lng] = metersToDeg(origin, best.x, best.y);
+  return { edge: best.edge, t: best.t, distM: best.distM, latlng: L.latLng(lat, lng) };
+}
+
+function openingPointFromRing(ring, edge, t) {
+  if (!ring || ring.length < 2) return null;
+  const n = ring.length;
+  const i = ((edge % n) + n) % n;
+  const tt = Math.max(0, Math.min(1, t));
+  const a = ring[i];
+  const b = ring[(i + 1) % n];
+  return L.latLng(
+    a.lat + (b.lat - a.lat) * tt,
+    a.lng + (b.lng - a.lng) * tt
+  );
+}
+
+/** Wall-break endpoints centered on {edge,t}, length min(target, k×edgeLen). */
+function openingMarkEndpoints(obj, opening) {
+  const ring = getFootprintEdgeRing(obj);
+  if (!ring || !opening) return null;
+  const n = ring.length;
+  const edge = opening.edge | 0;
+  if (edge < 0 || edge >= n) return null;
+  const t = Math.max(0, Math.min(1, Number(opening.t) || 0));
+  const a = ring[edge];
+  const b = ring[(edge + 1) % n];
+  const origin = obj.latlng;
+  const [ax, ay] = latlngToMeters(a.lat, a.lng, origin.lat, origin.lng);
+  const [bx, by] = latlngToMeters(b.lat, b.lng, origin.lat, origin.lng);
+  const abx = bx - ax;
+  const aby = by - ay;
+  const edgeLen = Math.hypot(abx, aby);
+  if (edgeLen < 1e-6) return null;
+  const markLen = Math.min(DOOR_MARK_TARGET_M, DOOR_MARK_EDGE_FRAC * edgeLen);
+  const half = markLen / 2;
+  const ux = abx / edgeLen;
+  const uy = aby / edgeLen;
+  const cx = ax + abx * t;
+  const cy = ay + aby * t;
+  const [lat1, lng1] = metersToDeg(origin, cx - ux * half, cy - uy * half);
+  const [lat2, lng2] = metersToDeg(origin, cx + ux * half, cy + uy * half);
+  return [L.latLng(lat1, lng1), L.latLng(lat2, lng2)];
+}
+
+function normalizeOpeningEntry(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const edge = Number(raw.edge);
+  const t = Number(raw.t);
+  if (!Number.isFinite(edge) || !Number.isFinite(t)) return null;
+  return { edge: Math.round(edge), t: Math.max(0, Math.min(1, t)) };
+}
+
+/** Keep openings whose edge index is valid for the current footprint ring; drop silently. */
+function sanitizeObjectOpenings(obj) {
+  if (!obj) return;
+  const ring = getFootprintEdgeRing(obj);
+  const n = ring ? ring.length : 0;
+  const raw = Array.isArray(obj.openings) ? obj.openings : [];
+  const next = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const o = normalizeOpeningEntry(raw[i]);
+    if (!o) continue;
+    if (n > 0 && (o.edge < 0 || o.edge >= n)) continue;
+    next.push(o);
+  }
+  if (next.length) obj.openings = next;
+  else delete obj.openings;
+}
+
+function cloneOpeningsForSnapshot(obj) {
+  if (!obj || !Array.isArray(obj.openings) || !obj.openings.length) return undefined;
+  return obj.openings.map(o => ({ edge: o.edge | 0, t: Math.max(0, Math.min(1, Number(o.t) || 0)) }));
+}
+
+function findNearestOpeningSeat(latlng) {
+  let best = null;
+  for (let i = 0; i < objects.length; i += 1) {
+    const obj = objects[i];
+    const ring = getFootprintEdgeRing(obj);
+    if (!ring) continue;
+    const hit = projectOntoBoundary(ring, latlng);
+    if (!hit || hit.distM > DOOR_PLACE_THRESHOLD_M) continue;
+    if (!best || hit.distM < best.distM) {
+      best = { obj, edge: hit.edge, t: hit.t, distM: hit.distM, latlng: hit.latlng };
+    }
+  }
+  return best;
+}
+
+function updateDoorModeUI() {
+  const btn = document.getElementById('btn-door-mode');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', String(!!doorMode));
+  btn.classList.toggle('snap-mode-on', !!doorMode);
+  btn.textContent = 'Door';
+  btn.setAttribute('aria-label', doorMode
+    ? 'Door mode on. Click near a footprint edge to place an entry mark. Esc exits.'
+    : 'Door mode off. Turn on to place entry marks on footprint edges.');
+  btn.title = doorMode
+    ? 'Door mode on. Click near a footprint edge to place an entry mark. Drag a mark along the wall to adjust; Delete or ✕ removes a selected mark. Esc exits. Continuous — keep clicking.'
+    : 'Door mode off (click to turn on). When on, click near a footprint edge to place an entry mark. Drag a mark along the wall to adjust; Delete or ✕ removes a selected mark. Esc exits. Continuous — keep clicking.';
+}
+
+function cancelDoorMode(opts) {
+  opts = opts || {};
+  if (!doorMode) {
+    updateDoorModeUI();
+    return;
+  }
+  doorMode = false;
+  endOpeningDrag();
+  clearSelectedOpening();
+  updateDoorModeUI();
+  if (!opts.keepModeText) {
+    if (!placingMode && !measureMode && !areaMeasureMode) {
+      setMode('View Mode');
+      map.getContainer().style.cursor = '';
+    }
+  }
+}
+
+function toggleDoorMode() {
+  if (doorMode) {
+    cancelDoorMode();
+    return;
+  }
+  if (placingMode) cancelPlacing();
+  if (measureMode || areaMeasureMode) clearMeasure();
+  doorMode = true;
+  clearSelection();
+  clearSelectedOpening();
+  map.getContainer().style.cursor = 'crosshair';
+  setMode('Door Mode');
+  updateDoorModeUI();
+}
+
+function clearSelectedOpening() {
+  const prev = selectedOpening;
+  selectedOpening = null;
+  if (prev) {
+    const obj = getObjectById(prev.objId);
+    if (obj) syncOpeningLayers(obj);
+  }
+}
+
+function setSelectedOpening(objId, index) {
+  const prev = selectedOpening;
+  selectedOpening = { objId, index };
+  if (prev && (prev.objId !== objId)) {
+    const po = getObjectById(prev.objId);
+    if (po) syncOpeningLayers(po);
+  }
+  const obj = getObjectById(objId);
+  if (obj) syncOpeningLayers(obj);
+}
+
+function removeOpeningAt(objId, index) {
+  const obj = getObjectById(objId);
+  if (!obj || !Array.isArray(obj.openings)) return;
+  if (index < 0 || index >= obj.openings.length) return;
+  pushStateToUndo();
+  obj.openings.splice(index, 1);
+  sanitizeObjectOpenings(obj);
+  if (selectedOpening && selectedOpening.objId === objId) {
+    selectedOpening = null;
+  }
+  drawObject(obj);
+  scheduleSaveSession();
+}
+
+function placeOpeningAtLatLng(latlng) {
+  const seat = findNearestOpeningSeat(latlng);
+  if (!seat) return false;
+  pushStateToUndo();
+  if (!Array.isArray(seat.obj.openings)) seat.obj.openings = [];
+  seat.obj.openings.push({ edge: seat.edge, t: seat.t });
+  sanitizeObjectOpenings(seat.obj);
+  const idx = seat.obj.openings.length - 1;
+  drawObject(seat.obj);
+  setSelectedOpening(seat.obj.id, idx);
+  scheduleSaveSession();
+  return true;
+}
+
+function endOpeningDrag() {
+  if (!activeOpeningDrag) return;
+  activeOpeningDrag = null;
+  map.dragging.enable();
+}
+
+function startOpeningDrag(obj, index, ev) {
+  if (!obj || !Array.isArray(obj.openings) || index < 0 || index >= obj.openings.length) return;
+  if (placingMode || measureMode || areaMeasureMode) return;
+  L.DomEvent.stop(ev);
+  pushStateToUndo();
+  activeOpeningDrag = { obj, index };
+  setSelectedOpening(obj.id, index);
+  map.dragging.disable();
+}
+
+function shouldShowDoorMarks() {
+  if (printForceDoorMarks) return true;
+  return map.getZoom() >= DOOR_MARK_MIN_ZOOM;
+}
+
+function clearOpeningLayers(obj) {
+  if (!obj) return;
+  if (Array.isArray(obj.openingLayers)) {
+    obj.openingLayers.forEach(entry => {
+      if (entry.stroke) map.removeLayer(entry.stroke);
+      if (entry.hit) map.removeLayer(entry.hit);
+      if (entry.del) map.removeLayer(entry.del);
+    });
+  }
+  obj.openingLayers = [];
+}
+
+function clearRampHatchLayer(obj) {
+  if (!obj) return;
+  if (obj.layerRampHatch) {
+    map.removeLayer(obj.layerRampHatch);
+    obj.layerRampHatch = null;
+  }
+}
+
+function ensureRampHatchPattern(svgRoot) {
+  if (!svgRoot || svgRoot.getElementById('psmt-ramp-hatch')) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  let defs = svgRoot.querySelector('defs');
+  if (!defs) {
+    defs = document.createElementNS(ns, 'defs');
+    svgRoot.insertBefore(defs, svgRoot.firstChild);
+  }
+  const pattern = document.createElementNS(ns, 'pattern');
+  pattern.setAttribute('id', 'psmt-ramp-hatch');
+  pattern.setAttribute('patternUnits', 'userSpaceOnUse');
+  pattern.setAttribute('width', '10');
+  pattern.setAttribute('height', '10');
+  pattern.setAttribute('patternTransform', 'rotate(35)');
+  const mkLine = (x, color, opacity) => {
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', String(x));
+    line.setAttribute('y1', '0');
+    line.setAttribute('x2', String(x));
+    line.setAttribute('y2', '10');
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '3.5');
+    line.setAttribute('stroke-opacity', String(opacity));
+    return line;
+  };
+  pattern.appendChild(mkLine(1.5, '#0d1117', 0.65));
+  pattern.appendChild(mkLine(6.5, '#f0f6fc', 0.5));
+  defs.appendChild(pattern);
+}
+
+function applyRampHatchFill(layer) {
+  if (!layer) return;
+  const apply = () => {
+    const path = layer._path;
+    if (!path) return;
+    ensureRampHatchPattern(path.ownerSVGElement);
+    path.setAttribute('fill', 'url(#psmt-ramp-hatch)');
+    path.style.fill = 'url(#psmt-ramp-hatch)';
+  };
+  apply();
+  layer.off('add', apply);
+  layer.on('add', apply);
+}
+
+function syncRampHatch(obj) {
+  clearRampHatchLayer(obj);
+  if (!obj || obj.role !== 'Ramp') return;
+  obj.layerRampHatch = createShapeLayer(obj, obj.widthM, obj.lengthM, {
+    color: obj.color,
+    weight: 0,
+    opacity: 0,
+    fill: true,
+    fillColor: '#0d1117',
+    fillOpacity: 0.75,
+    interactive: false,
+    className: 'psmt-ramp-hatch'
+  }, 0);
+  obj.layerRampHatch.addTo(map);
+  applyRampHatchFill(obj.layerRampHatch);
+  if (obj.layer && typeof obj.layer.bringToFront === 'function') obj.layer.bringToFront();
+}
+
+function syncOpeningLayers(obj) {
+  clearOpeningLayers(obj);
+  sanitizeObjectOpenings(obj);
+  if (!obj || !Array.isArray(obj.openings) || !obj.openings.length) return;
+  if (!shouldShowDoorMarks()) return;
+  obj.openingLayers = [];
+  obj.openings.forEach((opening, index) => {
+    const ends = openingMarkEndpoints(obj, opening);
+    if (!ends) return;
+    const selected = selectedOpening && selectedOpening.objId === obj.id && selectedOpening.index === index;
+    const stroke = L.polyline(ends, {
+      color: selected ? '#58a6ff' : '#f0f6fc',
+      weight: selected ? 5 : 3.5,
+      opacity: 1,
+      lineCap: 'butt',
+      interactive: false,
+      pane: 'openingPane',
+      className: 'psmt-door-mark'
+    }).addTo(map);
+    const hit = L.polyline(ends, {
+      color: '#000',
+      weight: DOOR_MARK_HIT_WEIGHT,
+      opacity: 0,
+      lineCap: 'butt',
+      interactive: true,
+      pane: 'openingPane',
+      className: 'psmt-door-mark-hit'
+    }).addTo(map);
+    hit.on('mousedown', ev => {
+      if (ev.originalEvent && ev.originalEvent.button !== 0) return;
+      L.DomEvent.stop(ev);
+      startOpeningDrag(obj, index, ev);
+    });
+    hit.on('click', ev => {
+      L.DomEvent.stop(ev);
+      if (Date.now() < dragEndedAt + DRAG_SUPPRESS_MS) return;
+      if (doorMode) return;
+      setSelectedOpening(obj.id, index);
+    });
+    let del = null;
+    if (selected) {
+      const mid = openingPointFromRing(getFootprintEdgeRing(obj), opening.edge, opening.t);
+      if (mid) {
+        const delIcon = L.divIcon({
+          html: '<button type="button" class="opening-delete-btn" aria-label="Remove entry mark" title="Remove entry mark">\u2715</button>',
+          className: 'opening-delete-icon',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        });
+        del = L.marker(mid, {
+          icon: delIcon,
+          interactive: true,
+          keyboard: false,
+          pane: 'openingPane'
+        }).addTo(map);
+        del.on('click', ev => {
+          L.DomEvent.stop(ev);
+          removeOpeningAt(obj.id, index);
+        });
+        del.on('mousedown', ev => { L.DomEvent.stop(ev); });
+      }
+    }
+    obj.openingLayers.push({ stroke, hit, del });
+  });
+}
+
+function refreshOpeningVisibility() {
+  objects.forEach(obj => syncOpeningLayers(obj));
+}
+
+function refreshRampHatches() {
+  objects.forEach(obj => {
+    if (obj.role === 'Ramp' && obj.layerRampHatch) applyRampHatchFill(obj.layerRampHatch);
+  });
 }
 
 // Convert meters offset to lat/lng delta from center (dx = east, dy = north)
@@ -3736,10 +4356,13 @@ function deleteObj(id) {
   const idx = objects.findIndex(o => o.id === id);
   if (idx === -1) return;
   pushStateToUndo();
+  if (selectedOpening && selectedOpening.objId === id) selectedOpening = null;
   if (objects[idx].layer) map.removeLayer(objects[idx].layer);
   if (objects[idx].layerBuffer) map.removeLayer(objects[idx].layerBuffer);
   clearSelectionUnderlay(objects[idx]);
   if (objects[idx].roleLabelLayer) map.removeLayer(objects[idx].roleLabelLayer);
+  clearOpeningLayers(objects[idx]);
+  clearRampHatchLayer(objects[idx]);
   if (isSelected(id)) {
     selectedIds = selectedIds.filter(x => x !== id);
     if (primaryId === id) primaryId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null;
@@ -3790,10 +4413,13 @@ function deleteSelectedBulk() {
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
     clearSelectionUnderlay(o);
     if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
+    clearOpeningLayers(o);
+    clearRampHatchLayer(o);
   });
   objects = objects.filter(o => !idSet.has(o.id));
   selectedIds = [];
   primaryId = null;
+  if (selectedOpening && idSet.has(selectedOpening.objId)) selectedOpening = null;
   clearRotateHandle();
   updateList();
   scheduleOverlapSummary();
@@ -3809,12 +4435,16 @@ function deleteSelectedBulk() {
 function resetPlacedObjects() {
   endObjectDrag();
   endRotateDrag();
+  endOpeningDrag();
   clearSelection();
+  clearSelectedOpening();
   objects.forEach(o => {
     if (o.layer) map.removeLayer(o.layer);
     if (o.layerBuffer) map.removeLayer(o.layerBuffer);
     clearSelectionUnderlay(o);
     if (o.roleLabelLayer) map.removeLayer(o.roleLabelLayer);
+    clearOpeningLayers(o);
+    clearRampHatchLayer(o);
   });
   objects = [];
   objectId = 0;
@@ -5259,6 +5889,10 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
+    if (selectedOpening) {
+      removeOpeningAt(selectedOpening.objId, selectedOpening.index);
+      return;
+    }
     confirmAndDeleteSelection();
     return;
   }
@@ -5331,6 +5965,19 @@ updateSnapModeUI();
   const btn = document.getElementById('btn-snap-mode');
   if (btn) btn.addEventListener('click', toggleSnapMode);
 })();
+updateDoorModeUI();
+(function doorModeInit() {
+  const btn = document.getElementById('btn-door-mode');
+  if (btn) btn.addEventListener('click', toggleDoorMode);
+})();
+window.addEventListener('beforeprint', () => {
+  printForceDoorMarks = true;
+  refreshOpeningVisibility();
+});
+window.addEventListener('afterprint', () => {
+  printForceDoorMarks = false;
+  refreshOpeningVisibility();
+});
 updateMeasureUI();
 (function measureMenuInit() {
   const menuBtn = document.getElementById('btn-measure-menu');
