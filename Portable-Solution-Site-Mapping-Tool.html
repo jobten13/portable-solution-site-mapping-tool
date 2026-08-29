@@ -956,7 +956,7 @@ const MANAGE_ROLES_OPTION_LABEL = 'Manage roles…';
 const cardRoleByKey = Object.create(null);
 
 // ─── Tent Database ──────────────────────────────────────────────────────────────
-// All dimensions in feet (width × length). Circles use widthFt as diameter.
+// All dimensions in feet (width × length).
 const TENT_DB = {
   "BLU-MED": [
     { id:"blumed-2032", name:"2032.5", tier:"standard", structure:"soft-sided",
@@ -1616,7 +1616,6 @@ function createTentCard(tent) {
 }
 
 function dimStr(tent) {
-  if (tent.shape === 'circle') return `Ø ${tent.widthFt} ft`;
   if (tent.shape === 'octagon') return `18'7" across, 7'8" faces`;
   if (tent.shape === 'cut-corner-rectangle') return `${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' cut-corner rect.`;
   if (tent.shape === 'cut-corner-square') return `${Math.round(tent.widthFt)}' cut-corner sq.`;
@@ -1625,7 +1624,6 @@ function dimStr(tent) {
     const b = Math.round(Math.max(tent.widthFt, tent.lengthFt));
     return `${a}'×${b}' 4-way hub`;
   }
-  if (tent.shape === 'ellipse') return `${Math.round(tent.widthFt)}'×${Math.round(tent.lengthFt)}' ellipse`;
   return `${tent.widthFt}' × ${tent.lengthFt}'`;
 }
 
@@ -1657,7 +1655,6 @@ COLORS.forEach(c => {
 
 // ─── Place from selected tent ────────────────────────────────────────────────────
 function startPlacing() {
-  if (!selectedTent) { alert('NOTICE:\nSelect a tent model first.'); return; }
   if (doorMode) cancelDoorMode({ keepModeText: true });
   if (measureMode || areaMeasureMode) clearMeasure();
   placingMode = true;
@@ -2194,7 +2191,6 @@ function getObjectsSnapshot() {
       role: o.role,
       cornerCutW: o.cornerCutW,
       cornerCutL: o.cornerCutL,
-      endCapFt: o.endCapFt,
       armWidthFt: o.armWidthFt,
       intentionalBuffer: !!o.intentionalBuffer
     };
@@ -2403,10 +2399,6 @@ function syncRotateHandle() {
     L.DomEvent.stop(ev);
     confirmAndDeleteSelection();
   });
-}
-
-function selectionIds() {
-  return selectedIds.slice();
 }
 
 function isSelected(id) {
@@ -2761,7 +2753,6 @@ function buildScenarioData() {
         role: String(o.role || '—'),
         cornerCutW: o.cornerCutW,
         cornerCutL: o.cornerCutL,
-        endCapFt: o.endCapFt,
         armWidthFt: o.armWidthFt,
         intentionalBufferOverlap: !!o.intentionalBuffer
       };
@@ -2866,7 +2857,16 @@ function loadScenarioFromData(data, options) {
 
   resetPlacedObjects();
 
-  const loadedObjects = data.objects.map((raw, idx) => buildObjectFromRaw(raw, idx));
+  let skippedLegacyShapes = 0;
+  const loadedObjects = [];
+  data.objects.forEach((raw, idx) => {
+    const o = buildObjectFromRaw(raw, idx);
+    if (!o) {
+      skippedLegacyShapes += 1;
+      return;
+    }
+    loadedObjects.push(o);
+  });
 
   loadedObjects.forEach(o => {
     objects.push(o);
@@ -2875,6 +2875,15 @@ function loadScenarioFromData(data, options) {
   });
   clearSelection();
 
+  if (skippedLegacyShapes > 0) {
+    const msg = skippedLegacyShapes === 1
+      ? '1 structure used a retired shape (circle/ellipse) and was skipped.'
+      : `${skippedLegacyShapes} structures used a retired shape (circle/ellipse) and were skipped.`;
+    const anchor = options.fromRestore
+      ? document.getElementById('btn-restore-autosave')
+      : document.querySelector('button[onclick="loadScenarioPrompt()"]');
+    showActionToast(msg, anchor);
+  }
   if (data.map && Array.isArray(data.map.center) && data.map.center.length === 2) {
     const lat = toNumber(data.map.center[0], map.getCenter().lat);
     const lng = toNumber(data.map.center[1], map.getCenter().lng);
@@ -3067,6 +3076,9 @@ function restoreAutosave() {
 }
 
 function buildObjectFromRaw(raw, idx) {
+  const shape = String(raw.shape || 'rect');
+  // Retired shapes: skip rather than silent-rect fallthrough (loader toast aggregates skips).
+  if (shape === 'ellipse' || shape === 'circle') return null;
   const vendor = String(raw.vendor || 'Loaded');
   const defaultColor = (vendor && VENDOR_COLORS[vendor]) || normalizeColor(raw.color || '#58a6ff');
   const obj = {
@@ -3076,7 +3088,7 @@ function buildObjectFromRaw(raw, idx) {
       lng: toNumber(raw.latlng && raw.latlng.lng, 0)
     },
     label: sanitizeLabel(raw.label || `Loaded ${idx + 1}`),
-    shape: String(raw.shape || 'rect'),
+    shape,
     widthM: Math.max(0.1, toNumber(raw.widthM, 1)),
     lengthM: Math.max(0.1, toNumber(raw.lengthM, 1)),
     color: normalizeColor(defaultColor),
@@ -3087,7 +3099,6 @@ function buildObjectFromRaw(raw, idx) {
     role: String(raw.role || '—'),
     cornerCutW: toNumber(raw.cornerCutW, undefined),
     cornerCutL: toNumber(raw.cornerCutL, undefined),
-    endCapFt: toNumber(raw.endCapFt, undefined),
     armWidthFt: toNumber(raw.armWidthFt, undefined),
     intentionalBuffer: !!(raw.intentionalBufferOverlap ?? raw.intentionalBuffer),
     layer: null,
@@ -3163,7 +3174,6 @@ map.on('click', e => {
   const extra = (!customMode && selectedTent) ? {
     cornerCutW: selectedTent.cornerCutW,
     cornerCutL: selectedTent.cornerCutL,
-    endCapFt:   selectedTent.endCapFt,
     armWidthFt: selectedTent.armWidthFt,
   } : {};
   if (customMode) {
@@ -3425,9 +3435,7 @@ function drawObject(obj) {
   const wFt = (obj.widthM / FT_TO_M).toFixed(1);
   const lFt = (obj.lengthM / FT_TO_M).toFixed(1);
   const safeLabel = escapeHtml(obj.label);
-  const tip = obj.shape === 'circle'
-    ? `<b>${safeLabel}</b><br>Ø ${wFt} ft`
-    : obj.shape === 'octagon'
+  const tip = obj.shape === 'octagon'
     ? `<b>${safeLabel}</b><br>Octagon — 18'7" across, 7'8" faces`
     : obj.shape === 'cut-corner-rectangle'
     ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' cut-corner rect`
@@ -3435,10 +3443,8 @@ function drawObject(obj) {
     ? `<b>${safeLabel}</b><br>${wFt}' cut-corner sq (C-crnr ~${obj.cornerCutW || 0}')`
     : obj.shape === 'plus'
     ? `<b>${safeLabel}</b><br>${wFt}' plus/cross (arm w: ${Math.round(obj.armWidthFt||0)}')`
-    : obj.shape === 'ellipse'
-    ? `<b>${safeLabel}</b><br>${wFt}' × ${lFt}' ellipse (dome footprint)`
     : `<b>${safeLabel}</b><br>${wFt}' × ${lFt}'`;
-  const angleInfo = obj.shape === 'circle' ? '' : `<br>Rotation: ${Math.round(obj.angleDeg || 0)}°`;
+  const angleInfo = `<br>Rotation: ${Math.round(obj.angleDeg || 0)}°`;
   const bufferInfo = (obj.bufferFt || 0) > 0 ? `<br>Clearance buffer: +${obj.bufferFt} ft` : '';
   const roleInfo = (obj.role && obj.role !== '—') ? `<br>Role: ${escapeHtml(obj.role)}` : '';
   const selectHint = `<br>Shift or Ctrl/Cmd+click to toggle selection`;
@@ -3627,11 +3633,8 @@ function refreshRoleLabelVisibility() {
 function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
   const widthBuffered = widthM + extraBufferM * 2;
   const lengthBuffered = lengthM + extraBufferM * 2;
-  if (obj.shape === 'circle') {
-    return L.circle(obj.latlng, { radius: widthM / 2 + extraBufferM, ...style });
-  }
   if (obj.shape === 'octagon') {
-    return createGeoPolygon(obj.latlng, widthBuffered, widthBuffered, 'octagon', obj.angleDeg || 0, style);
+    return createGeoPolygon(obj.latlng, widthBuffered, obj.angleDeg || 0, style);
   }
   if (obj.shape === 'cut-corner-rectangle') {
     const cornerCutWm = ((obj.cornerCutW || 0) * FT_TO_M) + extraBufferM;
@@ -3648,9 +3651,6 @@ function createShapeLayer(obj, widthM, lengthM, style, extraBufferM) {
     const armWidthM = armWidthBase + extraBufferM * 2;
     return createGeoPlusSign(obj.latlng, widthBuffered, lengthBuffered, armWidthM, obj.angleDeg || 0, style);
   }
-  if (obj.shape === 'ellipse') {
-    return createGeoEllipse(obj.latlng, widthBuffered, lengthBuffered, obj.angleDeg || 0, style);
-  }
   return createGeoRect(obj.latlng, widthBuffered, lengthBuffered, obj.angleDeg || 0, style);
 }
 
@@ -3661,16 +3661,6 @@ function getFootprintLocalOffsets(obj) {
   const widthM = obj.widthM;
   const lengthM = obj.lengthM != null ? obj.lengthM : obj.widthM;
   if (!(widthM > 0) || !(lengthM > 0)) return null;
-  if (obj.shape === 'circle') {
-    const r = widthM / 2;
-    const offsets = [];
-    for (let i = 0; i < 36; i += 1) {
-      const t = (i / 36) * 2 * Math.PI;
-      // Match getLayerVertices(L.Circle): dx=east sin, dy=north cos.
-      offsets.push([r * Math.sin(t), r * Math.cos(t)]);
-    }
-    return offsets;
-  }
   if (obj.shape === 'octagon') {
     const hw = widthM / 2;
     const t = widthM / (2 + Math.sqrt(2));
@@ -3720,16 +3710,6 @@ function getFootprintLocalOffsets(obj) {
       [-hw, aw],
       [-aw, aw]
     ];
-  }
-  if (obj.shape === 'ellipse') {
-    const hw = widthM / 2;
-    const hl = lengthM / 2;
-    const offsets = [];
-    for (let i = 0; i < 36; i += 1) {
-      const t = (i / 36) * 2 * Math.PI;
-      offsets.push([hw * Math.cos(t), hl * Math.sin(t)]);
-    }
-    return offsets;
   }
   // rect / Custom / unknown → rectangle
   const hw = widthM / 2;
@@ -4384,24 +4364,21 @@ function rotateOffsets(offsets, angleDeg) {
 
 // Regular octagon inscribed in a square of side widthM (across flats).
 // Corner inset along each edge: t = widthM / (2 + √2). All 8 sides equal: widthM * (√2 - 1).
-function createGeoPolygon(center, widthM, heightM, type, angleDeg, style) {
-  let points = [];
-  if (type === 'octagon') {
-    const hw = widthM / 2;
-    const t = widthM / (2 + Math.sqrt(2)); // GK20 SW-20: 18'7" across → 7'8" equal facets
-    // 8 points clockwise from top-left going right
-    const offsets = [
-      [ t - hw,  hw],  // top-left → top-right direction
-      [ hw - t,  hw],
-      [ hw,  hw - t],
-      [ hw, -hw + t],
-      [ hw - t, -hw],
-      [ t - hw, -hw],
-      [-hw, -hw + t],
-      [-hw,  hw - t],
-    ];
-    points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
-  }
+function createGeoPolygon(center, widthM, angleDeg, style) {
+  const hw = widthM / 2;
+  const t = widthM / (2 + Math.sqrt(2)); // GK20 SW-20: 18'7" across → 7'8" equal facets
+  // 8 points clockwise from top-left going right
+  const offsets = [
+    [ t - hw,  hw],  // top-left → top-right direction
+    [ hw - t,  hw],
+    [ hw,  hw - t],
+    [ hw, -hw + t],
+    [ hw - t, -hw],
+    [ t - hw, -hw],
+    [-hw, -hw + t],
+    [-hw,  hw - t],
+  ];
+  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
   return L.polygon(points, style);
 }
 
@@ -4434,21 +4411,6 @@ function createGeoCutCornerRectangle(center, widthM, lengthM, cornerCutWm, corne
     [-hw,  hl - cl],
   ];
 
-  const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
-  return L.polygon(points, style);
-}
-
-// Ellipse (legacy saved plans only — no current catalog entry): widthM = full width (E-W), lengthM = full length (N-S)
-// Drawn as polygon with 36 points; rotation applied via rotateOffsets
-function createGeoEllipse(center, widthM, lengthM, angleDeg, style) {
-  const hw = widthM / 2;
-  const hl = lengthM / 2;
-  const numPoints = 36;
-  const offsets = [];
-  for (let i = 0; i < numPoints; i++) {
-    const t = (i / numPoints) * 2 * Math.PI;
-    offsets.push([hw * Math.cos(t), hl * Math.sin(t)]);
-  }
   const points = rotateOffsets(offsets, angleDeg).map(([dx, dy]) => metersToDeg(center, dx, dy));
   return L.polygon(points, style);
 }
@@ -5326,21 +5288,6 @@ function scheduleOverlapSummary() {
 // Get polygon vertices in latlng from a layer (buffer or main footprint)
 function getLayerVertices(layer) {
   if (!layer) return null;
-  // Circle first: some Path subclasses expose getLatLngs; buffer/footprint circles must use radius.
-  if (layer instanceof L.Circle) {
-    const center = layer.getLatLng();
-    const r = layer.getRadius();
-    const mPerDegLat = 111320;
-    const cosLat = Math.cos(center.lat * Math.PI / 180);
-    const points = [];
-    for (let i = 0; i < 36; i += 1) {
-      const t = (i / 36) * 2 * Math.PI;
-      const latOffset = (r / mPerDegLat) * Math.cos(t);
-      const lngOffset = (r / (mPerDegLat * cosLat)) * Math.sin(t);
-      points.push(L.latLng(center.lat + latOffset, center.lng + lngOffset));
-    }
-    return points;
-  }
   if (layer.getLatLngs) {
     const rings = layer.getLatLngs();
     const first = Array.isArray(rings[0]) ? rings[0] : rings;
