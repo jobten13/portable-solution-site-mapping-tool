@@ -2067,6 +2067,8 @@ function startObjectDrag(obj, startLatlng) {
     startAngleDeg: normalizeAngle(obj.angleDeg || 0),
     snapAnchorId: null,
     snapFaceMid: null,
+    snapAnchorEdgeIndex: null,
+    snapMoverEdgeIndex: null,
     moved: false
   };
   map.dragging.disable();
@@ -3287,6 +3289,8 @@ map.on('mousemove', e => {
       }
       drag.snapAnchorId = null;
       drag.snapFaceMid = null;
+      drag.snapAnchorEdgeIndex = null;
+      drag.snapMoverEdgeIndex = null;
       return;
     }
     const obj = drag.obj;
@@ -3296,23 +3300,34 @@ map.on('mousemove', e => {
     );
     const suppress = e.originalEvent && (e.originalEvent.ctrlKey || e.originalEvent.metaKey);
     if (snapModeEnabled && !suppress) {
-      const best = findNearestSnapCandidate(obj, freeLatLng, drag.startAngleDeg);
+      const sticky = {
+        anchorId: drag.snapAnchorId,
+        anchorEdgeIndex: drag.snapAnchorEdgeIndex,
+        moverEdgeIndex: drag.snapMoverEdgeIndex
+      };
+      const best = findNearestSnapCandidate(obj, freeLatLng, drag.startAngleDeg, sticky);
       if (best) {
         obj.latlng = best.latlng;
         obj.angleDeg = best.angleDeg;
         drag.snapAnchorId = best.anchor.id;
         drag.snapFaceMid = best.faceMid;
+        drag.snapAnchorEdgeIndex = best.anchorEdgeIndex;
+        drag.snapMoverEdgeIndex = best.moverEdgeIndex;
       } else {
         obj.latlng = freeLatLng;
         obj.angleDeg = drag.startAngleDeg;
         drag.snapAnchorId = null;
         drag.snapFaceMid = null;
+        drag.snapAnchorEdgeIndex = null;
+        drag.snapMoverEdgeIndex = null;
       }
     } else {
       obj.latlng = freeLatLng;
       obj.angleDeg = drag.startAngleDeg;
       drag.snapAnchorId = null;
       drag.snapFaceMid = null;
+      drag.snapAnchorEdgeIndex = null;
+      drag.snapMoverEdgeIndex = null;
     }
     drawObject(obj);
   }
@@ -4182,14 +4197,59 @@ function isClockwiseHullEdge(ring, edgeIndex, origin) {
   return true;
 }
 
+/** Local-meter CW hull test (same rule as isClockwiseHullEdge; verts are [x,y] east/north). */
+function isClockwiseHullEdgeLocal(verts, edgeIndex) {
+  const n = verts.length;
+  const a = verts[edgeIndex];
+  const b = verts[(edgeIndex + 1) % n];
+  const abx = b[0] - a[0];
+  const aby = b[1] - a[1];
+  for (let j = 0; j < n; j += 1) {
+    if (j === edgeIndex || j === (edgeIndex + 1) % n) continue;
+    const p = verts[j];
+    const cross = abx * (p[1] - a[1]) - aby * (p[0] - a[0]);
+    if (cross > 1e-6) return false;
+  }
+  return true;
+}
+
+/** Face bearing whose length-north normal equals (nx, ny). */
+function bearingFromNormal(nx, ny) {
+  return normalizeAngle(Math.atan2(-nx, ny) * 180 / Math.PI);
+}
+
+function rotateVec2(x, y, angleDeg) {
+  const rad = (angleDeg || 0) * Math.PI / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return [x * c - y * s, x * s + y * c];
+}
+
+function angDiffAbs(a, b) {
+  let d = Math.abs(normalizeAngle(a) - normalizeAngle(b));
+  return d > 180 ? 360 - d : d;
+}
+
 /**
  * Outer true-edge snap candidates from getFootprintEdgeRing (buffer 0).
  * Hull filter drops plus inners; SNAP_MIN_EDGE_LEN_M drops degenerate zero-cut edges.
  */
 function getOuterSnapEdges(obj) {
-  const ring = getFootprintEdgeRing(obj);
-  if (!ring || ring.length < 3) return [];
-  const origin = obj.latlng;
+  return getOuterSnapEdgesAt(obj, obj.latlng, obj.angleDeg || 0);
+}
+
+/**
+ * Outer snap edges at an explicit pose (no mutation of obj). Used for mover free-pose evaluation.
+ */
+function getOuterSnapEdgesAt(obj, latlng, angleDeg) {
+  if (!obj || !latlng) return [];
+  const offsets = getFootprintLocalOffsets(obj);
+  if (!offsets || offsets.length < 3) return [];
+  const origin = latlng;
+  const ring = rotateOffsets(offsets, angleDeg || 0).map(([dx, dy]) => {
+    const [lat, lng] = metersToDeg(origin, dx, dy);
+    return L.latLng(lat, lng);
+  });
   const out = [];
   const n = ring.length;
   for (let i = 0; i < n; i += 1) {
@@ -4202,7 +4262,6 @@ function getOuterSnapEdges(obj) {
     const aby = by - ay;
     const len = Math.hypot(abx, aby);
     if (len < SNAP_MIN_EDGE_LEN_M) continue;
-    // CW walk: outward = left of tangent.
     let nx = -aby / len;
     let ny = abx / len;
     const mx = (ax + bx) / 2;
@@ -4211,8 +4270,7 @@ function getOuterSnapEdges(obj) {
       nx = -nx;
       ny = -ny;
     }
-    // Face bearing = object angleDeg whose north length-face normal equals N (pre-#31 length dir=+1).
-    const faceBearing = normalizeAngle(Math.atan2(-nx, ny) * 180 / Math.PI);
+    const faceBearing = bearingFromNormal(nx, ny);
     const [lat, lng] = metersToDeg(origin, mx, my);
     out.push({
       mid: L.latLng(lat, lng),
@@ -4227,9 +4285,47 @@ function getOuterSnapEdges(obj) {
 }
 
 /**
+ * Outer edges in body frame (angle 0): midLocal, outward normal, length, faceBearing0.
+ * #34 mover true-face — flush without depending on free-pose ring mutation.
+ */
+function getOuterSnapEdgesLocal(obj) {
+  const offsets = getFootprintLocalOffsets(obj);
+  if (!offsets || offsets.length < 3) return [];
+  const out = [];
+  const n = offsets.length;
+  for (let i = 0; i < n; i += 1) {
+    if (!isClockwiseHullEdgeLocal(offsets, i)) continue;
+    const a = offsets[i];
+    const b = offsets[(i + 1) % n];
+    const abx = b[0] - a[0];
+    const aby = b[1] - a[1];
+    const len = Math.hypot(abx, aby);
+    if (len < SNAP_MIN_EDGE_LEN_M) continue;
+    let nx = -aby / len;
+    let ny = abx / len;
+    const mx = (a[0] + b[0]) / 2;
+    const my = (a[1] + b[1]) / 2;
+    if (nx * mx + ny * my < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    out.push({
+      midLocal: [mx, my],
+      nx,
+      ny,
+      len,
+      faceBearing0: bearingFromNormal(nx, ny),
+      edgeIndex: i
+    });
+  }
+  return out;
+}
+
+/**
  * Flush pose against one outer edge: midpoint attach + auto-rotate.
  * Axis-aligned edges (∥ object length/width): pre-#31 object-relative intent / angle / half-axis
  * so rect-to-rect is identical. Angled edges (chamfers, octagon, plus arms): face-relative.
+ * Mover contribution is bbox half-extent only (rect short-circuit / #31 anchor path).
  */
 function proposeSnapFlushToEdge(edge, newLengthM, newWidthM, intentAngleDeg, anchorAngleDeg) {
   const A = normalizeAngle(anchorAngleDeg || 0);
@@ -4261,7 +4357,9 @@ function proposeSnapFlushToEdge(edge, newLengthM, newWidthM, intentAngleDeg, anc
       angleDeg: normalizeAngle(A + snappedRel),
       moverAxis,
       faceMid: edge.mid,
-      edgeLen: edge.len
+      edgeLen: edge.len,
+      anchorEdgeIndex: edge.edgeIndex,
+      moverEdgeIndex: null
     };
   }
 
@@ -4277,14 +4375,95 @@ function proposeSnapFlushToEdge(edge, newLengthM, newWidthM, intentAngleDeg, anc
     angleDeg: normalizeAngle(edge.faceBearing + snappedRel),
     moverAxis,
     faceMid: edge.mid,
-    edgeLen: edge.len
+    edgeLen: edge.len,
+    anchorEdgeIndex: edge.edgeIndex,
+    moverEdgeIndex: null
   };
 }
 
-function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
+/**
+ * #34: flush a specific mover true edge to an anchor edge (mid-to-mid, normals opposed
+ * for parallel presentations; perpendicular family for 90/270).
+ */
+function proposeSnapFlushMoverEdge(anchorEdge, moverEdgeLocal, intentAngleDeg) {
+  const snappedRel = roundRelativeAngleTo90(
+    normalizeAngle((intentAngleDeg || 0) - anchorEdge.faceBearing)
+  );
+  const [desiredNx, desiredNy] = desiredMoverNormalForIntent(anchorEdge, snappedRel);
+  const bearDesired = bearingFromNormal(desiredNx, desiredNy);
+  const angleDeg = normalizeAngle(bearDesired - moverEdgeLocal.faceBearing0);
+  const [rmx, rmy] = rotateVec2(moverEdgeLocal.midLocal[0], moverEdgeLocal.midLocal[1], angleDeg);
+  const [lat, lng] = metersToDeg(anchorEdge.mid, -rmx, -rmy);
+  return {
+    latlng: L.latLng(lat, lng),
+    angleDeg,
+    moverAxis: null,
+    faceMid: anchorEdge.mid,
+    edgeLen: anchorEdge.len,
+    moverEdgeLen: moverEdgeLocal.len,
+    anchorEdgeIndex: anchorEdge.edgeIndex,
+    moverEdgeIndex: moverEdgeLocal.edgeIndex
+  };
+}
+
+/** Desired world normal for mover edge under quantized relative intent (shared by flush + select). */
+function desiredMoverNormalForIntent(anchorEdge, snappedRel) {
+  if (snappedRel === 0 || snappedRel === 180) {
+    return [-anchorEdge.nx, -anchorEdge.ny];
+  }
+  if (snappedRel === 90) {
+    return [-anchorEdge.ny, anchorEdge.nx];
+  }
+  return [anchorEdge.ny, -anchorEdge.nx];
+}
+
+/**
+ * Among mover local edges, pick flush for this anchor edge + intent (presentation family + nearest θ).
+ */
+function selectMoverEdgeFlush(anchorEdge, moverLocalEdges, intentAngleDeg) {
+  if (!anchorEdge || !moverLocalEdges || !moverLocalEdges.length) return null;
+  const intent = intentAngleDeg || 0;
+  const snappedRel = roundRelativeAngleTo90(
+    normalizeAngle(intent - anchorEdge.faceBearing)
+  );
+  const [desiredNx, desiredNy] = desiredMoverNormalForIntent(anchorEdge, snappedRel);
+  let best = null;
+  let bestAng = Infinity;
+  for (let i = 0; i < moverLocalEdges.length; i += 1) {
+    const me = moverLocalEdges[i];
+    const result = proposeSnapFlushMoverEdge(anchorEdge, me, intent);
+    // Verify presentation family: world normal of mover edge should match desired.
+    const [wnx, wny] = rotateVec2(me.nx, me.ny, result.angleDeg);
+    const align = wnx * desiredNx + wny * desiredNy;
+    if (align < 0.999) continue; // not this presentation for this edge
+    const ang = angDiffAbs(result.angleDeg, intent);
+    const better =
+      ang < bestAng - 1e-9 ||
+      (Math.abs(ang - bestAng) <= 1e-9 && (
+        !best ||
+        me.len > best.moverEdgeLen + 1e-9 ||
+        (Math.abs(me.len - best.moverEdgeLen) <= 1e-9 && me.edgeIndex < best.moverEdgeIndex)
+      ));
+    if (better) {
+      bestAng = ang;
+      best = result;
+    }
+  }
+  return best;
+}
+
+/** Sticky hysteresis band: clamp 25% of engage into [0.15, 0.25] m. */
+function snapStickyEpsilonM(engageM) {
+  return Math.max(0.15, Math.min(0.25, 0.25 * engageM));
+}
+
+function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg, sticky) {
   const moverLen = mover.lengthM != null ? mover.lengthM : mover.widthM;
   const moverWid = mover.widthM;
   const engageM = snapEngageThresholdM(mover);
+  const eps = snapStickyEpsilonM(engageM);
+  const rectMover = mover.shape === 'rect';
+  const moverLocalEdges = rectMover ? null : getOuterSnapEdgesLocal(mover);
   let best = null;
   // S5: if a multi-set is active, never snap to another selected member as anchor.
   const excludeSelectedPeers = selectedIds.length > 1;
@@ -4307,9 +4486,15 @@ function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
       }
     }
     if (!nearest) continue;
-    const result = proposeSnapFlushToEdge(
-      nearest, moverLen, moverWid, intentAngleDeg, obj.angleDeg || 0
-    );
+    let result;
+    if (rectMover) {
+      result = proposeSnapFlushToEdge(
+        nearest, moverLen, moverWid, intentAngleDeg, obj.angleDeg || 0
+      );
+    } else {
+      result = selectMoverEdgeFlush(nearest, moverLocalEdges, intentAngleDeg);
+      if (!result) continue;
+    }
     const gap = map.distance(freeLatLng, result.latlng);
     if (gap > engageM) continue;
     const better =
@@ -4323,10 +4508,65 @@ function findNearestSnapCandidate(mover, freeLatLng, intentAngleDeg) {
         angleDeg: result.angleDeg,
         faceMid: result.faceMid,
         edgeLen: result.edgeLen,
-        gap
+        gap,
+        anchorEdgeIndex: result.anchorEdgeIndex != null ? result.anchorEdgeIndex : nearest.edgeIndex,
+        moverEdgeIndex: result.moverEdgeIndex != null ? result.moverEdgeIndex : null
       };
     }
   }
+
+  // Sticky anti-flicker: hold (anchor, anchorEdge, moverEdge) while still engage-legal and near-best.
+  if (
+    sticky &&
+    sticky.anchorId != null &&
+    sticky.anchorEdgeIndex != null
+  ) {
+    const stickyAnchor = getObjectById(sticky.anchorId);
+    if (
+      stickyAnchor &&
+      stickyAnchor.id !== mover.id &&
+      !(excludeSelectedPeers && isSelected(stickyAnchor.id))
+    ) {
+      const edges = getOuterSnapEdges(stickyAnchor);
+      const aEdge = edges.find(ed => ed.edgeIndex === sticky.anchorEdgeIndex);
+      if (aEdge) {
+        let stickyResult = null;
+        if (rectMover) {
+          stickyResult = proposeSnapFlushToEdge(
+            aEdge, moverLen, moverWid, intentAngleDeg, stickyAnchor.angleDeg || 0
+          );
+        } else if (moverLocalEdges) {
+          const me = moverLocalEdges.find(ed => ed.edgeIndex === sticky.moverEdgeIndex);
+          if (me) {
+            stickyResult = proposeSnapFlushMoverEdge(aEdge, me, intentAngleDeg);
+          } else {
+            stickyResult = selectMoverEdgeFlush(aEdge, moverLocalEdges, intentAngleDeg);
+          }
+        }
+        if (stickyResult) {
+          const stickyGap = map.distance(freeLatLng, stickyResult.latlng);
+          if (
+            stickyGap <= engageM &&
+            (!best || stickyGap <= best.gap + eps)
+          ) {
+            return {
+              anchor: stickyAnchor,
+              latlng: stickyResult.latlng,
+              angleDeg: stickyResult.angleDeg,
+              faceMid: stickyResult.faceMid,
+              edgeLen: stickyResult.edgeLen,
+              gap: stickyGap,
+              anchorEdgeIndex: sticky.anchorEdgeIndex,
+              moverEdgeIndex: stickyResult.moverEdgeIndex != null
+                ? stickyResult.moverEdgeIndex
+                : sticky.moverEdgeIndex
+            };
+          }
+        }
+      }
+    }
+  }
+
   return best;
 }
 

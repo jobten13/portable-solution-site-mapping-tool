@@ -1,31 +1,18 @@
 #!/usr/bin/env node
 /**
- * Rect-identity harness for #31 true-face snap.
+ * Snap identity + mover true-face harness (#31 / #34).
  *
- * Compares:
- *   - Pre-#31 bbox attach (frozen reference in this file — the old
- *     getSnapAttachLatLng face table + object-relative intent), versus
- *   - Shipping ring + dual-path proposal for shape:"rect"
- *     (getOuterSnapEdges → nearest mid → proposeSnapFlushToEdge),
- *     loaded live from Portable-Solution-Site-Mapping-Tool.html.
+ * Suites:
+ *   1) Rect identity (6480): pre-#31 frozen bbox vs shipping rect short-circuit path.
+ *   2) #34 (a) cut-corner mover chamfer-led onto rect (~192).
+ *   3) #34 (b) 8D36-shaped asymmetric mover (~96).
+ *   4) #34 (c) GK1935 mover control (~96).
  *
- * Approach: extract shipping helpers from the HTML at run time (not a
- * duplicated copy). Why: a single-file app has no module exports; live
- * extract guarantees the harness exercises whatever is currently in the
- * working tree. The pre-#31 bbox path stays frozen here as the identity
- * baseline (intentionally NOT loaded from HTML — that code was replaced).
+ * Shipping helpers are live-extracted from Portable-Solution-Site-Mapping-Tool.html.
  *
- * Sync obligation: none for the shipping side (always re-read from HTML).
- * If extract names/signatures change, this harness fails loudly at load.
- *
- * Case grid: sizes × angles × intents × free-offsets = 6480
- *   widths  [6, 10, 20]
- *   lengths [8, 15, 30]
- *   angles  [0, 15, 45, 90, 127, 180, 270, 33.7]
- *   intents [0, 30, 45, 90, 135, 180, A, A+90, A+45, A+22]
- *   offsets 9 positions relative to target (face-adjacent + corners)
- *
- * Pass tolerances: position ≤ 1 cm (0.01 m), angle ≤ 0.01°.
+ * Pass tolerances (rect identity): position ≤ 1 cm, angle ≤ 0.01°.
+ * Mover-chamfer suites: chamfer edge wins; presentation normals match desired (≥0.999);
+ * mids ≤ 1 cm.
  *
  * Run (from repo root):
  *   node tools/snap-identity-harness.js
@@ -42,11 +29,14 @@ const HTML_PATH = path.join(ROOT, 'Portable-Solution-Site-Mapping-Tool.html');
 
 const POS_TOL_M = 0.01;
 const ANG_TOL_DEG = 0.01;
+const NORMAL_ALIGN = 0.999;
 
 const WIDTHS = [6, 10, 20];
 const LENGTHS = [8, 15, 30];
 const ANGLES = [0, 15, 45, 90, 127, 180, 270, 33.7];
 const INTENT_BASE = [0, 30, 45, 90, 135, 180];
+
+const FT_TO_M = 0.3048;
 
 // ─── Extract shipping source from HTML ─────────────────────────────────────────
 
@@ -88,8 +78,18 @@ function loadShippingApi() {
     'roundRelativeAngleTo90',
     'resolveSnapMate',
     'isClockwiseHullEdge',
+    'isClockwiseHullEdgeLocal',
+    'bearingFromNormal',
+    'rotateVec2',
+    'angDiffAbs',
     'getOuterSnapEdges',
-    'proposeSnapFlushToEdge'
+    'getOuterSnapEdgesAt',
+    'getOuterSnapEdgesLocal',
+    'proposeSnapFlushToEdge',
+    'proposeSnapFlushMoverEdge',
+    'desiredMoverNormalForIntent',
+    'selectMoverEdgeFlush',
+    'snapStickyEpsilonM'
   ];
   const parts = [
     extractConst(html, 'FT_TO_M'),
@@ -184,7 +184,7 @@ function angDiff(api, a, b) {
   return d > 180 ? 360 - d : d;
 }
 
-/** Shipping path for one rect target: outer edges → nearest mid → propose. */
+/** Shipping path for one rect target: outer edges → nearest mid → propose (rect-mover bbox). */
 function shippingRectSnap(api, target, newLengthM, newWidthM, free, intent) {
   const edges = api.getOuterSnapEdges(target);
   if (!edges.length) throw new Error('getOuterSnapEdges returned no edges for rect');
@@ -209,12 +209,137 @@ function shippingRectSnap(api, target, newLengthM, newWidthM, free, intent) {
   );
 }
 
-// ─── Run ───────────────────────────────────────────────────────────────────────
+function isChamferEdgeIndex(i) {
+  return (i % 2) === 1;
+}
 
-function main() {
-  const api = loadShippingApi();
-  const center = api.L.latLng(38.5, -121.5);
+/**
+ * Length+ face of a rect (matches pre-#31 faces[0] normal).
+ */
+function rectLengthPlusEdge(api, anchor) {
+  const edges = api.getOuterSnapEdges(anchor);
+  const A = api.normalizeAngle(anchor.angleDeg || 0);
+  let best = null;
+  let bestDiff = Infinity;
+  for (let i = 0; i < edges.length; i += 1) {
+    const d = api.angDiffAbs(edges[i].faceBearing, A);
+    if (d < bestDiff - 1e-9 || (Math.abs(d - bestDiff) <= 1e-9 && edges[i].len > (best ? best.len : 0))) {
+      bestDiff = d;
+      best = edges[i];
+    }
+  }
+  return best;
+}
 
+/**
+ * Intents (deg) where selectMoverEdgeFlush returns this chamfer against the length+ face
+ * of a 0°-rect probe. Used so harness intents sit inside real angular basins (flush θ
+ * alone is not a fixed point — it often re-quantizes into another presentation).
+ */
+function intentsWhereChamferWins(api, moverSpec, chamferEdgeIndex, maxCount) {
+  const probe = {
+    id: 1,
+    shape: 'rect',
+    widthM: 10,
+    lengthM: 20,
+    angleDeg: 0,
+    latlng: api.L.latLng(38.5, -121.5)
+  };
+  const targetEdge = rectLengthPlusEdge(api, probe);
+  const local = api.getOuterSnapEdgesLocal(moverSpec);
+  const hits = [];
+  for (let i = 0; i < 360; i += 1) {
+    const won = api.selectMoverEdgeFlush(targetEdge, local, i);
+    if (won && won.moverEdgeIndex === chamferEdgeIndex) hits.push(i);
+  }
+  if (!hits.length) return [];
+  // Spread samples across the basin list.
+  const out = [];
+  const step = Math.max(1, Math.floor(hits.length / maxCount));
+  for (let k = 0; k < maxCount; k += 1) {
+    out.push(hits[Math.min(hits.length - 1, k * step)]);
+  }
+  return out;
+}
+
+/**
+ * Chamfer-led case: intent from a basin where this chamfer wins; free standoff outside
+ * flush so nearest mid is the target face. Anchor may be rotated — intent is offset by
+ * anchor face bearing so the relative presentation matches the 0° probe basin.
+ */
+function runChamferLedCase(api, moverSpec, anchor, chamferEdgeIndex, basinIntent0, standoffM) {
+  const targetEdge = rectLengthPlusEdge(api, anchor);
+  if (!targetEdge) return { ok: false, reason: 'no-anchor-edge' };
+  const local = api.getOuterSnapEdgesLocal(moverSpec);
+  const me = local.find(e => e.edgeIndex === chamferEdgeIndex);
+  if (!me) return { ok: false, reason: 'missing-chamfer', chamferEdgeIndex };
+
+  // basinIntent0 was measured against faceBearing 0; shift by live face bearing.
+  const intent = api.normalizeAngle(basinIntent0 + targetEdge.faceBearing);
+
+  const result = api.selectMoverEdgeFlush(targetEdge, local, intent);
+  if (!result) return { ok: false, reason: 'no-flush' };
+
+  const wonChamfer = isChamferEdgeIndex(result.moverEdgeIndex);
+  const wonTarget = result.moverEdgeIndex === chamferEdgeIndex;
+
+  const [desiredNx, desiredNy] = api.desiredMoverNormalForIntent(
+    targetEdge,
+    api.roundRelativeAngleTo90(api.normalizeAngle(intent - targetEdge.faceBearing))
+  );
+  const wonLocal = local.find(e => e.edgeIndex === result.moverEdgeIndex);
+  const [wnx, wny] = api.rotateVec2(wonLocal.nx, wonLocal.ny, result.angleDeg);
+  const align = wnx * desiredNx + wny * desiredNy;
+
+  const [mmx, mmy] = api.rotateVec2(wonLocal.midLocal[0], wonLocal.midLocal[1], result.angleDeg);
+  const midPair = api.metersToDeg(result.latlng, mmx, mmy);
+  const midWorld = api.L.latLng(midPair[0], midPair[1]);
+  const midErr = distM(api, midWorld, targetEdge.mid);
+
+  const freePair = api.metersToDeg(
+    result.latlng,
+    targetEdge.nx * standoffM,
+    targetEdge.ny * standoffM
+  );
+  const free = api.L.latLng(freePair[0], freePair[1]);
+  const aEdges = api.getOuterSnapEdges(anchor);
+  let nearest = null;
+  let nearestDist = Infinity;
+  for (let e = 0; e < aEdges.length; e += 1) {
+    const d = free.distanceTo(aEdges[e].mid);
+    if (
+      d < nearestDist - 1e-9 ||
+      (Math.abs(d - nearestDist) <= 1e-9 && aEdges[e].len > (nearest ? nearest.len : 0))
+    ) {
+      nearestDist = d;
+      nearest = aEdges[e];
+    }
+  }
+  const faceOk = nearest && nearest.edgeIndex === targetEdge.edgeIndex;
+
+  const ok = wonTarget && wonChamfer && align >= NORMAL_ALIGN && midErr <= POS_TOL_M && faceOk;
+  return {
+    ok,
+    wonChamfer,
+    wonTarget,
+    moverEdgeIndex: result.moverEdgeIndex,
+    align,
+    midErr,
+    faceOk,
+    intent,
+    reason: ok
+      ? null
+      : (!wonTarget
+        ? 'wrong-edge'
+        : (!wonChamfer
+          ? 'not-chamfer'
+          : (align < NORMAL_ALIGN
+            ? 'normal'
+            : (midErr > POS_TOL_M ? 'mid' : 'face'))))
+  };
+}
+
+function suiteRectIdentity(api, center) {
   let n = 0;
   let fail = 0;
   const samples = [];
@@ -284,15 +409,186 @@ function main() {
 
   const expected = WIDTHS.length * LENGTHS.length * ANGLES.length *
     (INTENT_BASE.length + 4) * 9;
-  const result = {
+  return {
+    name: 'rect-identity',
     ok: fail === 0 && n === expected,
     n,
     expected,
     fail,
     pass: n - fail,
+    samples
+  };
+}
+
+/**
+ * (a) 192: 4 anchor angles × 4 basin intents × 3 standoffs × 4 chamfers.
+ */
+function suiteCutCornerChamferLed(api, center) {
+  const moverSpec = {
+    id: 2,
+    shape: 'cut-corner-rectangle',
+    widthM: 6,
+    lengthM: 10,
+    cornerCutW: 1.5 / FT_TO_M,
+    cornerCutL: 1.5 / FT_TO_M,
+    angleDeg: 0,
+    latlng: center
+  };
+  const anchorAngles = [0, 45, 90, 180];
+  const standoffs = [1.0, 1.5, 2.0];
+  const chamfers = [1, 3, 5, 7];
+  const basinByChamfer = {};
+  for (let ci = 0; ci < chamfers.length; ci += 1) {
+    basinByChamfer[chamfers[ci]] = intentsWhereChamferWins(api, moverSpec, chamfers[ci], 4);
+    if (basinByChamfer[chamfers[ci]].length < 4) {
+      throw new Error('suite a: chamfer ' + chamfers[ci] + ' basin too small');
+    }
+  }
+
+  let n = 0;
+  let fail = 0;
+  const samples = [];
+
+  for (let ai = 0; ai < anchorAngles.length; ai += 1) {
+    const anchor = {
+      id: 1,
+      shape: 'rect',
+      widthM: 10,
+      lengthM: 20,
+      angleDeg: anchorAngles[ai],
+      latlng: center
+    };
+    for (let ci = 0; ci < chamfers.length; ci += 1) {
+      const intents = basinByChamfer[chamfers[ci]];
+      for (let ii = 0; ii < intents.length; ii += 1) {
+        for (let si = 0; si < standoffs.length; si += 1) {
+          const r = runChamferLedCase(
+            api, moverSpec, anchor, chamfers[ci], intents[ii], standoffs[si]
+          );
+          n += 1;
+          if (!r.ok) {
+            fail += 1;
+            if (samples.length < 12) {
+              samples.push({
+                suite: 'a',
+                A: anchorAngles[ai],
+                basin0: intents[ii],
+                chamfer: chamfers[ci],
+                standoff: standoffs[si],
+                ...r
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    name: 'cut-corner-chamfer-led',
+    ok: fail === 0 && n === 192,
+    n,
+    expected: 192,
+    fail,
+    pass: n - fail,
+    samples
+  };
+}
+
+/**
+ * (b)/(c) 96: 4 anchor angles × 4 basin intents × 2 standoffs × 3 chamfers.
+ */
+function suiteAsymmetricMover(api, center, name, widthFt, lengthFt, cutW, cutL, expected) {
+  const moverSpec = {
+    id: 2,
+    shape: 'cut-corner-rectangle',
+    widthM: widthFt * FT_TO_M,
+    lengthM: lengthFt * FT_TO_M,
+    cornerCutW: cutW,
+    cornerCutL: cutL,
+    angleDeg: 0,
+    latlng: center
+  };
+  const anchorAngles = [0, 30, 45, 90];
+  const standoffs = [1.5, 2.5];
+  const chamfers = [1, 3, 5];
+  const basinByChamfer = {};
+  for (let ci = 0; ci < chamfers.length; ci += 1) {
+    basinByChamfer[chamfers[ci]] = intentsWhereChamferWins(api, moverSpec, chamfers[ci], 4);
+    if (basinByChamfer[chamfers[ci]].length < 4) {
+      throw new Error(name + ': chamfer ' + chamfers[ci] + ' basin too small');
+    }
+  }
+
+  let n = 0;
+  let fail = 0;
+  const samples = [];
+
+  for (let ai = 0; ai < anchorAngles.length; ai += 1) {
+    const anchor = {
+      id: 1,
+      shape: 'rect',
+      widthM: 12,
+      lengthM: 24,
+      angleDeg: anchorAngles[ai],
+      latlng: center
+    };
+    for (let ci = 0; ci < chamfers.length; ci += 1) {
+      const intents = basinByChamfer[chamfers[ci]];
+      for (let ii = 0; ii < intents.length; ii += 1) {
+        for (let si = 0; si < standoffs.length; si += 1) {
+          const r = runChamferLedCase(
+            api, moverSpec, anchor, chamfers[ci], intents[ii], standoffs[si]
+          );
+          n += 1;
+          if (!r.ok) {
+            fail += 1;
+            if (samples.length < 10) {
+              samples.push({
+                suite: name,
+                A: anchorAngles[ai],
+                basin0: intents[ii],
+                chamfer: chamfers[ci],
+                ...r
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    name,
+    ok: fail === 0 && n === expected,
+    n,
+    expected,
+    fail,
+    pass: n - fail,
+    samples
+  };
+}
+
+function main() {
+  const api = loadShippingApi();
+  const center = api.L.latLng(38.5, -121.5);
+
+  const rect = suiteRectIdentity(api, center);
+  const a = suiteCutCornerChamferLed(api, center);
+  const b = suiteAsymmetricMover(api, center, '8d36-asymmetric', 31, 37, 8.4, 13.2, 96);
+  const c = suiteAsymmetricMover(api, center, 'gk1935-control', 18.583, 33.917, 5.421, 5.421, 96);
+
+  const result = {
+    ok: rect.ok && a.ok && b.ok && c.ok,
+    suites: { rect, a, b, c },
+    totals: {
+      n: rect.n + a.n + b.n + c.n,
+      fail: rect.fail + a.fail + b.fail + c.fail,
+      pass: rect.pass + a.pass + b.pass + c.pass
+    },
     posTolM: POS_TOL_M,
     angTolDeg: ANG_TOL_DEG,
-    samples
+    stickyEpsilon: 'clamp(0.25*engageM, 0.15, 0.25) m'
   };
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exit(1);
