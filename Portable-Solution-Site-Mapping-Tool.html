@@ -527,7 +527,27 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   padding:4px 7px;
   font-family:Arial, sans-serif;
 }
-#print-meta .print-meta-line + .print-meta-line { margin-top:2px; }
+#print-meta .print-meta-data { margin:0; }
+#print-meta .print-meta-legend {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:10px 16px;
+  margin-top:4px;
+  padding-top:3px;
+  border-top:1px solid #d0d7de;
+}
+#print-meta .print-legend-item {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  white-space:nowrap;
+  color:#0d1117;
+}
+#print-meta .print-legend-item svg {
+  display:block;
+  flex-shrink:0;
+}
 
 /* Note */
 .dim-note { font-size:10px; color:#8b949e; margin-top:4px; font-style:italic; }
@@ -835,18 +855,45 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 </div>
 <div id="version-display" class="version-badge">v—</div>
 <div id="print-meta">
-  <div class="print-meta-line">
+  <div class="print-meta-data">
     Plan: <span id="print-meta-operation">Untitled</span> |
     Printed: <span id="print-meta-date">-</span> |
-    Scale: <span id="print-meta-scale">-</span> |
-    Center: <span id="print-meta-center">-</span> |
-    Zones: <span id="print-meta-zones">—</span>
-  </div>
-  <div class="print-meta-line">
+    Coordinates: <span id="print-meta-center">-</span> |
     Beds (all): <span id="print-meta-beds-all">0</span> |
     Beds (Ward/ICU): <span id="print-meta-beds-wardicu">0</span><span id="print-meta-uncounted-wrap" hidden> | <span id="print-meta-uncounted"></span></span> |
-    <span id="print-meta-sqft">0 sq ft (0 w/ buffer)</span> |
+    <span id="print-meta-sqft">0 sq ft</span> |
+    Zones: <span id="print-meta-zones">—</span> |
     <span id="print-meta-caveat"></span>
+  </div>
+  <div class="print-meta-legend" aria-label="Print legend">
+    <span class="print-legend-item">
+      <svg width="17" height="12" viewBox="0 0 17 12" aria-hidden="true" focusable="false">
+        <rect x="1.25" y="1.25" width="14.5" height="9.5" fill="#c6f0cf" stroke="none"/>
+        <polyline points="4.8,1.25 1.25,1.25 1.25,10.75 15.75,10.75 15.75,1.25 11.0,1.25" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"/>
+      </svg>
+      Entry/Exit
+    </span>
+    <span class="print-legend-item">
+      <svg width="16" height="12" viewBox="0 0 16 12" aria-hidden="true" focusable="false">
+        <rect x="0.75" y="0.75" width="14.5" height="10.5" fill="#58a6ff" stroke="#24292f" stroke-width="1.25"/>
+        <line x1="1.5" y1="11" x2="10" y2="1" stroke="#0d1117" stroke-width="3.2" stroke-opacity="0.65"/>
+        <line x1="7" y1="11" x2="15.5" y2="1" stroke="#f0f6fc" stroke-width="3.2" stroke-opacity="0.5"/>
+        <line x1="12.5" y1="11" x2="15.5" y2="7.5" stroke="#0d1117" stroke-width="3.2" stroke-opacity="0.65"/>
+      </svg>
+      Ramp
+    </span>
+    <span class="print-legend-item">
+      <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true" focusable="false">
+        <rect x="1.25" y="1.25" width="11.5" height="9.5" fill="#ffd7d5" stroke="#f85149" stroke-width="2"/>
+      </svg>
+      Footprint overlap
+    </span>
+    <span class="print-legend-item">
+      <svg width="14" height="12" viewBox="0 0 14 12" aria-hidden="true" focusable="false">
+        <rect x="1.25" y="1.25" width="11.5" height="9.5" fill="#ffe8cc" stroke="#ffa657" stroke-width="2"/>
+      </svg>
+      Buffer advisory
+    </span>
   </div>
 </div>
 <input type="file" id="scenario-file-input" accept=".json,application/json" style="display:none;" />
@@ -4728,6 +4775,14 @@ function formatAreaTotal(footprintSqFt, bufferedSqFt) {
   return `${footprintSqFt} sq ft (${bufferedSqFt} w/ buffer)`;
 }
 
+/** Print header: omit buffer parenthetical when rounded totals match (all buffers 0). */
+function formatPrintAreaTotal(footprintSqFt, bufferedSqFt) {
+  if (bufferedSqFt !== footprintSqFt) {
+    return `${footprintSqFt} sq ft (${bufferedSqFt} w/ buffer)`;
+  }
+  return `${footprintSqFt} sq ft`;
+}
+
 /** Both bed modes + area; independent of bedsTotalMode (sidebar toggle). */
 function computePlacedTotals() {
   let minBedsAll = 0;
@@ -5846,7 +5901,9 @@ function getZoneSummary() {
   const counts = {};
   objects.forEach(o => {
     const r = String(o.role || '—');
-    if (r !== '—') counts[r] = (counts[r] || 0) + 1;
+    // Ramp is structure-class (legend hatch), not a clinical zone.
+    if (r === '—' || r === 'Ramp') return;
+    counts[r] = (counts[r] || 0) + 1;
   });
   const parts = Object.keys(counts).sort().map(r => `${counts[r]} ${r}`);
   return parts.length ? parts.join(', ') : '—';
@@ -5856,12 +5913,10 @@ function updatePrintMeta() {
   const center = map.getCenter();
   const opNameInput = document.getElementById('operation-name');
   const operationName = opNameInput && opNameInput.value.trim() ? opNameInput.value.trim() : 'Untitled';
-  const scaleText = document.getElementById('scale-ratio').textContent || '1:?';
   document.getElementById('print-meta-operation').textContent = operationName;
   document.getElementById('print-meta-date').textContent = new Date().toLocaleString();
-  document.getElementById('print-meta-scale').textContent = scaleText;
   document.getElementById('print-meta-center').textContent =
-    `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
+    `${center.lat.toFixed(3)}, ${center.lng.toFixed(3)}`;
   const zonesEl = document.getElementById('print-meta-zones');
   if (zonesEl) zonesEl.textContent = getZoneSummary();
 
@@ -5878,7 +5933,7 @@ function updatePrintMeta() {
     uncountedWrap.hidden = !uncountedLine;
   }
   const sqftEl = document.getElementById('print-meta-sqft');
-  if (sqftEl) sqftEl.textContent = formatAreaTotal(totals.footprintSqFt, totals.bufferedSqFt);
+  if (sqftEl) sqftEl.textContent = formatPrintAreaTotal(totals.footprintSqFt, totals.bufferedSqFt);
   const caveatEl = document.getElementById('print-meta-caveat');
   if (caveatEl) caveatEl.textContent = TOTALS_CAVEAT;
 }
