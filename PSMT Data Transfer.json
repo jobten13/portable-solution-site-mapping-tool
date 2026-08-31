@@ -1,0 +1,1257 @@
+{
+  "title": "PSMT Data Transfer",
+  "description": "Transfer export of all soft-sided and hard-sided products for another Cursor project (Portable Solution Mapping Tool or similar). Dimensions are raw source values \u2014 not comparison-tool display ceiling-rounding.",
+  "created": "2026-08-11",
+  "sourceProject": "portable-solution-comparison-tool",
+  "rules": {
+    "dimensionPriority": "Vendor sheet first, then data.js, then PSC only when no cleaner source exists.",
+    "excluded": "Non-dimension comparison specs (wind, snow, fire, setup, ground, lifespan, repair) omitted by request.",
+    "ceilingRounding": "Comparison-tool display often ceiling-rounds external L\u00d7W to whole feet. This file prefers raw pre-round values when known."
+  },
+  "products": [
+    {
+      "id": "blumed-2032",
+      "vendor": "BLU-MED",
+      "name": "XPH 2032.5",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Quonset / arched rectangle",
+      "bedCapacity": {
+        "value": 10,
+        "display": "10",
+        "provenance": "data.js; PSC bed capacity for XPH shelters"
+      },
+      "external": {
+        "lengthFt": 32.5,
+        "widthFt": 20.0,
+        "heightFt": 10.0,
+        "lengthRaw": "32.5'",
+        "widthRaw": "20'",
+        "heightRaw": "10'",
+        "sqFt": null,
+        "note": "PSC states Length 32.5', Width 20', Height 10' (Quonset Shape). data.js display uses ceiling-rounded 20'\u00d733' / 660 sq ft \u2014 not used here."
+      },
+      "internal": {
+        "lengthFt": 32.5,
+        "widthFt": 20.0,
+        "sqFt": 650,
+        "lengthRaw": "32.5'",
+        "widthRaw": "20'",
+        "sqFtRaw": "650 sq ft",
+        "note": "PSC interior Length 32.5' \u00d7 Width 20'. data.js stores 650 sq ft (20\u00d732.5)."
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (Vendor Product Catalog Template - Revised Version.pdf) \u2014 no dedicated BLU-MED sheet in this repo's Reference Material",
+        "also": [
+          "data.js",
+          "VENDOR_SPECS_DIGEST.md cites TM_20x32.5 manual as 20'\u00d732.5'"
+        ]
+      },
+      "notes": [],
+      "missingVendorSheet": "Missing vendor sheet: BLU-MED XPH 2032.5 manufacturer manual/spec (cited in VENDOR_SPECS_DIGEST as TM_20x32.5 BLU-MED XPH Shelter) was not in the reference package. Dimensions taken from PSC / digest / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "blumed-2039",
+      "vendor": "BLU-MED",
+      "name": "XPH 2039",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Quonset / arched rectangle",
+      "bedCapacity": {
+        "value": 10,
+        "display": "10",
+        "provenance": "data.js; PSC"
+      },
+      "external": {
+        "lengthFt": 39.0,
+        "widthFt": 20.0,
+        "heightFt": 10.0,
+        "lengthRaw": "39'",
+        "widthRaw": "20'",
+        "heightRaw": "10'",
+        "sqFt": 780,
+        "note": "PSC Length 39', Width 20', Height 10' (Quonset). 20\u00d739=780 sq ft exact."
+      },
+      "internal": {
+        "lengthFt": 39.0,
+        "widthFt": 20.0,
+        "sqFt": 780,
+        "lengthRaw": "39'",
+        "widthRaw": "20'",
+        "sqFtRaw": "780 sq ft"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog",
+        "also": [
+          "data.js",
+          "VENDOR_SPECS_DIGEST.md cites TM_2039"
+        ]
+      },
+      "notes": [],
+      "missingVendorSheet": "Missing vendor sheet: BLU-MED XPH 2039 manufacturer manual/spec (cited in VENDOR_SPECS_DIGEST as TM_2039 XPH Shelter) was not in the reference package. Dimensions taken from PSC / digest / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-asap18",
+      "vendor": "DLX",
+      "name": "ASAP18",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": 3,
+        "display": "3",
+        "provenance": "data.js / Quick Compare / PSC assembly context"
+      },
+      "external": {
+        "lengthFt": 18,
+        "widthFt": 16,
+        "heightFt": 8,
+        "lengthRaw": "18'",
+        "widthRaw": "16'",
+        "heightRaw": "8 ft",
+        "sqFt": 288,
+        "note": "PSC: External 18 \u00d7 16 \u00d7 8 ft; interior 288 ft2. Exact whole feet \u2014 no ceiling change."
+      },
+      "internal": {
+        "sqFt": 288,
+        "sqFtRaw": "288 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC: External 18 \u00d7 16 \u00d7 8 ft; interior 288 ft2. Exact whole feet \u2014 no ceiling change."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX ASAP-18 manufacturer tech sheet was not in the reference package. Dimensions taken from PSC / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-x8",
+      "vendor": "DLX",
+      "name": "X-8",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": null,
+        "display": "N/A",
+        "provenance": "data.js / Quick Compare / PSC assembly context",
+        "note": "Connector / non-patient role; bed capacity N/A or null in data.js"
+      },
+      "external": {
+        "lengthFt": 8,
+        "widthFt": 21.5,
+        "heightFt": 10.25,
+        "lengthRaw": "8'",
+        "widthRaw": "21.5'",
+        "heightRaw": "10.25 ft",
+        "sqFt": 172.0,
+        "note": "PSC: External 8 \u00d7 21.5 \u00d7 10.25 ft; interior 172 ft2. data.js display ceilings width to 22'."
+      },
+      "internal": {
+        "sqFt": 172,
+        "sqFtRaw": "172 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC: External 8 \u00d7 21.5 \u00d7 10.25 ft; interior 172 ft2. data.js display ceilings width to 22'."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-8 manufacturer tech sheet was not in the reference package. Dimensions taken from PSC / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-x16",
+      "vendor": "DLX",
+      "name": "X-16",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": 6,
+        "display": "6",
+        "provenance": "data.js / Quick Compare / PSC assembly context"
+      },
+      "external": {
+        "lengthFt": 16,
+        "widthFt": 21.5,
+        "heightFt": 10.25,
+        "lengthRaw": "16'",
+        "widthRaw": "21.5'",
+        "heightRaw": "10.25 ft",
+        "sqFt": 344.0,
+        "note": "PSC: External 16 \u00d7 21.5 \u00d7 10.25 ft; interior 344 ft2. data.js display ceilings width to 22'."
+      },
+      "internal": {
+        "sqFt": 344,
+        "sqFtRaw": "344 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC: External 16 \u00d7 21.5 \u00d7 10.25 ft; interior 344 ft2. data.js display ceilings width to 22'."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-16 manufacturer tech sheet was not in the reference package. Dimensions taken from PSC / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-x24",
+      "vendor": "DLX",
+      "name": "X-24",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": 8,
+        "display": "8",
+        "provenance": "data.js / Quick Compare / PSC assembly context"
+      },
+      "external": {
+        "lengthFt": 24,
+        "widthFt": 21.5,
+        "heightFt": 10.25,
+        "lengthRaw": "24'",
+        "widthRaw": "21.5'",
+        "heightRaw": "10.25 ft",
+        "sqFt": 516.0,
+        "note": "PSC + VENDOR_SPECS_DIGEST tech sheet: 24 \u00d7 21.5 ft, 516 ft2, height 10.25 ft. data.js display ceilings to 22'\u00d724'."
+      },
+      "internal": {
+        "sqFt": 516,
+        "sqFtRaw": "516 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC + VENDOR_SPECS_DIGEST tech sheet: 24 \u00d7 21.5 ft, 516 ft2, height 10.25 ft. data.js display ceilings to 22'\u00d724'."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-24 manufacturer tech sheet (cited in VENDOR_SPECS_DIGEST as X-Series X-24 Shelter Tech Sheet Updated 11_18_24.pdf) was not in the reference package. Dimensions taken from PSC / digest / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-x24sc",
+      "vendor": "DLX",
+      "name": "X-24SC",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": 6,
+        "display": "6",
+        "provenance": "data.js / Quick Compare / PSC assembly context"
+      },
+      "external": {
+        "lengthFt": 24,
+        "widthFt": 25.3,
+        "heightFt": 10.25,
+        "lengthRaw": "24'",
+        "widthRaw": "25.3'",
+        "heightRaw": "10.25 ft",
+        "sqFt": 607.2,
+        "note": "PSC: External 24 \u00d7 25.3 \u00d7 10.25 ft; interior 531 ft2. data.js display ceilings to 24'\u00d726'."
+      },
+      "internal": {
+        "sqFt": 531,
+        "sqFtRaw": "531 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC: External 24 \u00d7 25.3 \u00d7 10.25 ft; interior 531 ft2. data.js display ceilings to 24'\u00d726'."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-24SC (Side Connect) manufacturer tech sheet was not in the reference package. Dimensions taken from PSC / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-x32",
+      "vendor": "DLX",
+      "name": "X-32",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": 12,
+        "display": "12",
+        "provenance": "data.js / Quick Compare / PSC assembly context"
+      },
+      "external": {
+        "lengthFt": 32,
+        "widthFt": 21.5,
+        "heightFt": 10.25,
+        "lengthRaw": "32'",
+        "widthRaw": "21.5'",
+        "heightRaw": "10.25 ft",
+        "sqFt": 688.0,
+        "note": "PSC + digest tech sheet: 32 \u00d7 21.5 ft, 688 ft2. data.js display ceilings width to 22'."
+      },
+      "internal": {
+        "sqFt": 688,
+        "sqFtRaw": "688 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC + digest tech sheet: 32 \u00d7 21.5 ft, 688 ft2. data.js display ceilings width to 22'."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-32 manufacturer tech sheet (cited in VENDOR_SPECS_DIGEST as X-Series X-32 Shelter Tech Sheet Updated 11_18_24.pdf) was not in the reference package. Dimensions taken from PSC / digest / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-x40",
+      "vendor": "DLX",
+      "name": "X-40",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rect",
+      "bedCapacity": {
+        "value": 14,
+        "display": "14",
+        "provenance": "data.js / Quick Compare / PSC assembly context"
+      },
+      "external": {
+        "lengthFt": 40,
+        "widthFt": 21.5,
+        "heightFt": 10.25,
+        "lengthRaw": "40'",
+        "widthRaw": "21.5'",
+        "heightRaw": "10.25 ft",
+        "sqFt": 860.0,
+        "note": "PSC: External 40 \u00d7 21.5 \u00d7 10.25 ft; interior 860 ft2. data.js display ceilings width to 22'."
+      },
+      "internal": {
+        "sqFt": 860,
+        "sqFtRaw": "860 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC: External 40 \u00d7 21.5 \u00d7 10.25 ft; interior 860 ft2. data.js display ceilings width to 22'."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-40 manufacturer tech sheet was not in the reference package. Dimensions taken from PSC / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "dlx-xhub",
+      "vendor": "DLX",
+      "name": "X-Hub",
+      "type": "connector",
+      "structure": "soft-sided",
+      "shape": "plus / four-way connector",
+      "bedCapacity": {
+        "value": null,
+        "display": null,
+        "provenance": "data.js / Quick Compare / PSC assembly context",
+        "note": "Connector / non-patient role; bed capacity N/A or null in data.js"
+      },
+      "external": {
+        "lengthFt": 22,
+        "widthFt": 22,
+        "heightFt": 12.5,
+        "lengthRaw": "22'",
+        "widthRaw": "22'",
+        "heightRaw": "12.5 ft",
+        "sqFt": 484,
+        "note": "PSC + digest: 22 \u00d7 22 ft, 484 ft2, height 12.5 ft. data.js type=connector; PSC describes as soft-sided shelter with four-direction connection."
+      },
+      "internal": {
+        "sqFt": 484,
+        "sqFtRaw": "484 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw L\u00d7W\u00d7H); cross-checked with data.js and VENDOR_SPECS_DIGEST where sheets are cited",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "PSC + digest: 22 \u00d7 22 ft, 484 ft2, height 12.5 ft. data.js type=connector; PSC describes as soft-sided shelter with four-direction connection."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: DLX X-Hub manufacturer tech sheet (cited in VENDOR_SPECS_DIGEST as X-Hub Shelter Tech Sheet Updated 11_19_24.pdf) was not in the reference package. Dimensions taken from PSC / digest / data.js. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "hdt-305",
+      "vendor": "HDT",
+      "name": "Base-X 305",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": 8,
+        "display": "8",
+        "provenance": "data.js (Med-Surg bed capacity used by comparison tool)",
+        "note": "Vendor sheet markets shelter for 12\u201314 personnel billeting \u2014 different metric than Med-Surg beds."
+      },
+      "external": {
+        "lengthFt": 25.0,
+        "widthFt": 20.5,
+        "heightPeakFt": 10.5,
+        "lengthRaw": "25'0\"",
+        "widthRaw": "20'6\"",
+        "heightPeakRaw": "10'6\"",
+        "outerCoverWidthRaw": "20'6\"",
+        "sqFt": 512.5,
+        "note": "Vendor diagram outer cover 20'6\" \u00d7 25'0\". data.js display ceilings to 21'\u00d725'/525 sq ft \u2014 not used here. 20.5\u00d725=512.5."
+      },
+      "internal": {
+        "lengthFt": 25.0,
+        "widthFt": 18.0,
+        "sqFt": 450,
+        "lengthRaw": "25'",
+        "widthRaw": "18'",
+        "sqFtRaw": "450 ft2",
+        "note": "Vendor sheet Interior Floor Space 18' \u00d7 25', Area 450 ft2 (clear span 18')."
+      },
+      "provenance": {
+        "primary": "HDT_305shelter_13-13.pdf",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "Raw exterior uses outer-cover width 20'6\", not PSC's 18'\u00d725' clear-span figure."
+      ]
+    },
+    {
+      "id": "hdt-505",
+      "vendor": "HDT",
+      "name": "Base-X 505",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": 16,
+        "display": "16",
+        "provenance": "PSC - HDT.pdf / data.js"
+      },
+      "external": {
+        "lengthRaw": "25'7\" (diagram outer cover, Model 505)",
+        "widthRaw": "25'7\" (diagram outer cover, Model 505)",
+        "heightPeakRaw": "13'0\"",
+        "lengthFt": 25.583333333333332,
+        "widthFt": 25.583333333333332,
+        "heightPeakFt": 13.0,
+        "sqFt": 654.51,
+        "note": "Vendor diagram Model 505 outer cover \u224825'7\" square. PSC lists External 26'\u00d725'\u00d713' (matches ULME floor-space column more closely than standard Model 505). Prefer vendor-sheet diagram for raw exterior; PSC retained as alternate.",
+        "pscExternalAlternate": "26' \u00d7 25' \u00d7 13'"
+      },
+      "internal": {
+        "lengthFt": 25.0,
+        "widthFt": 25.0,
+        "sqFt": 625,
+        "lengthRaw": "25'",
+        "widthRaw": "25'",
+        "sqFtRaw": "625 ft2",
+        "note": "Vendor sheet Model 505 Interior Floor Space 25'\u00d725', Area 625 ft2. Clear span text: 25.25 ft wide."
+      },
+      "provenance": {
+        "primary": "HDT_505shelters_06.pdf",
+        "also": [
+          "PSC - HDT.pdf",
+          "data.js"
+        ]
+      },
+      "notes": [
+        "ULME variant on same sheet has 26'\u00d725' / 650 ft2 interior \u2014 not the product used in the tool."
+      ]
+    },
+    {
+      "id": "hdt-8d36",
+      "vendor": "HDT",
+      "name": "Base-X 8D36",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "dome / ellipse",
+      "bedCapacity": {
+        "value": 18,
+        "display": "18",
+        "provenance": "data.js"
+      },
+      "external": {
+        "outerCoverSpanRaw": "36'11\" (diagram outer cover label)",
+        "outerCoverSpanFt": 36.916666666666664,
+        "sqFt": null,
+        "shape": "Dome",
+        "note": "Vendor diagram labels outer cover ~36'11\". data.js display ~1184 sq ft (Dome) appears to be a tool judgment (numerically 32\u00d737) and is NOT a stated sheet exterior area \u2014 omitted as authoritative exterior sq ft.",
+        "dataJsDisplayForReferenceOnly": "~1184 sq ft (Dome)"
+      },
+      "internal": {
+        "lengthFt": 37.0,
+        "widthFt": 31.0,
+        "sqFt": 935,
+        "lengthRaw": "37'",
+        "widthRaw": "31'",
+        "sqFtRaw": "935 ft2",
+        "clearSpanRaw": "31 ft",
+        "note": "Vendor sheet Interior Floor Space 31' \u00d7 37', Area 935 ft2. Diagram liner clear span labeled 31'1\"."
+      },
+      "provenance": {
+        "primary": "HDT_8D36Shelter_11.pdf",
+        "also": [
+          "data.js",
+          "PSC combined catalog states 31'\u00d737' for system exterior listing"
+        ]
+      },
+      "notes": [
+        "Exterior square footage in data.js (~1184) is not independently confirmed on the manufacturer sheet; use diagram outer span or mapping-tool ellipse treatment carefully."
+      ]
+    },
+    {
+      "id": "hdt-402",
+      "vendor": "HDT",
+      "name": "Quick Halt 402",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 2,
+          "max": 3
+        },
+        "display": "2 to 3",
+        "provenance": "data.js \u2014 vendor-confirmed per-model capacity (not on Quick Halt sheet; PSC listed combined 2\u20134)"
+      },
+      "external": {
+        "lengthFt": 12.0,
+        "widthFt": 15.0,
+        "lengthRaw": "12'",
+        "widthRaw": "15'",
+        "sqFt": 180,
+        "note": "Vendor sheet lists interior W\u00d7L 15'\u00d712' / 180 ft2; no separate exterior L\u00d7W. Tool/data.js and PSC use same 15'\u00d712' footprint for this model."
+      },
+      "internal": {
+        "lengthFt": 12.0,
+        "widthFt": 15.0,
+        "sqFt": 180,
+        "lengthRaw": "12'",
+        "widthRaw": "15'",
+        "sqFtRaw": "180 ft2"
+      },
+      "provenance": {
+        "primary": "HDT_Quick-Halt_TAC_Shelter_08.pdf (dimensions); data.js (beds)",
+        "also": [
+          "PSC - HDT.pdf"
+        ]
+      },
+      "notes": [
+        "Sheet does not state bed capacity."
+      ]
+    },
+    {
+      "id": "hdt-403",
+      "vendor": "HDT",
+      "name": "Quick Halt 403",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 4,
+          "max": 5
+        },
+        "display": "4 to 5",
+        "provenance": "data.js \u2014 vendor-confirmed per-model capacity"
+      },
+      "external": {
+        "lengthFt": 18.0,
+        "widthFt": 15.0,
+        "lengthRaw": "18'",
+        "widthRaw": "15'",
+        "sqFt": 270
+      },
+      "internal": {
+        "lengthFt": 18.0,
+        "widthFt": 15.0,
+        "sqFt": 270,
+        "lengthRaw": "18'",
+        "widthRaw": "15'",
+        "sqFtRaw": "270 ft2"
+      },
+      "provenance": {
+        "primary": "HDT_Quick-Halt_TAC_Shelter_08.pdf (dimensions); data.js (beds)",
+        "also": [
+          "PSC - HDT.pdf"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "hdt-3236a",
+      "vendor": "HDT",
+      "name": "Airbeam 3236A",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Tapered-end rectangle",
+      "bedCapacity": {
+        "value": 50,
+        "display": "50",
+        "provenance": "PSC - HDT.pdf / data.js"
+      },
+      "external": {
+        "lengthFt": 77.33333333333333,
+        "widthFt": 34.416666666666664,
+        "lengthRaw": "77'4\"",
+        "widthRaw": "34'5\"",
+        "heightInteriorFt": 15.0,
+        "heightInteriorRaw": "15 ft (sheet narrative)",
+        "sqFt": 2661.56,
+        "shape": "Tapered-end rectangle",
+        "note": "Diagram bounding box 77'4\" \u00d7 34'5\". data.js/PSC display uses ceiling-rounded 78'\u00d735' / ~2730 \u2014 not used here. Raw product \u22482660.97 sq ft."
+      },
+      "internal": {
+        "bodyFloorSpaceRaw": "36' \u00d7 31.5'",
+        "endWallFloorSpaceRaw": "10.5' \u00d7 31' (Type A with liner)",
+        "sqFt": 1422,
+        "sqFtRaw": "1422 ft2 total useable area (Type A with liner)",
+        "note": "Prefer vendor Total useable area 1422 over PSC 32'\u00d736'/1400."
+      },
+      "provenance": {
+        "primary": "HDT_32SeriesAirBeam_17.pdf",
+        "also": [
+          "PSC - HDT.pdf",
+          "data.js"
+        ]
+      },
+      "notes": [
+        "Type A with liner assumed (matches tool's 1422 sq ft)."
+      ]
+    },
+    {
+      "id": "ws-gk20",
+      "vendor": "Western Shelter",
+      "name": "GateKeeper 20",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Octagon",
+      "bedCapacity": {
+        "value": null,
+        "display": "N/A",
+        "provenance": "data.js \u2014 ancillary/connector role"
+      },
+      "external": {
+        "footprintRaw": "18'7\" \u00d7 18'7\"",
+        "lengthFt": 18.583333333333332,
+        "widthFt": 18.583333333333332,
+        "sidewallHeightRaw": "6'",
+        "peakHeightRaw": "10'10\"",
+        "sqFt": 286,
+        "sqFtRaw": "286 ft\u00b2",
+        "shape": "Octagon"
+      },
+      "internal": {
+        "sqFt": 286,
+        "sqFtRaw": "286 ft\u00b2",
+        "footprintRaw": "18'7\" \u00d7 18'7\"",
+        "shape": "Octagon",
+        "note": "Sheet usable/square footage 286 ft\u00b2; footprint same as exterior for octagon listing."
+      },
+      "provenance": {
+        "primary": "SW-20.pdf",
+        "also": [
+          "data.js",
+          "PSC combined catalog"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "ws-gk1935",
+      "vendor": "Western Shelter",
+      "name": "GateKeeper 1935",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Clipped-corner rectangle (elongated octagon)",
+      "bedCapacity": {
+        "value": 10,
+        "display": "10",
+        "provenance": "data.js / PSC"
+      },
+      "external": {
+        "footprintRaw": "18'7\" \u00d7 33'11\"",
+        "widthFt": 18.583333333333332,
+        "lengthFt": 33.916666666666664,
+        "cornerCutLabelsRaw": "7'6\" and 9'4\" (diagram cut lengths)",
+        "sidewallHeightRaw": "6'",
+        "peakHeightRaw": "10'10\"",
+        "shape": "Clipped-corner rectangle",
+        "boundingBoxSqFtApprox": 630.28,
+        "note": "Footprint is clipped-corner; usable area is 570 ft\u00b2, not full bounding rectangle. data.js display ~630 sq ft is ceiling-rounded envelope judgment \u2014 not used as raw usable area."
+      },
+      "internal": {
+        "sqFt": 570,
+        "sqFtRaw": "570 ft\u00b2",
+        "footprintRaw": "18'7\" \u00d7 33'11\""
+      },
+      "provenance": {
+        "primary": "SW-1935.pdf",
+        "also": [
+          "data.js",
+          "VENDOR_SPECS_DIGEST.md"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "ws-gk2342",
+      "vendor": "Western Shelter",
+      "name": "GateKeeper 2342",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Clipped-corner rectangle",
+      "bedCapacity": {
+        "value": 17,
+        "display": "17",
+        "provenance": "PSC - Western Shelter.pdf / data.js"
+      },
+      "external": {
+        "footprintRaw": "22'6\" \u00d7 41'2\" (vendor sheet)",
+        "widthFt": 22.5,
+        "lengthFt": 41.166666666666664,
+        "peakHeightRaw": "12'",
+        "sidewallHeightRaw": "6'",
+        "shape": "Clipped-corner rectangle",
+        "pscExternalAlternate": "22'8\" \u00d7 41'2\" \u00d7 12'",
+        "note": "Prefer SW-2342 vendor footprint 22'6\"\u00d741'2\". PSC lists 22'8\"\u00d741'2\". data.js ~966 sq ft is ceiling-rounded bounding box \u2014 not raw usable."
+      },
+      "internal": {
+        "sqFt": 840,
+        "sqFtRaw": "840 ft\u00b2",
+        "note": "Vendor sheet Square Footage 840 ft\u00b2."
+      },
+      "provenance": {
+        "primary": "SW-2342_Shelter.pdf",
+        "also": [
+          "PSC - Western Shelter.pdf",
+          "data.js"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "ws-gk2360",
+      "vendor": "Western Shelter",
+      "name": "GateKeeper 2360",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Clipped-corner rectangle",
+      "bedCapacity": {
+        "value": 22,
+        "display": "22",
+        "provenance": "PSC - Western Shelter.pdf / data.js"
+      },
+      "external": {
+        "footprintRaw": "22'8\" \u00d7 60'1\"",
+        "widthFt": 22.666666666666668,
+        "lengthFt": 60.083333333333336,
+        "heightRaw": "12'",
+        "peakHeightRaw": "12'",
+        "sidewallHeightRaw": "6'",
+        "shape": "Clipped-corner rectangle",
+        "note": "Vendor sheet + PSC agree on 22'8\"\u00d760'1\". data.js ~1403 sq ft is ceiling-rounded envelope \u2014 not raw usable."
+      },
+      "internal": {
+        "sqFt": 1274,
+        "sqFtRaw": "1274 ft\u00b2"
+      },
+      "provenance": {
+        "primary": "SW-2360.pdf",
+        "also": [
+          "PSC - Western Shelter.pdf",
+          "data.js"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "ws-guardian-2032",
+      "vendor": "Western Shelter",
+      "name": "Guardian 2032",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Quonset / arched",
+      "bedCapacity": {
+        "value": 14,
+        "display": "14",
+        "provenance": "PSC - Western Shelter.pdf / data.js"
+      },
+      "external": {
+        "lengthFt": 32.5,
+        "widthFt": 20.0,
+        "heightFt": 10.333333333333334,
+        "lengthRaw": "32'6\"",
+        "widthRaw": "20'",
+        "heightRaw": "10'4\"",
+        "sqFt": 650,
+        "note": "Guardian_2032x3065.pdf and PSC: 20'\u00d732'6\"\u00d710'4\". data.js ceilings length to 33'/660 \u2014 not used here."
+      },
+      "internal": {
+        "lengthFt": 32.5,
+        "widthFt": 20.0,
+        "sqFt": 650,
+        "lengthRaw": "32'6\"",
+        "widthRaw": "20'",
+        "note": "PSC interior 20' \u00d7 32'6\"; data.js 650 sq ft."
+      },
+      "provenance": {
+        "primary": "Guardian_2032x3065.pdf",
+        "also": [
+          "PSC - Western Shelter.pdf",
+          "data.js"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "ws-guardian-3065",
+      "vendor": "Western Shelter",
+      "name": "Guardian 3065",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "Quonset / arched",
+      "bedCapacity": {
+        "value": 42,
+        "display": "42",
+        "provenance": "PSC - Western Shelter.pdf / data.js"
+      },
+      "external": {
+        "lengthFt": 65.0,
+        "widthFt": 30.0,
+        "heightFt": 15.333333333333334,
+        "lengthRaw": "65'",
+        "widthRaw": "30'",
+        "heightRaw": "15'4\" (vendor sheet)",
+        "sqFt": 1950,
+        "note": "Vendor sheet 30'\u00d765'\u00d715'4\". PSC external prints 30'\u00d765\" (inch typo) and height 15'; interior confirms 30'\u00d765'."
+      },
+      "internal": {
+        "lengthFt": 65.0,
+        "widthFt": 30.0,
+        "sqFt": 1950,
+        "lengthRaw": "65'",
+        "widthRaw": "30'"
+      },
+      "provenance": {
+        "primary": "Guardian_2032x3065.pdf",
+        "also": [
+          "PSC - Western Shelter.pdf",
+          "data.js"
+        ]
+      },
+      "notes": []
+    },
+    {
+      "id": "zumro-216",
+      "vendor": "ZUMRO",
+      "name": "Model 216",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 4,
+          "max": 8
+        },
+        "display": "4 to 8",
+        "provenance": "PSC - Zumro.pdf / data.js"
+      },
+      "external": {
+        "lengthFt": 16.0,
+        "widthFt": 14.7,
+        "heightFt": 8.7,
+        "lengthRaw": "16 feet",
+        "widthRaw": "14.7 feet",
+        "heightRaw": "8.7 feet",
+        "sqFt": 235.2,
+        "note": "Zumro 216.pdf deployed dims; PSC External 16'\u00d714.7'\u00d78.7'. data.js ceilings to 15'\u00d716'/240."
+      },
+      "internal": {
+        "widthFt": 13.5,
+        "widthRaw": "13.5 feet (interior width)",
+        "heightFt": 8.0,
+        "heightRaw": "8 feet",
+        "sqFt": 216,
+        "sqFtRaw": "216 Sq Ft (PSC + marketing); sheet table also prints Floor Space 151 sq ft \u2014 conflict",
+        "note": "Prefer PSC/marketing 216 sq ft product naming; sheet deployed-dimensions table lists 151 sq ft floor space \u2014 flagged."
+      },
+      "provenance": {
+        "primary": "Zumro 216.pdf + PSC - Zumro.pdf",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [
+        "Internal floor-space conflict on vendor sheet (151 vs 216)."
+      ]
+    },
+    {
+      "id": "zumro-400",
+      "vendor": "ZUMRO",
+      "name": "Model 400",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 6,
+          "max": 8
+        },
+        "display": "6 to 8",
+        "provenance": "data.js / Quick Compare"
+      },
+      "external": {
+        "lengthFt": 21.0,
+        "widthFt": 20.0,
+        "heightFt": 10.7,
+        "lengthRaw": "21'",
+        "widthRaw": "20'",
+        "heightRaw": "10.7' (digest exterior height)",
+        "sqFt": 420,
+        "note": "VENDOR_SPECS_DIGEST from Zumro 400 Specs.pdf: Length 21', Exterior width 20'. PSC: Length 21'/Width 20'/Height 10.7'. Exact whole feet."
+      },
+      "internal": {
+        "sqFt": 400,
+        "sqFtRaw": "400 Square Feet",
+        "interiorWidthRaw": "19.2' (digest)",
+        "interiorHeightRaw": "10' (digest)"
+      },
+      "provenance": {
+        "primary": "VENDOR_SPECS_DIGEST.md citing Zumro 400 Specs.pdf; PSC combined catalog",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [],
+      "missingVendorSheet": "Missing vendor sheet: Zumro 400 Specs.pdf was not in the reference package. Dimensions taken from VENDOR_SPECS_DIGEST.md and PSC. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "zumro-600",
+      "vendor": "ZUMRO",
+      "name": "Model 600",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 10,
+          "max": 12
+        },
+        "display": "10 to 12",
+        "provenance": "data.js / Quick Compare"
+      },
+      "external": {
+        "lengthFt": 31.0,
+        "widthFt": 20.4,
+        "heightFt": 9.583333333333334,
+        "lengthRaw": "31'",
+        "widthRaw": "20'4\" / 20.4'",
+        "heightRaw": "9'7\"",
+        "sqFt": 632.4,
+        "note": "Digest/PSC: Length 31', Width 20'4\", Height 9'7\". data.js ceilings width to 21'/651 \u2014 not used here. Raw 31\u00d720.4=632.4."
+      },
+      "internal": {
+        "sqFt": 600,
+        "sqFtRaw": "600 Square Feet",
+        "interiorWidthRaw": "19.3' (digest)",
+        "interiorHeightRaw": "9' (digest)"
+      },
+      "provenance": {
+        "primary": "VENDOR_SPECS_DIGEST.md citing Zumro 600 Specs.pdf; PSC combined catalog",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [],
+      "missingVendorSheet": "Missing vendor sheet: Zumro 600 Specs.pdf was not in the reference package. Dimensions taken from VENDOR_SPECS_DIGEST.md and PSC. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "zumro-900",
+      "vendor": "ZUMRO",
+      "name": "Model 900",
+      "type": "shelter",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 20,
+          "max": 25
+        },
+        "display": "20 to 25",
+        "provenance": "PSC - Zumro.pdf / data.js",
+        "note": "Zumro 900.pdf narrative says up to 15 treatment beds \u2014 conflict with PSC 20\u201325."
+      },
+      "external": {
+        "lengthFt": 30.0,
+        "widthFt": 32.9,
+        "heightFt": 13.833333333333334,
+        "lengthRaw": "30 feet",
+        "widthRaw": "32.9 feet",
+        "heightRaw": "13.10 feet / 13'10\"",
+        "sqFt": 987.0,
+        "note": "Zumro 900.pdf Exterior Width 32.9 feet. PSC prints 32.9\" (inch typo). data.js ceilings to 33'/990 \u2014 not used here. Raw 30\u00d732.9=987."
+      },
+      "internal": {
+        "sqFt": 900,
+        "sqFtRaw": "900 square feet",
+        "interiorWidthFt": 30.1,
+        "interiorWidthRaw": "30.1 feet",
+        "interiorHeightFt": 10.0,
+        "interiorHeightRaw": "10.0 feet"
+      },
+      "provenance": {
+        "primary": "Zumro 900.pdf",
+        "also": [
+          "PSC - Zumro.pdf",
+          "data.js"
+        ]
+      },
+      "notes": [
+        "Bed-capacity conflict between sheet (15 treatment beds) and PSC (20\u201325)."
+      ]
+    },
+    {
+      "id": "zumro-airlock",
+      "vendor": "ZUMRO",
+      "name": "External Airlock",
+      "type": "connector",
+      "structure": "soft-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": null,
+        "display": "N/A",
+        "provenance": "PSC / data.js connector"
+      },
+      "external": {
+        "lengthRaw": "128\"",
+        "widthRaw": "86\"",
+        "heightRaw": "93\"",
+        "lengthFt": 10.666666666666666,
+        "widthFt": 7.166666666666667,
+        "heightFt": 7.75,
+        "sqFt": 76.44,
+        "note": "PSC External 128\"\u00d786\"\u00d793\". data.js ceilings to 8'\u00d711'/88. Sheet does not restate exterior L\u00d7W; marketing lists 65 Sq. Ft. shelter \u2014 conflict/anomaly.",
+        "sheetMarketingSqFt": 65
+      },
+      "internal": {
+        "lengthRaw": "10'8\"",
+        "widthRaw": "5'6\"",
+        "lengthFt": 10.666666666666666,
+        "widthFt": 5.5,
+        "sqFt": 58.67,
+        "sqFtRaw": "5'6\" \u00d7 10'8\" \u2248 58.67 sq ft (data.js uses 59)",
+        "note": "Vendor-confirmed interior from Zumro External Airlock.pdf. PSC 10x10 is incorrect per prior vendor correspondence."
+      },
+      "provenance": {
+        "primary": "Zumro External Airlock.pdf (interior); PSC - Zumro.pdf (exterior inches)",
+        "also": [
+          "data.js",
+          "DESIGN_DECISIONS.md item 23"
+        ]
+      },
+      "notes": [
+        "DERIVED/JUDGMENT: exterior provenance mixed; interior/exterior ratio anomaly documented in DESIGN_DECISIONS.",
+        "Include with note as requested."
+      ]
+    },
+    {
+      "id": "zumro-quad",
+      "vendor": "ZUMRO",
+      "name": "QUAD Interface",
+      "type": "connector",
+      "structure": "soft-sided",
+      "shape": "plus / four-way connector",
+      "bedCapacity": {
+        "value": null,
+        "display": null,
+        "provenance": "data.js null / connector"
+      },
+      "external": {
+        "lengthFt": 29.4,
+        "widthFt": 19.5,
+        "heightFt": 8.0,
+        "lengthRaw": "29.4' / 29'4\"",
+        "widthRaw": "19.5' / 19'5\"",
+        "heightRaw": "8'",
+        "pscListingRaw": "Length 19'5\" \u00d7 29'4\" / Width 14'9\" / Height 8'",
+        "sqFt": 573.3,
+        "note": "Digest from Zumro Quad Interface.pdf: Length 29.4', Exterior width 19.5'. data.js display ~600 (20'\u00d730') is ceiling-rounded envelope \u2014 not used here. Raw \u2248573.3."
+      },
+      "internal": {
+        "sqFt": 454,
+        "sqFtRaw": "454 Square Feet",
+        "interiorWidthRaw": "15.7' (digest)",
+        "interiorHeightRaw": "8' (digest)"
+      },
+      "provenance": {
+        "primary": "VENDOR_SPECS_DIGEST.md citing Zumro Quad Interface.pdf; PSC combined catalog",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [],
+      "missingVendorSheet": "Missing vendor sheet: Zumro Quad Interface.pdf was not in the reference package. Dimensions taken from VENDOR_SPECS_DIGEST.md and PSC. Amend or remove this note when that sheet is added."
+    },
+    {
+      "id": "craftsmen-8bed-icu",
+      "vendor": "Craftsmen",
+      "name": "8-Bed ICU Trailer",
+      "type": "shelter",
+      "structure": "hard-sided",
+      "shape": "rectangle (expandable trailer)",
+      "bedCapacity": {
+        "value": 8,
+        "display": "8",
+        "provenance": "PSC combined catalog / data.js"
+      },
+      "external": {
+        "expandedLengthFt": 53.0,
+        "expandedWidthFt": 22.5,
+        "expandedHeightFt": 13.6,
+        "expandedRaw": "53' \u00d7 22.5' \u00d7 13.6'",
+        "closedRaw": "53' \u00d7 8.5' \u00d7 13.6'",
+        "expandedSqFt": 1192.5,
+        "note": "PSC raw expanded 53'\u00d722.5'. data.js ceilings width to 23'/1219 \u2014 not used here. Raw expanded = 1192.5 sq ft."
+      },
+      "internal": {
+        "sqFt": 1010,
+        "sqFtRaw": "1,010 ft2"
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (Vendor Product Catalog Template - Revised Version.pdf)",
+        "also": [
+          "data.js"
+        ]
+      },
+      "notes": [],
+      "missingVendorSheet": "Missing vendor sheet: no Craftsmen manufacturer product sheet was in the reference package. Dimensions taken from PSC combined catalog / data.js. Amend or remove this note when a vendor sheet is added."
+    },
+    {
+      "id": "forts-38",
+      "vendor": "FORTS",
+      "name": "Model 38",
+      "type": "shelter",
+      "structure": "hard-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": {
+          "min": 2,
+          "max": 3
+        },
+        "display": "~2 to 3",
+        "provenance": "data.js",
+        "note": "DERIVED: diagram-derived from uneven per-unit bed icons in PSC assembly drawing; not vendor-stated per Model 38. PSC assembly is 6 ICU or 10 Med-Surg beds across six Model 38 units + auxiliaries."
+      },
+      "external": {
+        "lengthFt": 20.0,
+        "widthFt": 18.0,
+        "lengthRaw": "20'",
+        "widthRaw": "18'",
+        "sqFt": 360,
+        "note": "data.js base-unit footprint 18'\u00d720'/360. PSC lists assembly envelopes (expanded 154'\u00d727'; closed 82.25'\u00d719.75') \u2014 not this single unit."
+      },
+      "internal": {
+        "sqFt": 273,
+        "sqFtRaw": "273 sq ft",
+        "note": "data.js per-base-unit estimate. PSC assembly interior ~2,293 ft2."
+      },
+      "provenance": {
+        "primary": "data.js (intentional Model 38 base unit)",
+        "also": [
+          "PSC combined catalog assembly section \u2014 for context only"
+        ]
+      },
+      "notes": [
+        "DERIVED/JUDGMENT values included with notes as requested.",
+        "Tool intentionally represents one Model 38, not the full PSC 6-Bed ICU / 10-Bed Med-Surg assembly."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: no FORTS Model 38 manufacturer product sheet was in the reference package. Base-unit figures taken from data.js; assembly context from PSC. Amend or remove this note when a vendor sheet is added."
+    },
+    {
+      "id": "wilscot-patient",
+      "vendor": "WILSCOT",
+      "name": "Patient Unit",
+      "type": "shelter",
+      "structure": "hard-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": 6,
+        "display": "6",
+        "provenance": "PSC narrative: each Patient Unit includes six critical care beds / data.js",
+        "note": "PSC section heading also says '6 CRITICAL CARE or 10 MEDICAL SURGE'; tool uses per-unit six."
+      },
+      "external": {
+        "lengthFt": 60.0,
+        "widthFt": 23.5,
+        "lengthRaw": "60'",
+        "widthRaw": "23'6\"",
+        "heightRaw": "~11' (combined-config PSC height)",
+        "sqFt": 1410.0,
+        "note": "PSC model line: 23'6\"\u00d760' Standard Units. Narrative shorthand 24'\u00d760'. data.js ceilings to 24'\u00d760'/1440 \u2014 not used here. Raw 23.5\u00d760=1410."
+      },
+      "internal": {
+        "sqFt": 1440,
+        "sqFtRaw": "~1440 sq ft",
+        "note": "DERIVED: per-unit interior not stated in PSC; inferred/apportioned from unit footprint / combined ~2160 for Patient+Staff pair. Flagged with tilde in data.js."
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw 23'6\" width); data.js (beds + derived interior)"
+      },
+      "notes": [
+        "DERIVED interior included with note as requested."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: no WILSCOT/WillScot manufacturer product sheet was in the reference package. Dimensions taken from PSC combined catalog / data.js. Amend or remove this note when a vendor sheet is added."
+    },
+    {
+      "id": "wilscot-staff",
+      "vendor": "WILSCOT",
+      "name": "Staff Unit",
+      "type": "shelter",
+      "structure": "hard-sided",
+      "shape": "rectangle",
+      "bedCapacity": {
+        "value": null,
+        "display": "N/A",
+        "provenance": "data.js \u2014 staff/flex space, no patient beds"
+      },
+      "external": {
+        "lengthFt": 60.0,
+        "widthFt": 11.75,
+        "lengthRaw": "60'",
+        "widthRaw": "11'9\"",
+        "heightRaw": "~11' (combined-config PSC height)",
+        "sqFt": 705.0,
+        "note": "PSC model line: 11'9\"\u00d760' Redi-Plex/Standard. Narrative shorthand 12'\u00d760'. data.js ceilings to 12'\u00d760'/720 \u2014 not used here. Raw 11.75\u00d760=705."
+      },
+      "internal": {
+        "sqFt": 720,
+        "sqFtRaw": "~720 sq ft",
+        "note": "DERIVED: per-unit interior not stated in PSC; inferred from unit footprint. Flagged with tilde in data.js."
+      },
+      "provenance": {
+        "primary": "PSC combined catalog (raw 11'9\" width); data.js (derived interior)"
+      },
+      "notes": [
+        "DERIVED interior included with note as requested."
+      ],
+      "missingVendorSheet": "Missing vendor sheet: no WILSCOT/WillScot manufacturer product sheet was in the reference package. Dimensions taken from PSC combined catalog / data.js. Amend or remove this note when a vendor sheet is added."
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 ---
-description: Core working agreement for the VPC Mapping Tool — how to diagnose, change, and report. Always applies.
+description: Core working agreement for the Portable Solution Site Mapping Tool — how to diagnose, change, and report. Always applies.
 alwaysApply: true
 ---
 
@@ -23,12 +23,18 @@ This is a field-facing tool for mobile/field hospitals. Lives may depend on its 
 - Do not "tidy," refactor, rename, or reformat code outside the scope of the request, even if it looks improvable.
 
 ## Scope discipline
-- This is a single-file application (`VPC Mapping Tool.html`). Do not split it into multiple files, introduce a build step, add a framework, or add dependencies unless explicitly asked.
+- This is a single-file application (`Portable-Solution-Site-Mapping-Tool.html`). Do not split it into multiple files, introduce a build step, add a framework, or add dependencies unless explicitly asked.
 - Prefer the simplest change that correctly does the job. This tool serves stressed users in high-pressure environments; complexity is a cost.
 
 ## Design decisions belong to the developer
 - When there is a real choice, present the options clearly and concisely, state a recommendation, and stop. Do not pick for the developer.
 - Once the developer has decided, implement that decision. Do not relitigate it.
+
+## Survey-first
+- When taking up any **new feature or function**, the first step is a **survey of existing consumer / market / open-source products** that have it — how they work, and what has become the de facto standard — **before** designing this tool's version.
+- The survey is a **starting input, not a mandate to copy**: diverge deliberately when warranted.
+- For tool-specific things with **no analog**, an empty result is valid and noted.
+- Do the survey at the **start** of the feature, not after a design is drafted.
 
 ## Reporting
 - Be precise and concise. Put the key question or decision at the end, clearly separated.

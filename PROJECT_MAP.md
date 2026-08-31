@@ -1,10 +1,12 @@
-# VPC Mapping Tool — Project Map
+# Portable Solution Site Mapping Tool — Project Map
 
 Orientation document for developers and collaborators. Describes **what this project is** and **how it is organized**.
 
 For **how to work on it** (read-only vs. authorized changes, scope discipline, catalog provenance, data-handling rules), see `.cursor/rules/` — especially `behavior.mdc`, `project-conventions.mdc`, and `data-handling.mdc`. This file does not duplicate those rules.
 
-**Current version:** `0.8.8` (`APP_META.version`, `lastUpdated` `2026-05-19` in `VPC Mapping Tool.html`).
+**Current version:** `1.5.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-31` in `Portable-Solution-Site-Mapping-Tool.html`).
+
+**Note:** Script section headers below mark **approximate** bands in the live HTML (~5,200 lines). Use search (`function name`) for authoritative locations — not contiguous line numbers.
 
 ---
 
@@ -12,7 +14,7 @@ For **how to work on it** (read-only vs. authorized changes, scope discipline, c
 
 ### What the tool is
 
-**VPC Mapping Tool** is a browser-based site layout planner for emergency field hospitals and soft-sided shelter deployments. Users place vendor-accurate tent footprints on a real-world map at true scale, check spacing and overlaps, tag structures by functional role, and save or share layouts.
+**Portable Solution Site Mapping Tool** is a browser-based site layout planner for emergency field hospitals and soft-sided shelter deployments. Users place vendor-accurate tent footprints on a real-world map at true scale, check spacing and overlaps, tag structures by functional role, and save or share layouts.
 
 It is a **single HTML file** opened directly in a modern browser. No install, no build step, no backend.
 
@@ -40,11 +42,11 @@ Intended for **hospital use** and **government (USU/DHA-adjacent) hosting**. Lay
 
 | Path | Purpose |
 |------|---------|
-| **`VPC Mapping Tool.html`** | The application (~3,246 lines): HTML, CSS, JavaScript |
+| **`Portable-Solution-Site-Mapping-Tool.html`** | The application (~5,200 lines): HTML, CSS, JavaScript |
 | **`README.md`** | Operator + developer reference: features, quick start, overlap behavior, autosave, changelog, backlog |
-| **`VPC_Project_Notes.md`** | Product roadmap, immediate backlog, architecture notes, doc maintenance |
+| **`PSMT_Project_Notes.md`** | Product roadmap, immediate backlog, architecture notes, doc maintenance |
 | **`VENDOR_SPECS_DIGEST.md`** | Spec alignment audit: manufacturer source for each `TENT_DB` entry |
-| **`VPC Mapping Tool - Quickstart.html`** | Condensed field quickstart (sole quickstart source) |
+| **`Portable-Solution-Site-Mapping-Tool-Quickstart.html`** | Condensed field quickstart (sole quickstart source) |
 | **`Initial prompt.txt`** | Original product idea / build prompt |
 | **`PROJECT_MAP.md`** | This document |
 | **`.gitignore`** | Ignores local restore snapshot and vendor PDF bundle (see below) |
@@ -73,31 +75,28 @@ Do not edit `Old/` or treat it as authoritative. See `.cursor/rules/project-conv
 
 ### Not in this repo
 
-Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; integration planned at v2.5+ per `VPC_Project_Notes.md`.
+Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; integration planned at v2.5+ per `PSMT_Project_Notes.md`.
 
 ---
 
-## 3. Architecture of `VPC Mapping Tool.html`
+## 3. Architecture of `Portable-Solution-Site-Mapping-Tool.html`
 
-### Whole-file layout
+### Whole-file layout (approximate)
 
-| Lines | Block | Contents |
-|-------|-------|----------|
-| 1–55 | `<head>` (partial) | DOCTYPE, meta, title, in-file changelog HTML comment |
-| 56–59 | CDN | Leaflet CSS/JS, jsPDF, html2canvas |
-| 60–335 | `<style>` | App layout, sidebar, map, print CSS |
-| 336 | | `</head>` |
-| 337–531 | `<body>` UI | Header, sidebar, map, status bar, print meta, hidden file input |
-| 533–3243 | `<script>` | All application logic (see below) |
-| 3244–3246 | | `</script>`, `</body>`, `</html>` |
+| Section | Block | Contents |
+|---------|-------|----------|
+| Head | `<head>` | DOCTYPE, meta, title, in-file changelog HTML comment |
+| CDN | Leaflet 1.9.4 CSS/JS |
+| Styles | `<style>` | App layout, sidebar, map, print CSS, handles, toasts, Start Here modal (search/topics), focus-mode sidebar |
+| Body UI | `<body>` (early) | Header (Start Here, search, Snap, Door, Undo/Redo, Measure, Print, Restore), Start Here modal (searchable help), sidebar, map, status bar, print meta + SVG legend, file input |
+| Script | `<script>` (~4,400 lines) | All application logic — see section bands below |
+| Close | `</script>`, `</body>`, `</html>` |
 
 ### Libraries (CDN — no build step)
 
 | Library | CDN version | Role |
 |---------|-------------|------|
 | **Leaflet** | 1.9.4 | Map, tiles, vectors, layer control, scale bar |
-| **jsPDF** | 2.5.1 | PDF export |
-| **html2canvas** | 1.4.1 | Map snapshot for PDF |
 
 **Not used:** Turf.js, frameworks, bundlers, npm. Geometry is hand-rolled.
 
@@ -116,236 +115,111 @@ Placed structures are vector overlays on `map` — not attached to tile layers.
 | Service | When | Data sent |
 |---------|------|-----------|
 | Esri / CARTO tiles | Map display | Tile requests |
-| CDN | First load / PDF | Library fetch |
+| CDN | First load | Library fetch |
 | Nominatim | Address search | User-typed search string |
 
 All layout data stays client-side until download or print.
 
 ---
 
-## 4. Script block — contiguous line map (533–3243)
+## 4. Script block — section bands (approximate)
 
-Every line in `<script>` is covered below. Ranges are **contiguous**: the end of one row plus one equals the start of the next (blank lines and section-marker comments are included in the span they sit within).
+Use ripgrep / editor search for `function name` — bands below are orientation only.
 
-| Lines | Band | What lives here |
-|-------|------|-----------------|
-| **533–538** | Script preamble | Opening `<script>`, block comment describing flow |
-| **539–551** | `APP_META` | Name, version, lastUpdated, changelog array |
-| **552–571** | Constants | Blank + `DRAG_SUPPRESS_MS`, handle offsets, storage keys, `ROLES`, `FT_TO_M`, etc. |
-| **572–639** | Tent database | Blank + `TENT_DB`, `COLORS`, `VENDOR_COLORS`, `getVendorColor()` |
-| **640–673** | Mutable state | Blank + `objects[]`, modes, undo stacks, measure state, `overlapState` |
-| **674–702** | Map init | Blank + `L.map`, tile layers, layer control, scale control |
-| **703–735** | Overlap pill | `initOverlapPill()` IIFE — pill click scrolls to first flagged row |
-| **736–759** | Vendor tab bootstrap | Blank + `Object.keys(TENT_DB).forEach` — builds vendor tab buttons |
-| **760–838** | Vendor catalog UI | Blank + `setVendor`, `renderTentList`, `tentShapeBadge`, `createTentCard`, `dimStr`; initial `renderTentList()` |
-| **839–859** | Color swatches | Blank + `syncColorSwatches`, `COLORS.forEach` swatch bootstrap |
-| **860–913** | Placement modes | Blank + `startPlacing`, `startCustomPlace`, `cancelPlacing`, `getDefaultModeMessage`, `setMode` |
-| **914–922** | View reset | Blank + `resetViewMode` |
-| **923–934** | Mode badge | Blank + `initModeBadgeClick()` IIFE |
-| **935–963** | Collapsibles | Blank + `makeCollapsible` + four panel init calls |
-| **964–1075** | Measure UI | Blank + `updateMeasureUI`, menu helpers, toggle/clear measure |
-| **1076–1317** | Drag / undo / handles | Blank + object drag, rotate, undo/redo, handles, buffer presets |
-| **1318–1446** | Labels & roles | Blank + `sanitizeLabel`, custom roles storage/UI, `normalizeColor` |
-| **1447–1694** | Save & export | Blank + `saveScenario`, `buildScenarioData`, GeoJSON, `exportPDF`, helpers |
-| **1695–1885** | Load & autosave | Blank + `loadScenarioPrompt`, `loadScenarioFromData`, `saveSession`, `scheduleSaveSession`, `updateRestoreButtonState`, **`restoreAutosave`**, etc. |
-| **1886–1914** | Plan hydration | Blank + `buildObjectFromRaw` — JSON → runtime object |
-| **1915–2031** | Map events | Blank + `map.on('click'…)`, `mousemove`, `moveend`, `zoomend`, `mouseup` |
-| **2032–2541** | Objects & list UI | Blank + section marker + `placeObject`, `drawObject`, geometry, list UI |
-| **2542–2643** | On-map measure | Blank + `handleMeasureClick`, area measure, `polygonAreaMeters` |
-| **2644–2873** | Overlap geometry | Blank + `scheduleOverlapSummary`, polygon tests, **`updateOverlapSummary`** |
-| **2874–2880** | Offline | Blank + `updateOfflineBanner` |
-| **2881–3094** | Search & print | Blank + `searchLocation`, scale ratio, `printFitToPage`, etc. |
-| **3095–3163** | DOM wiring | Blank + listeners, `isTypingTarget`, keyboard shortcuts, tooltip CSS |
-| **3164–3242** | Startup init | Blank + version badge, role/measure init IIFEs, autosave indicator hydrate |
-| **3243** | Script close | `</script>` |
-
-**Coverage check:** 533 → 3243 inclusive. Each row’s end line + 1 equals the next row’s start line. Blank lines between sections are absorbed into the following row’s range.
+| Band | What lives here |
+|------|-----------------|
+| Script preamble | Opening `<script>`, flow comment |
+| `APP_META` | Name, version, lastUpdated, changelog |
+| Constants | `DRAG_SUPPRESS_MS`, zoom-derived handle padding (`HANDLE_TARGET_EDGE_PX`, `HANDLE_PAD_MIN_M`), storage keys, `ROLES` (incl. Ramp), `FT_TO_M`, overlap thresholds, etc. |
+| `TENT_DB` | Catalog data, `COLORS`, `VENDOR_COLORS`, tier visibility helpers |
+| Mutable state | `objects[]`, placement/measure modes, **`selectedIds`**, **`primaryId`**, undo stacks, autosave timers, `overlapState`, search pending results |
+| Map init | `L.map`, tile layers, layer control, scale control, `roleLabelPane` |
+| Overlap pill | `initOverlapPill` IIFE |
+| Vendor catalog UI | Tabs, `createTentCard`, roles on cards, extended-catalog toggle (hidden) |
+| Placement & modes | `startPlacing`, `startCustomPlace`, toasts, readout, Snap toggle, Door mode |
+| Measure UI | Menu, strip positioning, distance/area mode toggles |
+| Drag / rotate / selection | `startObjectDrag`, `endObjectDrag`, `startRotateDrag`, `endRotateDrag`, handles, group geometry, selection set API, buffer apply |
+| Undo | `pushStateToUndo`, `undo`, `redo`, snapshots |
+| Labels & roles | `sanitizeLabel`, `formatObjectIdentity`, custom roles UI |
+| Persistence | `saveScenario`, `buildScenarioData`, `exportGeoJSON`, `loadScenarioFromData`, **`getPlacedObjectsBounds`**, **`restoreAutosave`**, session save |
+| Plan hydration | `buildObjectFromRaw` |
+| Map events | `map.on('click'…)`, `mousemove` (drag, group move/rotate), `moveend`, `zoomend`, `mouseup` |
+| Objects & list UI | `placeObject`, `drawObject`, selection underlay, role labels, true-face snap, openings/ramp hatch, list rows, placed-list focus mode |
+| On-map measure | `handleMeasureClick`, area measure, `polygonAreaMeters` |
+| Overlap geometry | `scheduleOverlapSummary`, **`getLayerMeterRing`**, **`latlngToMeters`**, polygon intersection, **`updateOverlapSummary`** |
+| Offline & search | `updateOfflineBanner`, **`searchLocation`**, picker show/dismiss |
+| Print & scale | `updatePrintMeta` (header + SVG legend), `updateScaleRatio`, `restorePrintHandles` |
+| DOM wiring | `addEventListener`, **`isTypingTarget`**, document `keydown` (Esc, /, Ctrl+A, Delete, Ctrl+Z/Y) |
+| Startup init | Version badge, catalog roles popover, measure menu init, autosave indicator hydrate |
 
 ---
 
 ## 5. Function index (every top-level function)
 
-All functions below appear in the script block. IIFEs and inline handlers are noted separately.
+All functions below appear in the script block. IIFEs and inline handlers are noted separately. **No line numbers** — search by name.
 
-### 573–639 — Tent database
+### Catalog & vendor UI
 
-| Line | Function |
-|------|----------|
-| 637 | `getVendorColor` |
+`getVendorColor`, `catalogTierOf`, `isCatalogModelVisible`, `visibleCatalogModels`, `visibleCatalogVendors`, `tentCatalogKey`, `applyExtendedCatalogToggle`, `renderVendorTabs`, `setVendor`, `renderTentList`, `getCardRole`, `setCardRole`, `formatCardDimsBeds`, `catalogPlacementLabel`, `catalogCardAccessibleName`, `fillRoleSelectOptions`, `wireRoleSelect`, `showRoleCustomInline`, `createTentCard`, `dimStr`, `syncColorSwatches`
 
-### 703–735 — IIFE
+### Placement, modes, feedback
 
-| Line | Name |
+`startPlacing`, `startCustomPlace`, `cancelPlacing`, `clearToasts`, `scheduleToastHide`, `clampToastPosition`, `showActionToast`, `showSpatialToast`, `syncMapStateReadout`, `setMode`, `updateSnapModeUI`, `toggleSnapMode`, `updateDoorModeUI`, `cancelDoorMode`, `toggleDoorMode`, `resetViewMode`, `makeCollapsible`, `isStartHereModalOpen`, `startHereTopicMatches`, `renderStartHereHelp`, `openStartHereModal`, `closeStartHereModal`
+
+### Measure UI & on-map measure
+
+`positionMeasureStripUnderButton`, `updateMeasureUI`, `closeMeasureMenu`, `measureMenuPickDistance`, `measureMenuPickArea`, `toggleMeasureMode`, `toggleAreaMeasureMode`, `clearMeasure`, `clearMeasureStartMarker`, `handleMeasureClick`, `handleAreaMeasureClick`, `drawAreaMeasureLayer`, `northBoundaryAnchor`, `finishAreaMeasure`, `polygonAreaMeters`
+
+### Drag, rotate, handles, group geometry
+
+`startObjectDrag`, `endObjectDrag`, `startRotateDrag`, `endRotateDrag`, `getObjectById`, `clearRotateHandle`, `mapMetersPerPixel`, `handleOutsidePaddingM`, `getRotateHandleLatLng`, `getDeleteHandleLatLng`, `getMembersCentroid`, `getGroupMaxCornerRadiusM`, `getGroupRotateHandleSeatAtRest`, `rotateLatLngAboutPivot`, `shortestAngleDelta`, `syncRotateHandle`, `computeAngleFromCenter`, `isMultiMemberGestureActive`
+
+### Selection set (runtime only — not in plan schema)
+
+`selectionIds`, `isSelected`, `selectionReadoutText`, `applySelectionReadout`, `setSelection`, `toggleInSelection`, `setSelectedObject`, `clearSelection`, `isMultiSelectModifierEvent`
+
+### Undo & buffer
+
+`getObjectsSnapshot`, `applySnapshot`, `pushStateToUndo`, `undo`, `redo`, `updateUndoRedoButtons`, `setBufferInput`, `applyBufferPreset`, `applyBufferToSelected`, `applyBufferToAll`
+
+### Labels, roles, identity
+
+`sanitizeLabel`, `formatObjectIdentity`, `getCustomRolesFromStorage`, `getEffectiveRoles`, `addCustomRole`, `rebuildRoleDropdowns`, `rebuildManageRolesPanel`, `removeCustomRole`, `normalizeColor`
+
+### Persistence & session
+
+`saveScenario`, `buildScenarioData`, `downloadJsonFile`, `exportGeoJSON`, `loadScenarioPrompt`, `toNumber`, `getPlacedObjectsBounds`, `loadScenarioFromData`, `formatLastSaved`, `updateLastSavedIndicator`, `getStoredSessionObjectCount`, `saveSession`, `scheduleSaveSession`, `updateRestoreButtonState`, `restoreAutosave`, `buildObjectFromRaw`
+
+### Objects, drawing, list UI, delete
+
+`placeObject`, `drawObject`, `shouldShowRoleLabel`, `removeRoleLabel`, `clearSelectionUnderlay`, `ensureSelectionUnderlay`, `buildRoleLabelIcon`, `syncRoleLabel`, `refreshRoleLabelVisibility`, `createShapeLayer`, `metersToDeg`, `snapEngageThresholdM`, `roundRelativeAngleTo90`, `resolveSnapMate`, `findNearestSnapCandidate`, `getOuterSnapEdges`, `getOuterSnapEdgesAt`, `getOuterSnapEdgesLocal`, `getSnapAttachLatLng`, `getSnapFaceMidpointLatLng`, `getNearestFaceMidpointLatLng`, `normalizeAngle`, `rotateOffsets`, `createGeoPolygon`, `createGeoCutCornerRectangle`, `createGeoPlusSign`, `createGeoRect`, `placeOpeningAtLatLng`, `startOpeningDrag`, `clearRampHatchLayer`, `ensureRampHatchPattern`, `applyRampHatchFill`, `syncRampHatch`, `refreshRampHatches`, `maybeShowRampRequiredToast`, `deleteObj`, `confirmAndDeleteSelection`, `deleteSelectedBulk`, `resetPlacedObjects`, `clearAll`, `updateList`, `updatePlacedListFocusUI`, `togglePlacedListFocusMode`, `exitPlacedListFocusMode`, `scrollPlacedListToObject`, `createObjectListItem`, `cycleOverlapPill`, `syncOverlapPillCycleFromFlaggedIds`
+
+### Overlap geometry
+
+`scheduleOverlapSummary`, `getLayerVertices`, `latlngToMeters`, `polygonBounds`, `bboxOverlap2D`, `pointInPolygonXY`, `segmentIntersectsOpen`, `polygonsTouchOrOverlap2D`, `cross2DXY`, `polygonSignedArea2D`, `pointInTriangle2D`, `lineIntersection2D`, `isInsideClipEdge2D`, `clipPolygonByHalfPlane2D`, `clipPolygonByConvexPolygon2D`, `triangulatePolygon2D`, `polygonIntersectionArea2D`, `polygonsFootprintOverlap2D`, `getLayerPointRing`, `getLayerMeterRing`, `updateOverlapSummary`
+
+### Search, offline, print, helpers
+
+`updateOfflineBanner`, `searchLocation` (async), `fetchSearchResults` (async), `focusSearchResult`, `clearSearchResults`, `isSearchResultsVisible`, `closeSearchResultsOnOutsideClick`, `showSearchResults`, `escapeHtml`, `updateScaleRatio`, `getZoneSummary`, `updatePrintMeta`, `restorePrintHandles`, `isTypingTarget`
+
+### IIFEs & inline handlers
+
+| Name | Role |
 |------|------|
-| 703 | `initOverlapPill` (IIFE) |
+| `initOverlapPill` | Pill click/Enter cycles flagged structures (`cycleOverlapPill`) + pulse |
+| `initCatalogRolesPopover` | Manage roles… popover positioning (when customs exist) |
+| `measureMenuInit` | Measure dropdown open/close |
+| `map.on(...)` | Placement click, drag mousemove (singleton + group move/rotate), pan/zoom autosave |
+| `document keydown` | Esc (Start Here first; then search picker; then modes + deselect + snap off), `/`, Ctrl/Cmd+A, Delete/Backspace, Ctrl+Z/Y |
+| `btn-print` click | `window.print()` |
 
-### 761–838 — Vendor catalog UI
-
-| Line | Function |
-|------|----------|
-| 761 | `setVendor` |
-| 770 | `renderTentList` |
-| 779 | `tentShapeBadge` |
-| 788 | `createTentCard` |
-| 829 | `dimStr` |
-
-### 840–913 — Placement modes
-
-| Line | Function |
-|------|----------|
-| 842 | `syncColorSwatches` |
-| 862 | `startPlacing` |
-| 871 | `startCustomPlace` |
-| 879 | `cancelPlacing` |
-| 887 | `getDefaultModeMessage` |
-| 891 | `setMode` |
-
-### 915–1075 — View reset, collapsibles, measure UI
-
-| Line | Function |
-|------|----------|
-| 915 | `resetViewMode` |
-| 924 | `initModeBadgeClick` (IIFE) |
-| 936 | `makeCollapsible` |
-| 965 | `updateMeasureUI` |
-| 995 | `closeMeasureMenu` |
-| 1002 | `measureMenuPickDistance` |
-| 1008 | `measureMenuPickArea` |
-| 1014 | `toggleMeasureMode` |
-| 1034 | `toggleAreaMeasureMode` |
-| 1057 | `clearMeasure` |
-
-### 1077–1446 — Interaction, roles, sanitize
-
-| Line | Function |
-|------|----------|
-| 1077 | `startObjectDrag` |
-| 1092 | `endObjectDrag` |
-| 1107 | `startRotateDrag` |
-| 1115 | `endRotateDrag` |
-| 1127 | `getObjectById` |
-| 1131 | `clearRotateHandle` |
-| 1142 | `getObjectsSnapshot` |
-| 1164 | `applySnapshot` |
-| 1187 | `pushStateToUndo` |
-| 1194 | `undo` |
-| 1202 | `redo` |
-| 1210 | `updateUndoRedoButtons` |
-| 1217 | `getRotateHandleLatLng` |
-| 1224 | `getDeleteHandleLatLng` |
-| 1231 | `syncRotateHandle` |
-| 1274 | `setSelectedObject` |
-| 1282 | `computeAngleFromCenter` |
-| 1288 | `setBufferInput` |
-| 1296 | `applyBufferPreset` |
-| 1301 | `applyBufferToAll` |
-| 1319 | `sanitizeLabel` |
-| 1324 | `getCustomRolesFromStorage` |
-| 1339 | `getEffectiveRoles` |
-| 1353 | `addCustomRole` |
-| 1368 | `rebuildRoleDropdowns` |
-| 1384 | `rebuildManageRolesPanel` |
-| 1426 | `removeCustomRole` |
-| 1443 | `normalizeColor` |
-
-### 1448–1885 — Persistence
-
-| Line | Function |
-|------|----------|
-| 1448 | `saveScenario` |
-| 1458 | `buildScenarioData` |
-| 1497 | `downloadJsonFile` |
-| 1509 | `exportGeoJSON` |
-| 1550 | `setExportChromeVisible` |
-| 1557 | `waitForTilesIdle` |
-| 1595 | `exportPDF` (async) |
-| 1696 | `loadScenarioPrompt` |
-| 1703 | `toNumber` |
-| 1708 | `loadScenarioFromData` |
-| 1763 | `formatLastSaved` |
-| 1770 | `updateLastSavedIndicator` |
-| 1790 | `saveSession` |
-| 1802 | `scheduleSaveSession` |
-| 1807 | `updateRestoreButtonState` |
-| 1835 | **`restoreAutosave`** |
-| 1887 | `buildObjectFromRaw` |
-
-### 2034–2873 — Objects, measure-on-map, overlap
-
-| Line | Function |
-|------|----------|
-| 2034 | `placeObject` |
-| 2065 | `drawObject` |
-| 2145 | `createShapeLayer` |
-| 2171 | `metersToDeg` |
-| 2183 | `getSnapAttachLatLng` |
-| 2216 | `normalizeAngle` |
-| 2220 | `rotateOffsets` |
-| 2233 | `createGeoPolygon` |
-| 2256 | `createGeoElongatedOctagon` |
-| 2289 | `createGeoEllipse` |
-| 2310 | `createGeoPlusSign` |
-| 2334 | `createGeoRect` |
-| 2347 | `deleteObj` |
-| 2364 | `resetPlacedObjects` |
-| 2379 | `clearAll` |
-| 2388 | `updateList` |
-| 2408 | `createObjectListItem` |
-| 2543 | `clearMeasureStartMarker` |
-| 2550 | `handleMeasureClick` |
-| 2581 | `handleAreaMeasureClick` |
-| 2592 | `drawAreaMeasureLayer` |
-| 2610 | `finishAreaMeasure` |
-| 2628 | `polygonAreaMeters` |
-| 2645 | `scheduleOverlapSummary` |
-| 2654 | `getLayerVertices` |
-| 2680 | `latlngToMeters` |
-| 2692 | `polygonBounds` |
-| 2707 | `bboxOverlap2D` |
-| 2711 | `pointInPolygonXY` |
-| 2729 | `segmentIntersectsOpen` |
-| 2744 | `polygonsOverlap2D` |
-| 2763 | `getLayerPointRing` |
-| 2773 | `updateOverlapSummary` |
-
-### 2875–3127 — Offline, search, scale, print, keyboard helper
-
-| Line | Function |
-|------|----------|
-| 2876 | `updateOfflineBanner` |
-| 2883 | `searchLocation` (async) |
-| 2941 | `fetchSearchResults` (async) |
-| 2963 | `focusSearchResult` |
-| 2980 | `clearSearchResults` |
-| 2987 | `showSearchResults` |
-| 3001 | `escapeHtml` |
-| 3010 | `updateScaleRatio` |
-| 3018 | `getZoneSummary` |
-| 3028 | `updatePrintMeta` |
-| 3042 | `applyScalePreset` |
-| 3051 | `getPlacedBounds` |
-| 3063 | `printFitToPage` |
-| 3123 | `isTypingTarget` |
-
-### 3165–3239 — Startup IIFEs
-
-| Line | Name |
-|------|------|
-| 3169 | `initCustomRoleControls` (IIFE) |
-| 3201 | `measureMenuInit` (IIFE) |
-| 3236 | `initHeaderTruncateTitles` (IIFE) |
-
-### Not named functions (inline in bands above)
-
-- **1916–2031:** `map.on(...)` handlers (placement click, drag mousemove, pan/zoom autosave)
-- **3096–3121:** `addEventListener` on address input, search results, scenario file input
-- **3129–3156:** document `keydown` handler (Esc, `/`, P, Ctrl+Z/Y)
+**Removed (do not search):** `printFitToPage`, `getPlacedBounds`, `getGroupRotateHandleLatLng` (dead AABB seat; removed 1.4.0-dev), `#snap-to-selected` path, `createGeoEllipse` / ellipse·circle branches / `endCapFt` vestige (Working queue #12, `19aed4d`).
 
 ---
 
 ## 6. Key data structures
 
-### `APP_META` (539–551)
+### `APP_META`
 
 ```javascript
 { name, version, lastUpdated, changelog: [{ version, date, note }, …] }
@@ -353,7 +227,7 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 
 Bottom-right badge reads `APP_META.version`.
 
-### `TENT_DB` (575–627)
+### `TENT_DB`
 
 Object keyed by vendor name → array of model entries.
 
@@ -366,21 +240,28 @@ Object keyed by vendor name → array of model entries.
 | `lengthFt` | yes | Length in feet |
 | `shape` | yes | Footprint type (below) |
 | `note` | yes | Spec summary; tent card `title` |
-| `cornerCutW` | optional | Elongated octagon — width-axis cut (ft) |
-| `cornerCutL` | optional | Elongated octagon — length-axis cut (ft) |
+| `cornerCutW` | optional | Cut-corner rectangle (GK1935, 8D36) or cut-corner square (X-HUB) — width-axis cut (ft) |
+| `cornerCutL` | optional | Cut-corner rectangle (GK1935, 8D36) or cut-corner square (X-HUB) — length-axis cut (ft) |
 | `armWidthFt` | optional | Plus/cross hub arm width (ft) |
 
-**Shape types used in catalog:** `rect`, `octagon`, `elongated-octagon`, `plus`, `ellipse`. (`circle` supported in drawing code; not in current catalog.)
+**Shape types used in catalog:** `rect`, `octagon`, `cut-corner-rectangle`, `cut-corner-square`, `plus`. (`ellipse` / `circle` drawing branches removed — no legacy-plan compat, Working queue #12.)
 
 Dimensions convert to meters at placement (`× FT_TO_M`).
 
-### `VENDOR_COLORS` (630–636)
+### `VENDOR_COLORS`
 
 Maps catalog vendor → default hex. Missing vendor falls back to user swatch via `getVendorColor()`.
 
-Current keys: `BLU-MED`, `Western Shelter`, `DLX`, `ZUMRO`, `HDT`.
+Current keys: `BLU-MED`, `Western Shelter`, `DLX`, `ZUMRO`, `HDT`, `Craftsmen`, `FORTS`, `WillScot`, `Power`.
 
-### `objects[]` — runtime placed structure (647+)
+### Runtime selection (not serialized)
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `selectedIds` | `number[]` | Ordered set of selected object ids |
+| `primaryId` | `number \| null` | Last-interacted member; anchor for singleton handles and scroll |
+
+### `objects[]` — runtime placed structure
 
 Built by `placeObject` / `buildObjectFromRaw`; drawn by `drawObject`.
 
@@ -411,20 +292,20 @@ Built by `placeObject` / `buildObjectFromRaw`; drawn by `drawObject`.
 | **`'Custom'`** | Custom Size workflow (`customMode`); always `rect` |
 | **`'Loaded'`** | `buildObjectFromRaw` default when plan lacks `vendor` |
 
-### `overlapState` (673)
+### `overlapState`
 
 ```javascript
 { footprintIds: Set<number>, bufferIds: Set<number> }
 ```
 
-Updated by `updateOverlapSummary` (2773). UI-only pair details are not exported.
+Updated by `updateOverlapSummary`. Recomputes live during drag/rotate via `scheduleOverlapSummary` from `drawObject`. UI-only pair details are not exported.
 
 ### Serialization spellings (intentional — do not unify)
 
 | Surface | Field name |
 |---------|------------|
 | Runtime / undo | `intentionalBuffer` |
-| Plan JSON (`vpc-scenario-v1`) | `intentionalBufferOverlap` |
+| Plan JSON (`psmt-scenario-v1`) | `intentionalBufferOverlap` |
 | GeoJSON export | `intentional_buffer_overlap` |
 
 See `.cursor/rules/project-conventions.mdc`.
@@ -433,23 +314,27 @@ See `.cursor/rules/project-conventions.mdc`.
 
 ## 7. Vendor catalog
 
-### Current vendors and models (`TENT_DB`, lines 575–627)
+### Current vendors and models (`TENT_DB`)
 
-| Vendor | Models |
+| Vendor | Models (standard-visible; extended omitted here) |
 |--------|--------|
 | **BLU-MED** | 2032.5, 2039, Vestibule |
-| **Western Shelter** | GK1935, GK20, Vestibule, Generator 70 kVA (on trailer) |
+| **Western Shelter** | GK1935, GK20, Vestibule |
 | **DLX** | X-24, Quad (X-HUB), X-32 |
 | **ZUMRO** | Quad Interface, Model 400, Model 600, Interconnect |
 | **HDT** | Base-X 305, Base-X Dome (8D36) |
+| **Craftsmen** | 8-Bed ICU Trailer |
+| **FORTS** | Model 38 |
+| **WillScot** | Patient Unit, Staff Unit |
+| **Power** | Generator 70 kVA (on trailer) — MQ Power card identity; planning tab grouping, not procurement |
 
-Vendor tabs render from `TENT_DB` keys automatically (737–759).
+Catalog section header is **Catalog**. Tabs render from `TENT_DB` keys automatically.
 
 ### Provenance
 
 Every catalog model must trace to **`VENDOR_SPECS_DIGEST.md`**. Adding a vendor: digest entry first → `TENT_DB` + `VENDOR_COLORS`.
 
-**Known open gap:** DLX Quad (X-HUB) `armWidthFt: 16` — unverified in code comment (603–604); bounding box confirmed, arm width not confirmed from primary spec.
+**Known open gap:** DLX Quad (X-HUB) `cornerCutW` / `cornerCutL` **1.0 ft** — unverified in code comment; overall 22'×22' bounding box confirmed, corner chamfer not confirmed from primary spec. HDT Base-X Dome (8D36) `cornerCutW` **8.4 ft** / `cornerCutL` **13.2 ft** — unverified; overall 31'×37' bbox confirmed, corner legs diagram-derived (pixel-measure), not vendor-stated.
 
 ### Designed to expand
 
@@ -461,63 +346,80 @@ Catalog is not fixed. See `.cursor/rules/project-conventions.mdc` for the proven
 
 ### Locate site
 
-Search address/place or `lat, lng` (2883 `searchLocation`). Coordinates work offline; address search needs network (Nominatim). Setup panel: operation name, search local bias, scale presets. Layer control: satellite / street / hybrid labels.
+Search address/place or `lat, lng` (`searchLocation` — **Enter** to run). Results prefer the current map area; first match centers; multi-match shows `#search-results` picker (Esc / outside-click dismiss). **Plan Name** under **Plan**. Layer control: satellite / street / hybrid labels. Internet required for address search; lat/lng works offline.
 
 ### Place structures (click-then-place)
 
-Select vendor model → auto place mode (862) → click map (1917 handler) → `placeObject`. **Custom Size:** `startCustomPlace` (871), vendor `'Custom'`. **Snap:** checkbox + `getSnapAttachLatLng` (2183); auto-uncheck after success.
+Select catalog model → place mode → click map → `placeObject`. Catalog placement stays armed (continuous); Custom Size is one-shot (`startCustomPlace`, vendor `'Custom'`).
 
-### Adjust placed objects
+### Doors & ramps
 
-Drag body (`startObjectDrag`), rotate orange handle (`startRotateDrag`, Shift = 5°), delete (handles, list, Shift+click). Select via click or list row.
+Header **Door** mode (`toggleDoorMode`): click near any footprint edge → `placeOpeningAtLatLng`; drag along wall (`startOpeningDrag`); **Esc** exits Door mode. **Ramp** is a role (usually Custom Size) with hatch (`syncRampHatch`); hard-sided placement may toast (`maybeShowRampRequiredToast`). See function index (openings / ramp hatch).
+
+### Select & adjust placed objects
+
+| Action | Behavior |
+|--------|----------|
+| Select | Click footprint or list row; **Shift/Ctrl/Cmd+click** toggles membership (`toggleInSelection`); **Ctrl/Cmd+A** selects all |
+| Highlight | Double-outline blue underlay (`ensureSelectionUnderlay`) |
+| Exit selection | **Esc** or empty-map click (`clearSelection`); Esc also leaves place/measure/door modes and turns Snap off |
+| Move | Drag body — **rigid group translate** when N>1 (`startObjectDrag`); one undo per gesture; **snap off** for N>1 |
+| Rotate | Drag shared **↻** handle (`startRotateDrag`); singleton or **rigid group rotate** about centroid; Shift = 5°; one undo per gesture |
+| Delete (map) | Shared **✕** on primary — identity confirm N=1, count confirm N≥2 (`confirmAndDeleteSelection` / `deleteSelectedBulk`) |
+| Delete (list) | Row **✕** always **`deleteObj`** for that row only (identity confirm), even when row is in a multi-selection |
+| Delete (key) | **Delete** / **Backspace** — same as map ✕; suppressed when `isTypingTarget` |
+| Buffer | **Apply to Selected** / **Apply to All** — one undo per apply |
+
+### Snap (singleton drag only)
+
+Header **Snap** toggle + `findNearestSnapCandidate` / `getOuterSnapEdges*` / `getSnapAttachLatLng` on drag. **True-face** flush (chamfers, facets, arm faces — not bbox-only). Uses **rotation-as-intent**: pre-drag angle quantized to nearest 0°/90° relative to anchor. **Ctrl/Cmd** suppresses while dragging; **Esc** turns Snap off. Disabled during multi-member moves (N>1).
 
 ### Two-tier overlap (advisory)
 
-| Tier | Color | Meaning |
-|------|-------|---------|
-| Footprint | Red | Solid footprints intersect |
-| Buffer | Amber | Clearance ring conflict |
+| Tier | Color | Geometry | Meaning |
+|------|-------|----------|---------|
+| Footprint | Red | Pair-local **meter space** (`getLayerMeterRing`, `polygonsFootprintOverlap2D`) | Solid footprints intersect (positive area) |
+| Buffer | Amber | **Layer pixel** rings (`getLayerPointRing`, touch-or-overlap) | Clearance ring conflict |
 
-Status bar, sidebar warning, map pill. **Intentional** checkbox on amber-only rows. Does not block placement.
+Status bar, sidebar warning, map pill (`cycleOverlapPill` — click/Enter **cycles** flagged structures with appearance pulse). **Intentional** checkbox on amber-only rows. Recomputes **live during drag and rotate** (rAF-coalesced). Does not block placement.
 
 ### Measure
 
-Header Measure menu (965+ UI; 2550+ on-map handlers). Distance or area. Not persisted.
+Header Measure menu + on-map handlers. Distance or area. Strip centered under Measure button; labels offset off geometry. Not persisted.
 
 ### Undo / redo
 
-50 steps (`undo`/`redo`, 1194/1202). Lost on refresh.
+50 steps (`undo`/`redo`). Covers place, move, rotate, delete, role, buffer-to-selected, buffer-to-all, clear all, group move/rotate/delete. Lost on refresh.
 
 ### Persistence
 
 | Action | Key functions | Notes |
 |--------|---------------|-------|
-| Autosave write | `scheduleSaveSession` → `saveSession` (1802, 1790) | `localStorage` key `vpc-mapping-session`; 500 ms debounce |
-| Autosave restore | **`restoreAutosave`** (1835) → `loadScenarioFromData` | Manual; confirms if layout exists |
-| Save Plan | `saveScenario` (1448) | Downloads `vpc-scenario-v1` JSON |
-| Open Plan | `loadScenarioPrompt` (1696) + file input handler (3102) | Replaces layout |
+| Autosave write | `scheduleSaveSession` → `saveSession` | `localStorage` key `psmt-session`; 500 ms debounce |
+| Autosave restore | **`restoreAutosave`** → `loadScenarioFromData` | Manual; confirms if layout exists; restores saved center/zoom; **`getPlacedObjectsBounds`** fit fallback only when no structure visible (maxZoom 18) |
+| Save Plan | `saveScenario` | Downloads `psmt-scenario-v1` JSON |
+| Open Plan | `loadScenarioPrompt` + file input | Replaces layout |
 
-**Fresh open:** default map (NYC area), empty layout — autosave does **not** auto-restore (init 3216–3241 only hydrates indicator).
+**Fresh open:** default map (NYC area), empty layout — autosave does **not** auto-restore (init hydrates indicator only).
 
-### Export
+### Export & print
 
 | Action | Function | Output |
 |--------|----------|--------|
-| GeoJSON | `exportGeoJSON` (1509) | `FeatureCollection` + metadata |
-| PDF | `exportPDF` (1595) | Map snapshot + summary; text-only fallback |
-| Print Fit | `printFitToPage` (3063) | Browser print |
+| GeoJSON | `exportGeoJSON` | `FeatureCollection` + metadata |
+| Print | `#btn-print` or Ctrl/Cmd+P + `beforeprint` / `afterprint` | Browser print of current map view + plan-details header (plan name, date stamp, coordinates, beds, sq ft, zones) + SVG symbol legend |
 
 ---
 
 ## 9. Serialization (high level)
 
-### Plan JSON — `vpc-scenario-v1` (`buildScenarioData`, 1458)
+### Plan JSON — `psmt-scenario-v1` (`buildScenarioData`)
 
-`schema`, `appVersion`, `savedAt`, `map` (center, zoom), `ui` (operationName, preferCurrentMapArea, bufferFt), `objects[]`, `customRoles[]`.
+`schema`, `appVersion`, `savedAt`, `map` (center, zoom), `ui` (operationName, bufferFt), `objects[]` (may include `customBeds` on Custom), `customRoles[]`. Older plans may still carry `preferCurrentMapArea` — ignored on load.
 
-Does not store: active base layer, undo history, overlap pairs, measure drawings.
+Does not store: `selectedIds` / `primaryId`, active base layer, undo history, overlap pairs, measure drawings.
 
-### GeoJSON (`exportGeoJSON`, 1509)
+### GeoJSON (`exportGeoJSON`)
 
 Per-feature properties + collection `metadata.zoneSummary`. Footprint geometry from Leaflet `toGeoJSON()`.
 
@@ -532,11 +434,13 @@ Schema not frozen pre-v1 — change deliberately; keep plan and GeoJSON in sync.
 | Single-file | All logic in one HTML file |
 | Fresh open | v0.8.7+ — no auto-restore on load |
 | Autosave | Same browser only |
+| Selection | Runtime-only; not in plan JSON |
 | Units | Feet in UI; meters internally; no unit toggle yet |
-| PDF / CORS | `crossOrigin: true` on tiles; capture may fail → text-only PDF |
-| Offline | Editing works; tiles/search may not |
-| Overlap | Advisory only |
-| Geometry | Layer-space polygon tests; no Turf |
+| PDF / CORS | `crossOrigin: true` on tiles; browser print only (no Export PDF) |
+| Offline | Tool requires internet for tiles/search; offline banner warns when connection is lost |
+| Overlap | Advisory only; hybrid geometry (meter footprint + layer-pixel buffer) |
+| Geometry | Hand-rolled; no Turf |
+| Group rotate seat | Centroid pivot; handle seat is polar offset (`getGroupRotateHandleSeatAtRest`), not union AABB |
 | `Old/` | Archive only |
 
 ---
@@ -547,9 +451,9 @@ Schema not frozen pre-v1 — change deliberately; keep plan and GeoJSON in sync.
 |----------|--------|
 | **`PROJECT_MAP.md`** | This orientation map |
 | **`README.md`** | Release features, operator quick start, overlap, autosave, changelog |
-| **`VPC_Project_Notes.md`** | Roadmap, backlog, calculator integration plan |
+| **`PSMT_Project_Notes.md`** | Roadmap, backlog, calculator integration plan |
 | **`VENDOR_SPECS_DIGEST.md`** | Spec provenance per model |
-| **`VPC Mapping Tool - Quickstart.html`** | Field quickstart |
+| **`Portable-Solution-Site-Mapping-Tool-Quickstart.html`** | Field quickstart |
 | **`.cursor/rules/`** | Agent working agreement and invariants |
 
 When `APP_META.version` changes: update README, Project Notes, Quickstart, in-app changelog (see project-conventions rule).
@@ -560,11 +464,17 @@ When `APP_META.version` changes: update README, Project Notes, Quickstart, in-ap
 
 | Looking for… | Go to… |
 |--------------|--------|
-| Add/change tent model | `TENT_DB` (575), digest |
-| Map imagery | `satelliteLayer` (678), layer control (696) |
-| Restore autosave | **`restoreAutosave`** (1835) |
-| Load plan file | `loadScenarioFromData` (1708) |
-| Autosave write | `saveSession` (1790) |
-| Placement click | `map.on('click')` (1917) |
-| Overlap logic | `updateOverlapSummary` (2773) |
-| Export GeoJSON/PDF | 1509 / 1595 |
+| Add/change tent model | `TENT_DB`, digest |
+| Map imagery | `satelliteLayer`, layer control init |
+| Selection set | `selectedIds`, `primaryId`, `setSelection`, `toggleInSelection` |
+| Group move / rotate | `startObjectDrag`, `startRotateDrag`, `getMembersCentroid`, `getGroupRotateHandleSeatAtRest` |
+| Group / key delete | `confirmAndDeleteSelection`, `deleteSelectedBulk`, `deleteObj` |
+| Restore autosave + drift guard | `restoreAutosave`, `getPlacedObjectsBounds` in `loadScenarioFromData` |
+| Load plan file | `loadScenarioFromData` |
+| Autosave write | `saveSession`, `scheduleSaveSession` |
+| Placement click | `map.on('click')` |
+| Overlap logic | `updateOverlapSummary`, `getLayerMeterRing`, `latlngToMeters` |
+| Snap attach | `getSnapAttachLatLng`, `findNearestSnapCandidate` |
+| Export GeoJSON | `exportGeoJSON` |
+| Identity strings | `formatObjectIdentity` |
+| Buffer to selection | `applyBufferToSelected` |

@@ -1,11 +1,11 @@
 ---
-description: VPC Mapping Tool project conventions — architecture facts and invariants that must be preserved when editing.
+description: Portable Solution Site Mapping Tool project conventions — architecture facts and invariants that must be preserved when editing.
 alwaysApply: true
 ---
 
-# VPC Mapping Tool — project conventions
+# Portable Solution Site Mapping Tool — project conventions
 
-Single-file HTML app for emergency field-hospital site layout. Leaflet map at true scale; vendor tent catalog; place / drag / rotate / snap; two-tier overlap; save/load; GeoJSON + PDF export. No build step, no framework, no Turf — geometry is hand-rolled.
+Single-file HTML app for emergency field-hospital site layout. Leaflet map at true scale; vendor tent catalog; place / drag / rotate / snap; two-tier overlap; save/load; GeoJSON export. No build step, no framework, no Turf — geometry is hand-rolled.
 
 Program context: this tool supports the IMPACTS project (NDMS Modular/Convertible Capability Pilot, DHA-sponsored, UC Davis–implemented) — planning rapid hospital expansion with soft-sided shelter systems. Vendor dimensions feed real emergency planning, so catalog accuracy is not negotiable.
 
@@ -17,7 +17,8 @@ The catalog is **designed to grow** as additional vendors/teams are added. Rules
 - Three things move together as a set when a vendor or model is added or changed: the `TENT_DB` entry, a matching `VENDOR_COLORS` entry for the vendor, and a section in `VENDOR_SPECS_DIGEST.md` with spec provenance. A vendor missing from `VENDOR_COLORS` silently falls back to a generic color — do not leave that gap.
 - **Provenance gate:** every vendor/model in `TENT_DB` must trace to a spec source documented in `VENDOR_SPECS_DIGEST.md`. Add a vendor digest-first (spec entry with source), then `TENT_DB` + `VENDOR_COLORS`. Never add a catalog model with no documented source.
 - Do not change `TENT_DB` dimensions, shapes, or shape-extra fields (`cornerCutW`, `cornerCutL`, `armWidthFt`, `endCapFt`) without a corresponding documented spec source and a digest update.
-- Known open provenance gap: DLX X-HUB `armWidthFt: 16` is unverified (bounding box confirmed, arm width not confirmed from a primary spec). Preserve the code comment marking it unverified until DLX confirms.
+- Known open provenance gap: DLX X-HUB `cornerCutW` / `cornerCutL` **1.0 ft** chamfer is unverified (bounding box confirmed, corner chamfer not confirmed from a primary spec). Preserve the code comment marking it unverified until DLX confirms.
+- Known open provenance gap: HDT Base-X Dome (8D36) `cornerCutW` **8.4 ft** / `cornerCutL` **13.2 ft** chamfer legs are unverified (overall 31'×37' bbox confirmed; corner legs diagram-derived by pixel-measure, not vendor-stated). Preserve the code comment marking it unverified until HDT confirms.
 
 ## Non-catalog vendor values — never treat as catalog entries
 
@@ -35,13 +36,13 @@ Placed objects live on the Leaflet `map` as vector overlays, stored in the `obje
 
 The "intentional buffer" concept is deliberately spelled differently on each surface:
 - runtime + undo snapshot: `intentionalBuffer`
-- plan JSON (`vpc-scenario-v1`): `intentionalBufferOverlap`
+- plan JSON (`psmt-scenario-v1`): `intentionalBufferOverlap`
 - GeoJSON export: `intentional_buffer_overlap`
 
 Do **not** "unify" these — each matches its serialization contract. Changing a spelling breaks save/load or export compatibility.
 
 ## Schema
-- Plan schema is `vpc-scenario-v1`; GeoJSON is a `FeatureCollection` with per-feature properties and collection metadata.
+- Plan schema is `psmt-scenario-v1`; GeoJSON is a `FeatureCollection` with per-feature properties and collection metadata.
 - Schema is not frozen pre-v1 and may change — but change it deliberately, and keep `buildScenarioData()` (plan) and the GeoJSON export in sync with any field changes.
 
 ## UI text must match behavior
@@ -51,4 +52,4 @@ Do **not** "unify" these — each matches its serialization contract. Changing a
 - `Old/` is archived prior versions. It is not active source. Do not edit it, cite it as current, or treat its patterns as authoritative.
 
 ## Versioning / docs
-- Version lives in `APP_META` (and the bottom-right badge reads from it). When `APP_META.version` changes, update `README.md`, `VPC_Project_Notes.md`, the Quickstart, and in-app changelog together.
+- Version lives in `APP_META` (and the bottom-right badge reads from it). When `APP_META.version` changes, update `README.md`, `PSMT_Project_Notes.md`, the Quickstart, and in-app changelog together.
