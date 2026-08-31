@@ -6,9 +6,10 @@
 <title>Portable Solution Site Mapping Tool</title>
 <!--
   Portable Solution Site Mapping Tool
-  Version: 1.3.0-dev
-  Last Updated: 2026-08-17
+  Version: 1.5.0-dev
+  Last Updated: 2026-08-31
   Change Log: See README. APP_META.changelog holds current version only.
+    - 1.5.0-dev: Start Here searchable essential help (#3); docs sync through post-cf2dae9 ships (#26/#27/#29/#31–#35, #12 ellipse removal, #32 Manage roles…); operator docs + Notes. README/Quickstart/PROJECT_MAP/Notes synced.
     - 1.3.0-dev: Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (renamed Scenario Name → Plan Name; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.
     - 1.2.0-dev: Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).
     - 1.1.0-dev: Object/shape-fidelity audit complete -- all five non-rect TENT_DB shapes verified against vendor specs: GK20 (true regular octagon), GK1935 (symmetric cut-corner-rectangle, renamed from elongated-octagon), ZUMRO Quad Interface (verified faithful, no change), DLX X-HUB (corrected from incorrect plus/cross to cut-corner-square), HDT Base-X Dome 8D36 (corrected from ellipse to asymmetric cut-corner-rectangle). True-face snapping for these shapes (snap backlog #6) now unblocked.
@@ -960,9 +961,10 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
  */
 const APP_META = {
   name: 'Portable Solution Site Mapping Tool',
-  version: '1.4.0-dev',
-  lastUpdated: '2026-08-25',
+  version: '1.5.0-dev',
+  lastUpdated: '2026-08-31',
   changelog: [
+    { version: '1.5.0-dev', date: '2026-08-31', note: 'Start Here searchable essential help (#3); docs sync through post-cf2dae9 ships (#26/#27/#29/#31–#35, #12 ellipse removal, #32 Manage roles…); operator docs + Notes. README/Quickstart/PROJECT_MAP/Notes synced.' },
     { version: '1.4.0-dev', date: '2026-08-25', note: 'Post-1.3.0 ships: search picker + Enter placeholder; Plan naming; MQ Power generator card; placed-list expand + row cleanup; Custom bed ranges; on-map role labels zoom-only; Restore Autosave drift guard; selection exit; Apply to Selected; header Print; overlap meter-space footprint + live advisory during drag/rotate; selection underlay; rotation-as-intent snap. Multi-select (#21): Shift/Ctrl/Cmd+click toggle; Ctrl/Cmd+A select all; rigid group move/rotate/delete; buffer-to-set; Delete/Backspace; ↻ rotate handle; snap off for N>1. Dead AABB group-seat helper removed. README/Quickstart/PROJECT_MAP/Notes synced.' },
     { version: '1.3.0-dev', date: '2026-08-17', note: 'Catalog import (8 vendors + Power tab; 36 records / 20 standard-visible / 16 extended-hidden) + catalog/card redesign (two-line cards, sticky per-card roles, continuous placement, on-map role text, Placed running totals with Ward/ICU toggle and Custom beds, totals caveat ⓘ on Placed header) + Setup dissolve (renamed Scenario Name → Plan Name; search always map-biased; scale presets removed) + print/export consolidation (print totals strip; Fit View removed — Ctrl/Cmd+P prints current view with @page letter-landscape; Export PDF / html2canvas / jsPDF removed — browser print is the only PDF path; Export ▾ collapsed to Export GeoJSON). README/Quickstart/PROJECT_MAP/Notes synced.' },
     { version: '1.2.0-dev', date: '2026-08-10', note: 'Tier C complete -- toast feedback system (b1fb43b), map-floating ongoing-state readout (b66ee21), Start Here modal + sidebar How-to removal (802c1b3), #mode-display removal (77762fb).' },

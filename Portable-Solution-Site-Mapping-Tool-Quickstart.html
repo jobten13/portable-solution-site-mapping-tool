@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portable Solution Site Mapping Tool — Quickstart (v1.4.0-dev)</title>
+<title>Portable Solution Site Mapping Tool — Quickstart (v1.5.0-dev)</title>
 <style>
 /* ─── Screen ─── */
 :root {
@@ -173,7 +173,7 @@ footer.doc-foot {
 <article class="doc">
   <header class="doc-head">
     <h1>Portable Solution Site Mapping Tool — Quickstart</h1>
-    <p class="doc-meta"><span class="ver">v1.4.0-dev</span> · August 2026 · One sheet for field operators. Open <strong>Portable-Solution-Site-Mapping-Tool.html</strong> in Chrome, Edge, or Safari.</p>
+    <p class="doc-meta"><span class="ver">v1.5.0-dev</span> · August 2026 · One sheet for field operators. Open <strong>Portable-Solution-Site-Mapping-Tool.html</strong> in Chrome, Edge, or Safari.</p>
   </header>
 
   <section aria-labelledby="s-open">
@@ -193,11 +193,12 @@ footer.doc-foot {
   <section aria-labelledby="s-header">
     <h2 id="s-header">2. Header tools</h2>
     <ul>
-      <li><strong>Start Here</strong> — short how-to anytime (not a one-time popup).</li>
-      <li><strong>Snap</strong> — ambient align-while-dragging for singleton moves (see Snap section). Hold <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> while dragging to suppress. Off during multi-structure group moves.</li>
+      <li><strong>Start Here</strong> — searchable essential help anytime (not a one-time popup).</li>
+      <li><strong>Snap</strong> — true-face align-while-dragging for singleton moves (see Snap section). Hold <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> while dragging to suppress. Off during multi-structure group moves.</li>
+      <li><strong>Door</strong> — place entry marks on any footprint edge; drag along the wall to adjust; <kbd>Esc</kbd> exits.</li>
       <li><strong>Undo / Redo</strong> — up to 50 steps (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd>; Mac: <kbd>Cmd</kbd>+<kbd>Z</kbd>). Cleared on refresh — use Save Plan or Restore Autosave.</li>
       <li><strong>Measure ▾</strong> — distance or area on the map.</li>
-      <li><strong>Print</strong> — same as <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>P</kbd> (current view + totals strip).</li>
+      <li><strong>Print</strong> — same as <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>P</kbd> (current view + plan details header + SVG legend).</li>
       <li><strong>Autosaved …</strong> — timestamp for browser backup; <strong>Restore Autosave</strong> loads it (confirms if layout already has structures).</li>
       <li>Map-floating readout — shows what you're currently doing (placing, measuring, or which structure(s) are selected); when armed to place, includes <strong>✕</strong> to stop.</li>
     </ul>
@@ -206,21 +207,21 @@ footer.doc-foot {
   <section aria-labelledby="s-place">
     <h2 id="s-place">3. Place &amp; edit structures</h2>
     <ol>
-      <li><strong>Catalog</strong> tab (nine tabs: eight vendors + <strong>Power</strong>) → click a model (enters place mode). Set role on the card if needed. Bed counts on cards show a <strong>beds</strong> unit.</li>
+      <li><strong>Catalog</strong> tab (nine tabs: eight vendors + <strong>Power</strong>) → click a model (enters place mode). Set role on the card if needed (<strong>Manage roles…</strong> appears in the role dropdown when custom roles exist). Bed counts on cards show a <strong>beds</strong> unit.</li>
       <li>Click the map to place. Catalog placement <strong>stays armed</strong> — click again for another of the same model. Disarm: readout <strong>✕</strong>, <kbd>Esc</kbd>, re-click the armed card, or click a placed object.</li>
       <li><strong>Select:</strong> click a footprint; <kbd>Shift</kbd>, <kbd>Ctrl</kbd>, or <kbd>Cmd</kbd>+click toggles add/remove; <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>A</kbd> selects all. Selected footprints show a blue double-outline.</li>
       <li><strong>Move:</strong> drag body — multiple selected structures move together as a rigid group (one undo).</li>
       <li><strong>Rotate:</strong> drag the <strong>↻</strong> handle (<kbd>Shift</kbd> = 5° steps). Groups rotate about their centroid (one undo).</li>
       <li><strong>Delete:</strong> red map <strong>✕</strong> deletes the current selection (name confirm for one structure; count confirm for two or more). <strong>✕</strong> in the placed list deletes <em>that row only</em> — even if it is part of a multi-selection. <kbd>Delete</kbd> / <kbd>Backspace</kbd> matches map <strong>✕</strong> behavior.</li>
-      <li><strong>Custom Size</strong> — width / length, optional <strong>Beds</strong> (single or min–max range), optional label → <strong>Place Custom</strong> → click map (places once — click Place Custom again for another).</li>
-      <li><strong>Placed</strong> header <strong>▾</strong> expands the list (compact ↔ tall, session-only).</li>
+      <li><strong>Custom Size</strong> — width / length, optional <strong>Beds</strong> (single or min–max range), optional label → <strong>Place Custom</strong> → click map (places once — click Place Custom again for another). Set role <strong>Ramp</strong> for a ramp footprint (hatch); use where a doorway sits above grade.</li>
+      <li><strong>Placed</strong> header <strong>▾</strong> focuses the list (other sidebar panels hide until <strong>▴</strong>).</li>
     </ol>
     <p><strong>Placed</strong> shows running totals: beds (click to toggle <strong>All</strong> / <strong>Ward·ICU</strong>) and sq ft. The <strong>ⓘ</strong> on the Placed header opens the combined caveat: utilities (water, hygiene, waste) are excluded from footprint totals; bed figures are manufacturer recommendations — actual capacity varies with site-specific use.</p>
   </section>
 
   <section aria-labelledby="s-snap">
     <h2 id="s-snap">4. Snap (align structures)</h2>
-    <p>Turn on <strong>Snap</strong> in the header (off by default; click again to turn off). Drag a <em>single</em> structure near another and it pulls flush; your pre-drag orientation is matched to the nearest 0°/90° relative to the anchor. Hold <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> while dragging to suppress snap; <kbd>Esc</kbd> also turns Snap off. Snap does not run during multi-structure group moves.</p>
+    <p>Turn on <strong>Snap</strong> in the header (off by default; click again to turn off). Drag a <em>single</em> structure near another and <strong>true faces</strong> pull flush (including chamfers and irregular footprints); your pre-drag orientation is matched to the nearest 0°/90° relative to the anchor. Hold <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> while dragging to suppress snap; <kbd>Esc</kbd> also turns Snap off. Snap does not run during multi-structure group moves — snap a connector piece first, then rejoin.</p>
   </section>
 
   <section aria-labelledby="s-overlap">
@@ -235,7 +236,7 @@ footer.doc-foot {
         <tr><td><strong>Amber</strong></td><td>Clearance rings conflict (footprints may still be separate)</td><td>Adjust spacing, or check <strong>Intentional</strong> in placed list (amber-only rows)</td></tr>
       </tbody>
     </table>
-    <p>Overlap counts update <strong>while you drag or rotate</strong>, not only after release. Watch the status bar, sidebar warning under <strong>Placed</strong>, and the map <strong>pill</strong> (top-right). Click the pill to jump to the first flagged structure.</p>
+    <p>Overlap counts update <strong>while you drag or rotate</strong>, not only after release. Watch the status bar, sidebar warning under <strong>Placed</strong>, and the map <strong>pill</strong> (top-right). Click the pill to <strong>cycle</strong> through flagged structures (with pulse).</p>
   </section>
 
   <section aria-labelledby="s-save">
@@ -244,7 +245,7 @@ footer.doc-foot {
       <li><strong>Save Plan</strong> — portable JSON (archive, email, reopen on any machine).</li>
       <li><strong>Open Plan</strong> — replaces current layout (confirms).</li>
       <li><strong>Export GeoJSON</strong> — GIS handoff.</li>
-      <li><strong>Print</strong> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>P</kbd> — prints the <strong>current</strong> view with totals strip (no auto-fit); if the satellite image is missing from the print, enable <em>Print background graphics</em> in the browser's print settings.</li>
+      <li><strong>Print</strong> or <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>P</kbd> — prints the <strong>current</strong> view with plan details (name, date, coordinates, beds, sq ft, zones) and an SVG legend for Entry/Exit, Ramp, footprint overlap, and buffer advisory (no auto-fit); if the satellite image is missing from the print, enable <em>Print background graphics</em> in the browser's print settings.</li>
     </ul>
     <div class="callout callout-warn">
       <strong>Autosave ≠ backup:</strong> Autosave stays in this browser only. Save Plan files for operations handoff.
@@ -255,17 +256,17 @@ footer.doc-foot {
     <h2 id="s-keys">7. Keyboard shortcuts</h2>
     <ul>
       <li><kbd>/</kbd> — puts your cursor in the search box</li>
-      <li><kbd>Esc</kbd> — leave place/measure modes; clear selection; turn Snap off</li>
+      <li><kbd>Esc</kbd> — leave place/measure/door modes; clear selection; turn Snap off</li>
       <li><kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>A</kbd> — select all placed structures</li>
       <li><kbd>Delete</kbd> / <kbd>Backspace</kbd> — delete current selection (confirm)</li>
       <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd> — undo / redo</li>
       <li>Hold <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> while dragging — suppress Snap</li>
     </ul>
-    <p><strong>Start Here</strong> (header) reopens the orientation anytime.</p>
+    <p><strong>Start Here</strong> (header) reopens searchable essential help anytime.</p>
   </section>
 
   <footer class="doc-foot">
-    <p class="no-print-url"><strong>App:</strong> Portable-Solution-Site-Mapping-Tool.html · <strong>Docs:</strong> README.md, PSMT_Project_Notes.md · <strong>Version:</strong> 1.4.0-dev (2026-08-25)</p>
+    <p class="no-print-url"><strong>App:</strong> Portable-Solution-Site-Mapping-Tool.html · <strong>Docs:</strong> README.md, PSMT_Project_Notes.md · <strong>Version:</strong> 1.5.0-dev (2026-08-31)</p>
     <p class="no-print-url">To print this sheet: use File → Print in your browser.</p>
   </footer>
 </article>

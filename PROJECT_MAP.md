@@ -4,7 +4,7 @@ Orientation document for developers and collaborators. Describes **what this pro
 
 For **how to work on it** (read-only vs. authorized changes, scope discipline, catalog provenance, data-handling rules), see `.cursor/rules/` — especially `behavior.mdc`, `project-conventions.mdc`, and `data-handling.mdc`. This file does not duplicate those rules.
 
-**Current version:** `1.4.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-25` in `Portable-Solution-Site-Mapping-Tool.html`).
+**Current version:** `1.5.0-dev` (`APP_META.version`, `lastUpdated` `2026-08-31` in `Portable-Solution-Site-Mapping-Tool.html`).
 
 **Note:** Script section headers below mark **approximate** bands in the live HTML (~5,200 lines). Use search (`function name`) for authoritative locations — not contiguous line numbers.
 
@@ -87,8 +87,8 @@ Calculator suite (Load, Water, Consumables, Medicines) — separate HTML tools; 
 |---------|-------|----------|
 | Head | `<head>` | DOCTYPE, meta, title, in-file changelog HTML comment |
 | CDN | Leaflet 1.9.4 CSS/JS |
-| Styles | `<style>` | App layout, sidebar, map, print CSS, handles, toasts, Start Here modal |
-| Body UI | `<body>` (early) | Header (search, Snap, Undo/Redo, Measure, Print, Restore), Start Here modal, sidebar, map, status bar, print meta, file input |
+| Styles | `<style>` | App layout, sidebar, map, print CSS, handles, toasts, Start Here modal (search/topics), focus-mode sidebar |
+| Body UI | `<body>` (early) | Header (Start Here, search, Snap, Door, Undo/Redo, Measure, Print, Restore), Start Here modal (searchable help), sidebar, map, status bar, print meta + SVG legend, file input |
 | Script | `<script>` (~4,400 lines) | All application logic — see section bands below |
 | Close | `</script>`, `</body>`, `</html>` |
 
@@ -130,13 +130,13 @@ Use ripgrep / editor search for `function name` — bands below are orientation 
 |------|-----------------|
 | Script preamble | Opening `<script>`, flow comment |
 | `APP_META` | Name, version, lastUpdated, changelog |
-| Constants | `DRAG_SUPPRESS_MS`, handle offsets, storage keys, `ROLES`, `FT_TO_M`, overlap thresholds, etc. |
+| Constants | `DRAG_SUPPRESS_MS`, zoom-derived handle padding (`HANDLE_TARGET_EDGE_PX`, `HANDLE_PAD_MIN_M`), storage keys, `ROLES` (incl. Ramp), `FT_TO_M`, overlap thresholds, etc. |
 | `TENT_DB` | Catalog data, `COLORS`, `VENDOR_COLORS`, tier visibility helpers |
 | Mutable state | `objects[]`, placement/measure modes, **`selectedIds`**, **`primaryId`**, undo stacks, autosave timers, `overlapState`, search pending results |
 | Map init | `L.map`, tile layers, layer control, scale control, `roleLabelPane` |
 | Overlap pill | `initOverlapPill` IIFE |
 | Vendor catalog UI | Tabs, `createTentCard`, roles on cards, extended-catalog toggle (hidden) |
-| Placement & modes | `startPlacing`, `startCustomPlace`, toasts, readout, Snap toggle |
+| Placement & modes | `startPlacing`, `startCustomPlace`, toasts, readout, Snap toggle, Door mode |
 | Measure UI | Menu, strip positioning, distance/area mode toggles |
 | Drag / rotate / selection | `startObjectDrag`, `endObjectDrag`, `startRotateDrag`, `endRotateDrag`, handles, group geometry, selection set API, buffer apply |
 | Undo | `pushStateToUndo`, `undo`, `redo`, snapshots |
@@ -144,11 +144,11 @@ Use ripgrep / editor search for `function name` — bands below are orientation 
 | Persistence | `saveScenario`, `buildScenarioData`, `exportGeoJSON`, `loadScenarioFromData`, **`getPlacedObjectsBounds`**, **`restoreAutosave`**, session save |
 | Plan hydration | `buildObjectFromRaw` |
 | Map events | `map.on('click'…)`, `mousemove` (drag, group move/rotate), `moveend`, `zoomend`, `mouseup` |
-| Objects & list UI | `placeObject`, `drawObject`, selection underlay, role labels, snap attach, list rows, placed-list expand |
+| Objects & list UI | `placeObject`, `drawObject`, selection underlay, role labels, true-face snap, openings/ramp hatch, list rows, placed-list focus mode |
 | On-map measure | `handleMeasureClick`, area measure, `polygonAreaMeters` |
 | Overlap geometry | `scheduleOverlapSummary`, **`getLayerMeterRing`**, **`latlngToMeters`**, polygon intersection, **`updateOverlapSummary`** |
 | Offline & search | `updateOfflineBanner`, **`searchLocation`**, picker show/dismiss |
-| Print & scale | `updatePrintMeta`, `updateScaleRatio`, `restorePrintHandles` |
+| Print & scale | `updatePrintMeta` (header + SVG legend), `updateScaleRatio`, `restorePrintHandles` |
 | DOM wiring | `addEventListener`, **`isTypingTarget`**, document `keydown` (Esc, /, Ctrl+A, Delete, Ctrl+Z/Y) |
 | Startup init | Version badge, catalog roles popover, measure menu init, autosave indicator hydrate |
 
@@ -164,7 +164,7 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 
 ### Placement, modes, feedback
 
-`startPlacing`, `startCustomPlace`, `cancelPlacing`, `clearToasts`, `scheduleToastHide`, `clampToastPosition`, `showActionToast`, `showSpatialToast`, `syncMapStateReadout`, `setMode`, `updateSnapModeUI`, `toggleSnapMode`, `resetViewMode`, `makeCollapsible`, `isStartHereModalOpen`, `openStartHereModal`, `closeStartHereModal`
+`startPlacing`, `startCustomPlace`, `cancelPlacing`, `clearToasts`, `scheduleToastHide`, `clampToastPosition`, `showActionToast`, `showSpatialToast`, `syncMapStateReadout`, `setMode`, `updateSnapModeUI`, `toggleSnapMode`, `updateDoorModeUI`, `cancelDoorMode`, `toggleDoorMode`, `resetViewMode`, `makeCollapsible`, `isStartHereModalOpen`, `startHereTopicMatches`, `renderStartHereHelp`, `openStartHereModal`, `closeStartHereModal`
 
 ### Measure UI & on-map measure
 
@@ -172,7 +172,7 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 
 ### Drag, rotate, handles, group geometry
 
-`startObjectDrag`, `endObjectDrag`, `startRotateDrag`, `endRotateDrag`, `getObjectById`, `clearRotateHandle`, `getRotateHandleLatLng`, `getDeleteHandleLatLng`, `getMembersCentroid`, `getGroupMaxCornerRadiusM`, `getGroupRotateHandleSeatAtRest`, `rotateLatLngAboutPivot`, `shortestAngleDelta`, `syncRotateHandle`, `computeAngleFromCenter`, `isMultiMemberGestureActive`
+`startObjectDrag`, `endObjectDrag`, `startRotateDrag`, `endRotateDrag`, `getObjectById`, `clearRotateHandle`, `mapMetersPerPixel`, `handleOutsidePaddingM`, `getRotateHandleLatLng`, `getDeleteHandleLatLng`, `getMembersCentroid`, `getGroupMaxCornerRadiusM`, `getGroupRotateHandleSeatAtRest`, `rotateLatLngAboutPivot`, `shortestAngleDelta`, `syncRotateHandle`, `computeAngleFromCenter`, `isMultiMemberGestureActive`
 
 ### Selection set (runtime only — not in plan schema)
 
@@ -192,7 +192,7 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 
 ### Objects, drawing, list UI, delete
 
-`placeObject`, `drawObject`, `shouldShowRoleLabel`, `removeRoleLabel`, `clearSelectionUnderlay`, `ensureSelectionUnderlay`, `buildRoleLabelIcon`, `syncRoleLabel`, `refreshRoleLabelVisibility`, `createShapeLayer`, `metersToDeg`, `snapEngageThresholdM`, `roundRelativeAngleTo90`, `resolveSnapMate`, `findNearestSnapCandidate`, `getSnapAttachLatLng`, `getNearestFaceMidpointLatLng`, `normalizeAngle`, `rotateOffsets`, `createGeoPolygon`, `createGeoCutCornerRectangle`, `createGeoEllipse`, `createGeoPlusSign`, `createGeoRect`, `deleteObj`, `confirmAndDeleteSelection`, `deleteSelectedBulk`, `resetPlacedObjects`, `clearAll`, `updateList`, `togglePlacedListExpand`, `scrollPlacedListToObject`, `createObjectListItem`
+`placeObject`, `drawObject`, `shouldShowRoleLabel`, `removeRoleLabel`, `clearSelectionUnderlay`, `ensureSelectionUnderlay`, `buildRoleLabelIcon`, `syncRoleLabel`, `refreshRoleLabelVisibility`, `createShapeLayer`, `metersToDeg`, `snapEngageThresholdM`, `roundRelativeAngleTo90`, `resolveSnapMate`, `findNearestSnapCandidate`, `getOuterSnapEdges`, `getOuterSnapEdgesAt`, `getOuterSnapEdgesLocal`, `getSnapAttachLatLng`, `getSnapFaceMidpointLatLng`, `getNearestFaceMidpointLatLng`, `normalizeAngle`, `rotateOffsets`, `createGeoPolygon`, `createGeoCutCornerRectangle`, `createGeoPlusSign`, `createGeoRect`, `placeOpeningAtLatLng`, `startOpeningDrag`, `clearRampHatchLayer`, `ensureRampHatchPattern`, `applyRampHatchFill`, `syncRampHatch`, `refreshRampHatches`, `maybeShowRampRequiredToast`, `deleteObj`, `confirmAndDeleteSelection`, `deleteSelectedBulk`, `resetPlacedObjects`, `clearAll`, `updateList`, `updatePlacedListFocusUI`, `togglePlacedListFocusMode`, `exitPlacedListFocusMode`, `scrollPlacedListToObject`, `createObjectListItem`, `cycleOverlapPill`, `syncOverlapPillCycleFromFlaggedIds`
 
 ### Overlap geometry
 
@@ -206,14 +206,14 @@ All functions below appear in the script block. IIFEs and inline handlers are no
 
 | Name | Role |
 |------|------|
-| `initOverlapPill` | Pill click scrolls to first flagged row |
-| `initCatalogRolesPopover` | Manage-roles popover positioning |
+| `initOverlapPill` | Pill click/Enter cycles flagged structures (`cycleOverlapPill`) + pulse |
+| `initCatalogRolesPopover` | Manage roles… popover positioning (when customs exist) |
 | `measureMenuInit` | Measure dropdown open/close |
 | `map.on(...)` | Placement click, drag mousemove (singleton + group move/rotate), pan/zoom autosave |
-| `document keydown` | Esc (modes + deselect + snap off), `/`, Ctrl/Cmd+A, Delete/Backspace, Ctrl+Z/Y |
+| `document keydown` | Esc (Start Here first; then search picker; then modes + deselect + snap off), `/`, Ctrl/Cmd+A, Delete/Backspace, Ctrl+Z/Y |
 | `btn-print` click | `window.print()` |
 
-**Removed (do not search):** `printFitToPage`, `getPlacedBounds`, `getGroupRotateHandleLatLng` (dead AABB seat; removed 1.4.0-dev), `#snap-to-selected` path.
+**Removed (do not search):** `printFitToPage`, `getPlacedBounds`, `getGroupRotateHandleLatLng` (dead AABB seat; removed 1.4.0-dev), `#snap-to-selected` path, `createGeoEllipse` / ellipse·circle branches / `endCapFt` vestige (Working queue #12, `19aed4d`).
 
 ---
 
@@ -244,7 +244,7 @@ Object keyed by vendor name → array of model entries.
 | `cornerCutL` | optional | Cut-corner rectangle (GK1935, 8D36) or cut-corner square (X-HUB) — length-axis cut (ft) |
 | `armWidthFt` | optional | Plus/cross hub arm width (ft) |
 
-**Shape types used in catalog:** `rect`, `octagon`, `cut-corner-rectangle`, `cut-corner-square`, `plus`. (`circle` and `ellipse` supported in drawing code; not in current catalog — `ellipse` for legacy saved plans only.)
+**Shape types used in catalog:** `rect`, `octagon`, `cut-corner-rectangle`, `cut-corner-square`, `plus`. (`ellipse` / `circle` drawing branches removed — no legacy-plan compat, Working queue #12.)
 
 Dimensions convert to meters at placement (`× FT_TO_M`).
 
@@ -352,13 +352,17 @@ Search address/place or `lat, lng` (`searchLocation` — **Enter** to run). Resu
 
 Select catalog model → place mode → click map → `placeObject`. Catalog placement stays armed (continuous); Custom Size is one-shot (`startCustomPlace`, vendor `'Custom'`).
 
+### Doors & ramps
+
+Header **Door** mode (`toggleDoorMode`): click near any footprint edge → `placeOpeningAtLatLng`; drag along wall (`startOpeningDrag`); **Esc** exits Door mode. **Ramp** is a role (usually Custom Size) with hatch (`syncRampHatch`); hard-sided placement may toast (`maybeShowRampRequiredToast`). See function index (openings / ramp hatch).
+
 ### Select & adjust placed objects
 
 | Action | Behavior |
 |--------|----------|
 | Select | Click footprint or list row; **Shift/Ctrl/Cmd+click** toggles membership (`toggleInSelection`); **Ctrl/Cmd+A** selects all |
 | Highlight | Double-outline blue underlay (`ensureSelectionUnderlay`) |
-| Exit selection | **Esc** or empty-map click (`clearSelection`); Esc also leaves place/measure and turns Snap off |
+| Exit selection | **Esc** or empty-map click (`clearSelection`); Esc also leaves place/measure/door modes and turns Snap off |
 | Move | Drag body — **rigid group translate** when N>1 (`startObjectDrag`); one undo per gesture; **snap off** for N>1 |
 | Rotate | Drag shared **↻** handle (`startRotateDrag`); singleton or **rigid group rotate** about centroid; Shift = 5°; one undo per gesture |
 | Delete (map) | Shared **✕** on primary — identity confirm N=1, count confirm N≥2 (`confirmAndDeleteSelection` / `deleteSelectedBulk`) |
@@ -368,7 +372,7 @@ Select catalog model → place mode → click map → `placeObject`. Catalog pla
 
 ### Snap (singleton drag only)
 
-Header **Snap** toggle + `findNearestSnapCandidate` / `getSnapAttachLatLng` on drag. Uses **rotation-as-intent**: pre-drag angle quantized to nearest 0°/90° relative to anchor. **Ctrl/Cmd** suppresses while dragging; **Esc** turns Snap off. Disabled during multi-member moves (N>1).
+Header **Snap** toggle + `findNearestSnapCandidate` / `getOuterSnapEdges*` / `getSnapAttachLatLng` on drag. **True-face** flush (chamfers, facets, arm faces — not bbox-only). Uses **rotation-as-intent**: pre-drag angle quantized to nearest 0°/90° relative to anchor. **Ctrl/Cmd** suppresses while dragging; **Esc** turns Snap off. Disabled during multi-member moves (N>1).
 
 ### Two-tier overlap (advisory)
 
@@ -377,7 +381,7 @@ Header **Snap** toggle + `findNearestSnapCandidate` / `getSnapAttachLatLng` on d
 | Footprint | Red | Pair-local **meter space** (`getLayerMeterRing`, `polygonsFootprintOverlap2D`) | Solid footprints intersect (positive area) |
 | Buffer | Amber | **Layer pixel** rings (`getLayerPointRing`, touch-or-overlap) | Clearance ring conflict |
 
-Status bar, sidebar warning, map pill. **Intentional** checkbox on amber-only rows. Recomputes **live during drag and rotate** (rAF-coalesced). Does not block placement.
+Status bar, sidebar warning, map pill (`cycleOverlapPill` — click/Enter **cycles** flagged structures with appearance pulse). **Intentional** checkbox on amber-only rows. Recomputes **live during drag and rotate** (rAF-coalesced). Does not block placement.
 
 ### Measure
 
@@ -403,7 +407,7 @@ Header Measure menu + on-map handlers. Distance or area. Strip centered under Me
 | Action | Function | Output |
 |--------|----------|--------|
 | GeoJSON | `exportGeoJSON` | `FeatureCollection` + metadata |
-| Print | `#btn-print` or Ctrl/Cmd+P + `beforeprint` / `afterprint` | Browser print of current map view + totals strip |
+| Print | `#btn-print` or Ctrl/Cmd+P + `beforeprint` / `afterprint` | Browser print of current map view + plan-details header (plan name, date stamp, coordinates, beds, sq ft, zones) + SVG symbol legend |
 
 ---
 
