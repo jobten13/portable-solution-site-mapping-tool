@@ -930,8 +930,10 @@ const SNAP_PROXIMITY_FLOOR_M = 0.75;    // minimum engage distance (m)
 const SNAP_PROXIMITY_CEILING_M = 4;     // maximum engage distance (m); was flat default
 /** Skip degenerate footprint edges (zero-cut collapse); GK1935 chamfers (~2.3 m) stay in. */
 const SNAP_MIN_EDGE_LEN_M = 0.2;
-/** Extra meters beyond half footprint size for rotate/delete handles (keep controls off the tent body). */
-const HANDLE_OUTSIDE_PADDING_M = 14;
+/** Target screen gap (px) from footprint edge to rotate/delete handle center. */
+const HANDLE_TARGET_EDGE_PX = 40;
+/** Floor on zoom-derived handle padding (m); keeps the 28px icon off the stroke at high zoom. */
+const HANDLE_PAD_MIN_M = 1.0;
 /** Pixel offset for tent info tooltip (direction 'top' → shift further above the shape). */
 const MAP_OBJ_TOOLTIP_OFFSET = [0, -72];
 const MAP_HANDLE_TOOLTIP_OFFSET_TOP = [0, -18];
@@ -2074,6 +2076,7 @@ function startObjectDrag(obj, startLatlng) {
   map.dragging.disable();
   if (map.boxZoom) map.boxZoom.disable();
   if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
+  if (map.touchZoom) map.touchZoom.disable();
   mapContainer.style.cursor = 'grabbing';
 }
 
@@ -2085,6 +2088,7 @@ function endObjectDrag() {
   map.dragging.enable();
   if (map.boxZoom) map.boxZoom.enable();
   if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+  if (map.touchZoom) map.touchZoom.enable();
   mapContainer.style.cursor = '';
   if (moved) {
     dragEndedAt = Date.now();
@@ -2144,6 +2148,7 @@ function startRotateDrag(obj, startLatlng) {
   map.dragging.disable();
   if (map.boxZoom) map.boxZoom.disable();
   if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
+  if (map.touchZoom) map.touchZoom.disable();
   mapContainer.style.cursor = 'crosshair';
 }
 
@@ -2154,6 +2159,7 @@ function endRotateDrag() {
   map.dragging.enable();
   if (map.boxZoom) map.boxZoom.enable();
   if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+  if (map.touchZoom) map.touchZoom.enable();
   mapContainer.style.cursor = '';
   updateList();
   scheduleOverlapSummary();
@@ -2271,15 +2277,27 @@ function updateUndoRedoButtons() {
   if (r) r.disabled = redoStack.length === 0;
 }
 
+/** Same Web Mercator m/px as updateScaleRatio. */
+function mapMetersPerPixel() {
+  const lat = map.getCenter().lat * Math.PI / 180;
+  const zoom = map.getZoom();
+  return (40075016.686 * Math.cos(lat)) / Math.pow(2, zoom + 8);
+}
+
+/** Zoom-derived handle padding (m); floor HANDLE_PAD_MIN_M; no upper bound. */
+function handleOutsidePaddingM() {
+  return Math.max(HANDLE_PAD_MIN_M, HANDLE_TARGET_EDGE_PX * mapMetersPerPixel());
+}
+
 function getRotateHandleLatLng(obj) {
-  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + HANDLE_OUTSIDE_PADDING_M;
+  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + handleOutsidePaddingM();
   const [dx, dy] = rotateOffsets([[0, handleOffsetM]], obj.angleDeg || 0)[0];
   const [lat, lng] = metersToDeg(obj.latlng, dx, dy);
   return L.latLng(lat, lng);
 }
 
 function getDeleteHandleLatLng(obj) {
-  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + HANDLE_OUTSIDE_PADDING_M;
+  const handleOffsetM = (Math.max(obj.widthM, obj.lengthM) / 2) + handleOutsidePaddingM();
   const [dx, dy] = rotateOffsets([[0, -handleOffsetM]], obj.angleDeg || 0)[0];
   const [lat, lng] = metersToDeg(obj.latlng, dx, dy);
   return L.latLng(lat, lng);
@@ -2324,7 +2342,7 @@ function getGroupRotateHandleSeatAtRest(members) {
   if (primary && primary.layer) {
     bearingDeg = computeAngleFromCenter(centroid, getRotateHandleLatLng(primary));
   }
-  const r = getGroupMaxCornerRadiusM(members, centroid) + HANDLE_OUTSIDE_PADDING_M;
+  const r = getGroupMaxCornerRadiusM(members, centroid) + handleOutsidePaddingM();
   const rad = bearingDeg * Math.PI / 180;
   const [lat, lng] = metersToDeg(centroid, r * Math.sin(rad), r * Math.cos(rad));
   return L.latLng(lat, lng);
@@ -3346,6 +3364,9 @@ map.on('zoomend', () => {
   refreshRoleLabelVisibility();
   refreshOpeningVisibility();
   refreshRampHatches();
+  if (selectedIds.length && !isMultiMemberGestureActive() && !activeRotateDrag && !activeObjectDrag) {
+    syncRotateHandle();
+  }
 });
 map.on('zoom', () => {
   refreshRoleLabelVisibility();
@@ -6077,9 +6098,7 @@ function escapeHtml(text) {
 }
 
 function updateScaleRatio() {
-  const lat = map.getCenter().lat * Math.PI / 180;
-  const zoom = map.getZoom();
-  const metersPerPixel = (40075016.686 * Math.cos(lat)) / Math.pow(2, zoom + 8);
+  const metersPerPixel = mapMetersPerPixel();
   const scaleDenominator = Math.max(1, Math.round(metersPerPixel / 0.000264583));
   document.getElementById('scale-ratio').textContent = `1:${scaleDenominator.toLocaleString()}`;
 }
