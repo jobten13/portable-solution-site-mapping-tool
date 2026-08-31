@@ -570,9 +570,11 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
 .start-here-dialog {
   position:relative;
   z-index:1;
-  width:min(440px, calc(100vw - 32px));
+  display:flex;
+  flex-direction:column;
+  width:min(520px, calc(100vw - 32px));
   max-height:calc(100vh - 32px);
-  overflow:auto;
+  overflow:hidden;
   background:#161b22;
   border:1px solid #30363d;
   border-radius:10px;
@@ -583,18 +585,68 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   font-size:16px;
   font-weight:600;
   color:#e6edf3;
-  margin:0 28px 14px 0;
+  margin:0 28px 12px 0;
+  flex:0 0 auto;
 }
-.start-here-dialog ol {
-  margin:0;
-  padding-left:20px;
+.start-here-search-wrap {
+  flex:0 0 auto;
+  margin:0 0 12px 0;
+}
+.start-here-search-wrap input {
+  width:100%;
+  box-sizing:border-box;
+  padding:7px 10px;
+  font-size:13px;
+  color:#e6edf3;
+  background:#0d1117;
+  border:1px solid #30363d;
+  border-radius:6px;
+}
+.start-here-search-wrap input:focus {
+  outline:2px solid #58a6ff;
+  outline-offset:1px;
+  border-color:#58a6ff;
+}
+.start-here-dialog-body {
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
   color:#8b949e;
   font-size:13px;
   line-height:1.55;
 }
-.start-here-dialog li { margin-bottom:10px; }
-.start-here-dialog li:last-child { margin-bottom:0; }
-.start-here-dialog li strong { color:#e6edf3; font-weight:600; }
+.start-here-lead {
+  margin:0 0 14px 0;
+  padding-bottom:12px;
+  border-bottom:1px solid #30363d;
+}
+.start-here-lead p {
+  margin:0 0 8px 0;
+}
+.start-here-lead p:last-child { margin-bottom:0; }
+.start-here-topic {
+  margin:0 0 14px 0;
+}
+.start-here-topic:last-child { margin-bottom:0; }
+.start-here-topic h3 {
+  margin:0 0 6px 0;
+  font-size:13px;
+  font-weight:600;
+  color:#e6edf3;
+}
+.start-here-topic ul {
+  margin:0;
+  padding-left:18px;
+}
+.start-here-topic li { margin-bottom:4px; }
+.start-here-topic li:last-child { margin-bottom:0; }
+.start-here-empty {
+  display:none;
+  margin:0;
+  color:#8b949e;
+  font-size:13px;
+}
+.start-here-empty.is-visible { display:block; }
 .start-here-close {
   position:absolute;
   top:10px;
@@ -689,12 +741,14 @@ input[type=range] { width:100%; accent-color:#58a6ff; margin-top:4px; }
   <div class="start-here-dialog">
     <button type="button" class="start-here-close" id="btn-start-here-close" aria-label="Close how-to">&times;</button>
     <h2 id="start-here-title">How to use this tool</h2>
-    <!-- PLACEHOLDER: Start Here modal copy — replace in a future content pass -->
-    <ol>
-      <li><strong>Pick a structure</strong> — Choose a shelter from the sidebar, then click the map to place it.</li>
-      <li><strong>Arrange it</strong> — Drag to move, use the handle to rotate. Turn on Snap to line it up flush with a neighbor.</li>
-      <li><strong>Check for overlap</strong> — Red means footprints collide. Amber means clearance buffers touch. Fix before finalizing.</li>
-    </ol>
+    <div class="start-here-search-wrap">
+      <input type="search" id="start-here-search" placeholder="Search help topics…" aria-label="Search help topics" autocomplete="off" />
+    </div>
+    <div class="start-here-dialog-body" id="start-here-body">
+      <div class="start-here-lead" id="start-here-lead"></div>
+      <div id="start-here-topics"></div>
+      <p class="start-here-empty" id="start-here-empty" role="status">No matching topics.</p>
+    </div>
   </div>
 </div>
 <div id="action-toast" class="psmt-toast" role="status" aria-live="polite"></div>
@@ -1878,9 +1932,145 @@ function makeCollapsible(panelId, btnId, storageKey, labels) {
 }
 makeCollapsible('style-advanced', 'style-options-toggle', STORAGE_KEY_OPTIONS, { closed: 'Options ▾', open: 'Options ▴' });
 
+/** Start Here help content — essential get-going topics only. Searchable via #start-here-search. */
+const START_HERE_LEAD = [
+  'Search the address bar and press Enter — an address or lat, lng both work.',
+  'The map opens empty each time. Use Restore Autosave or Open Plan to bring prior work back.'
+];
+/** Invisible search terms for the lead-in (user vocabulary). */
+const START_HERE_LEAD_KEYWORDS = 'find location address coordinates gps start begin empty map where site go to jump search bar lat lng reopen prior work get back';
+
+const START_HERE_TOPICS = [
+  {
+    id: 'place',
+    title: 'Place a structure',
+    keywords: 'find location address coordinates gps start begin empty map catalog tent shelter put drop add insert pick choose model card vendor map click place placement armed continuous repeat again stop cancel disarm esc',
+    bullets: [
+      'Open a vendor tab in Catalog, click a model card, then click the map to place it.',
+      'Placement stays armed so you can place another of the same model without re-picking.',
+      'Stop with the ✕ on the blue map readout, or press Esc.'
+    ]
+  },
+  {
+    id: 'move-rotate-delete',
+    title: 'Move / rotate / delete',
+    keywords: 'turn spin remove select multiple group undo drag slide shift rotate twist handle delete erase clear backspace list row focus mode expand placed sidebar long list',
+    bullets: [
+      'Click a structure to select it. Drag the body to move. Drag the ↻ handle to rotate.',
+      'The ✕ handle on the map, or the Delete key, removes every selected structure.',
+      'The ✕ on a Placed list row deletes that row only — even if several structures are selected. Map ✕ / Delete removes the whole selection.',
+      'Shift, Ctrl, or Cmd+click selects several; groups move and rotate together. Snap is off during group moves.',
+      'To see more of the Placed list, click the ▾ on its header — the other panels hide until you click ▴.'
+    ]
+  },
+  {
+    id: 'overlap',
+    title: 'Check overlap and clearance',
+    keywords: 'spacing gap distance room too close collision conflict red amber warning buffer clearance ring dashed intentional accept fix resolve pill cycle flagged advisory crowded cramped',
+    bullets: [
+      'A clearance buffer is an extra dashed ring around a footprint (set in feet under Options) for spacing.',
+      'Red means solid footprints collide — move or rotate until it clears.',
+      'Amber means clearance rings touch or conflict while footprints may still be separate. Change the buffer (Apply to Selected) or check Intentional on an amber-only list row to accept that tight spacing (Intentional does not clear red footprint overlap).',
+      'Click the map pill (top-right) to cycle through flagged structures.'
+    ]
+  },
+  {
+    id: 'snap',
+    title: 'Snap structures together',
+    keywords: 'attach connect join align flush stick together snap face edge magnet pull dock link connector piece suppress hold',
+    bullets: [
+      'Turn on Snap in the header (off by default). Drag one structure near another and faces pull flush.',
+      'Your rotation before the drag sets intent — snap squares to the nearest 0°/90° relative to the neighbor, not forced to match its angle.',
+      'Hold Ctrl or Cmd while dragging to suppress snap for that gesture.',
+      'To join a group: snap the connector piece first, then rejoin the others (Snap does not run on multi-structure group moves).'
+    ]
+  },
+  {
+    id: 'save',
+    title: 'Save and reopen your plan',
+    keywords: 'download backup file share export reopen restore lost work get work back autosave save plan open plan keep archive reload browser copy replace',
+    bullets: [
+      'Save Plan downloads a JSON file you keep, share, or reopen on any machine.',
+      'Autosave writes only in this browser. It can be lost if storage is cleared or you switch browsers — it is not a substitute for Save Plan.',
+      'Restore Autosave reloads the browser copy (confirms if structures are already placed). Open Plan loads a Save Plan file and replaces the current layout (confirms if structures are already placed).'
+    ]
+  },
+  {
+    id: 'doors-ramps',
+    title: 'Doors and ramps',
+    keywords: 'entry exit opening access egress ramp accessibility door mark hatch custom size wheelchair incline doorway passageway ground level raised grade trailer steps elevated',
+    bullets: [
+      'Turn on Door in the header, then click near any edge of any structure to place an entry mark. Drag a mark along the wall to adjust; Delete or its ✕ removes it. Esc exits Door mode.',
+      'Use a ramp where a doorway sits above grade — hard-sided units, trailers, or any raised entry. A ramp is a role on a footprint — usually a Custom Size rectangle with role set to Ramp — not a separate catalog model. The hatch fill marks it on the map and in print.'
+    ]
+  },
+  {
+    id: 'print',
+    title: 'Print',
+    keywords: 'print paper pdf legend symbols handout hard copy printout map view ctrl cmd footprint buffer entry exit ramp',
+    bullets: [
+      'Use the Print button or Ctrl/Cmd+P to print the current map view.',
+      "The printout includes the plan details (plan name, date stamp, coordinates, beds, sq ft, zones) and a legend explaining the map symbols — it's built to hand to someone who's never seen the tool."
+    ]
+  }
+];
+
 function isStartHereModalOpen() {
   const modal = document.getElementById('start-here-modal');
   return !!(modal && modal.classList.contains('is-open'));
+}
+
+function startHereTopicMatches(topic, query) {
+  if (!query) return true;
+  const hay = (topic.title + ' ' + topic.keywords + ' ' + topic.bullets.join(' ')).toLowerCase();
+  return hay.indexOf(query) !== -1;
+}
+
+function renderStartHereHelp(filterQuery) {
+  const leadEl = document.getElementById('start-here-lead');
+  const topicsEl = document.getElementById('start-here-topics');
+  const emptyEl = document.getElementById('start-here-empty');
+  if (!leadEl || !topicsEl || !emptyEl) return;
+
+  const q = String(filterQuery || '').trim().toLowerCase();
+  const leadBlob = (START_HERE_LEAD.join(' ') + ' ' + START_HERE_LEAD_KEYWORDS).toLowerCase();
+  const showLead = !q || leadBlob.indexOf(q) !== -1;
+
+  leadEl.textContent = '';
+  if (showLead) {
+    leadEl.hidden = false;
+    START_HERE_LEAD.forEach(line => {
+      const p = document.createElement('p');
+      p.textContent = line;
+      leadEl.appendChild(p);
+    });
+  } else {
+    leadEl.hidden = true;
+  }
+
+  topicsEl.textContent = '';
+  let shown = 0;
+  START_HERE_TOPICS.forEach(topic => {
+    if (!startHereTopicMatches(topic, q)) return;
+    shown += 1;
+    const section = document.createElement('section');
+    section.className = 'start-here-topic';
+    section.setAttribute('data-topic-id', topic.id);
+    const h = document.createElement('h3');
+    h.textContent = topic.title;
+    section.appendChild(h);
+    const ul = document.createElement('ul');
+    topic.bullets.forEach(text => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      ul.appendChild(li);
+    });
+    section.appendChild(ul);
+    topicsEl.appendChild(section);
+  });
+
+  const anyVisible = showLead || shown > 0;
+  emptyEl.classList.toggle('is-visible', !anyVisible);
 }
 
 function openStartHereModal() {
@@ -1888,8 +2078,14 @@ function openStartHereModal() {
   if (!modal) return;
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
-  const closeBtn = document.getElementById('btn-start-here-close');
-  if (closeBtn) closeBtn.focus();
+  const search = document.getElementById('start-here-search');
+  if (search) {
+    search.value = '';
+    renderStartHereHelp('');
+    search.focus();
+  } else {
+    renderStartHereHelp('');
+  }
 }
 
 function closeStartHereModal() {
@@ -1897,6 +2093,9 @@ function closeStartHereModal() {
   if (!modal) return;
   modal.classList.remove('is-open');
   modal.setAttribute('aria-hidden', 'true');
+  const search = document.getElementById('start-here-search');
+  if (search) search.value = '';
+  renderStartHereHelp('');
   const openBtn = document.getElementById('btn-start-here');
   if (openBtn) openBtn.focus();
 }
@@ -1905,7 +2104,9 @@ function closeStartHereModal() {
   const openBtn = document.getElementById('btn-start-here');
   const closeBtn = document.getElementById('btn-start-here-close');
   const modal = document.getElementById('start-here-modal');
+  const search = document.getElementById('start-here-search');
   if (!openBtn || !modal) return;
+  renderStartHereHelp('');
   openBtn.addEventListener('click', () => openStartHereModal());
   if (closeBtn) closeBtn.addEventListener('click', () => closeStartHereModal());
   modal.addEventListener('click', e => {
@@ -1913,6 +2114,9 @@ function closeStartHereModal() {
       closeStartHereModal();
     }
   });
+  if (search) {
+    search.addEventListener('input', () => renderStartHereHelp(search.value));
+  }
 })();
 
 function positionMeasureStripUnderButton(strip, btn) {
